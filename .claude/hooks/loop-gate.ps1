@@ -1,29 +1,17 @@
 # loop-gate: a Stop hook. During an explicit timed autonomous run it BLOCKS the
-# model from ending its turn until the clock budget is spent -- mechanically
-# enforcing the never-stop loop (you cannot quit early). This is the tooling-
-# enforced loop continuation DESIGN.md said to build "fresh against the clock-
-# driven never-stop model" if ever wanted. The release condition is TIME, not a
-# verdict file -- the deleted review-gate.ps1's fatal flaw (it gated on a file
-# nothing wrote, so it only ever hit its fail-open MAX_ITERS backstop).
+# model from ending its turn until the clock budget is spent, mechanically
+# enforcing the never-stop loop (you cannot quit early). Constraint, stated flat:
+# the release condition is wall-clock TIME, never a verdict file a step might
+# fail to write. Provenance: ported from the wedding-scavenger-hunt repo's
+# governance history, not a DESIGN.md decision made in this repo.
 #
-# SAFETY (it must never trap a session, and must never burn tokens in a tight loop):
-#   - Only active while .run_state/run.json exists (an explicit run). No run file
-#     -> a normal session stops normally.
-#   - Releases automatically once now >= end_epoch (the budget IS the hard ceiling);
-#     only this true-budget-spent path clears run.json (disarms the run).
-#   - An emergency .run_state/STOP sentinel releases immediately.
-#   - Tight-loop guard: when the model is already continuing from this hook
-#     (stop_hook_active) and stops AGAIN within MIN_TURN seconds (no real work),
-#     that is counted as churn; after CHURN_MAX such empty turns the gate RELEASES
-#     (lets the session end) -- bounding token burn. Real work between stops
-#     (>= MIN_TURN) resets the churn count and the gate keeps forcing.
-#   - A high absolute turn cap is an ultimate runaway breaker that RELEASES (never
-#     traps) if tripped. Neither breaker deletes run.json -- time still governs.
-#   - ANY error / unreadable state FAILS OPEN (allows the stop). A dead gate that
-#     blocks nothing beats a live gate that wedges a run.
-# Project-scoped: fires only for sessions rooted in this repo (where the
-# orchestrator actually runs). NOTE: the counters assume a single session per run;
-# the time bound is concurrency-safe, the turn/churn counts are not.
+# SAFETY (must never trap a session, must never burn tokens in a tight loop): each
+# release path (no active run, emergency STOP, budget spent, tight-loop churn,
+# runaway turn cap, any error) is a one-line comment at its own exit-0 branch
+# below. Two constraints not visible at any single branch: this hook is
+# project-scoped (fires only for sessions rooted in this repo), and its
+# turn/churn counters assume a single session per run (the time bound alone is
+# concurrency-safe).
 $ErrorActionPreference = 'SilentlyContinue'
 $MIN_TURN  = 25   # seconds; a stop sooner than this after a block = no real work
 $CHURN_MAX = 6    # consecutive empty turns tolerated before releasing
@@ -32,7 +20,7 @@ try {
   try { $j = $raw | ConvertFrom-Json } catch { exit 0 }   # bad stdin -> fail open
 
   $top = (& git rev-parse --show-toplevel 2>$null)
-  if (-not $top) { exit 0 }
+  if (-not $top) { exit 0 }                               # not in a repo -> allow (project-scoped)
   $rs   = Join-Path $top '.run_state'
   $runf = Join-Path $rs 'run.json'
   if (-not (Test-Path $runf)) { exit 0 }                  # no active run -> allow

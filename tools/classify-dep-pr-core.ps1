@@ -1,20 +1,16 @@
 # tools/classify-dep-pr-core.ps1: shared tier-classification logic for
 # Dependabot-shaped dependency bumps. Dot-source this file; do not run it
-# directly (mirrors the -core.ps1 convention of tools/issue-core.ps1).
-#
-# Single source of truth for the auto/review precedence rules, reused by
-# tools/classify-dep-pr.ps1 (thin CLI: classifies one real Dependabot PR).
-# See .claude/rules/dependencies.md and DESIGN.md's Hazards disposition
-# (hazard 3) for the policy.
+# directly (mirrors the -core.ps1 convention of tools/issue-core.ps1). Single
+# source of truth for the auto/review precedence rules, reused by
+# tools/classify-dep-pr.ps1. Policy: .claude/rules/dependencies.md and
+# DESIGN.md's Hazards disposition (hazard 3).
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 
 # Critical-dependency list: a bad bump to one of these breaks a path this repo
-# depends on. Read from an env override first (CRITICAL_DEPS_JSON, a JSON
-# array string; the test seam, mirroring scripts/check-emdash.js's
-# EMDASH_BASE override pattern), then from repo-profile.json's
-# criticalDependencies field, defaulting to an empty list if neither is set.
-# Single source of truth: do not duplicate this list; .claude/rules/dependencies.md
+# depends on. Read from an env override first (CRITICAL_DEPS_JSON, a JSON array
+# string; the test seam), then repo-profile.json's criticalDependencies field,
+# defaulting to an empty list. Single-homed: .claude/rules/dependencies.md
 # points here and at repo-profile.json instead of asserting its own copy.
 $CriticalDeps = @()
 if ($env:CRITICAL_DEPS_JSON) {

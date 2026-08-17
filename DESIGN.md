@@ -44,46 +44,41 @@ repo may declare (not only this repo's own choice):
 
 - `preReview` (string). Allowed: the literal `"none"`, or any other string naming this repo's
   declared pre-review process (for example a live visual-approval loop); when not `"none"`, it
-  should name, in the repo's own docs, a process file describing the mechanism. This repo:
-  `"none"`.
+  should name, in the repo's own docs, a process file describing the mechanism.
 - `surfaceGlobs` (array of strings). Allowed: any list of path globs, or `[]`; the pre-review
   surface, path globs a change must touch to trigger the declared pre-review step, empty when
-  `preReview` is `"none"`. This repo: `[]`.
+  `preReview` is `"none"`.
 - `shipMode` (string). Allowed: `"pr"` (branch, PR, CI, merge on green) or `"direct"` (commit
-  straight to the default branch, watch CI to green there, no branch or PR). This repo: `"pr"`.
+  straight to the default branch, watch CI to green there, no branch or PR).
 - `criticalDependencies` (array of strings). Allowed: any list of npm package names, or `[]`;
   package names whose bump is held for review regardless of semver, per
-  `.claude/rules/dependencies.md`. This repo: `[]` (no production runtime dependencies to
-  protect).
+  `.claude/rules/dependencies.md`.
 - `criticalPaths` (array of strings). Allowed: any list of path globs, or `[]`; a repo's own
   critical paths (join/auth, payment, moderation, export-core equivalents), consumed by
   `standards/issue-standards.md` § "Sonnet tier eligibility" gate (b): an issue touching a
-  critical path is denied the `sonnet-only` award. This repo: `[]` (a docs-only governance repo
-  has no runtime path to protect).
+  critical path is denied the `sonnet-only` award.
 - `ciCheckNames` (array of strings). Allowed: any list of real, observed CI check-run names
   required on the default branch before merge, consumed by `tools/apply-branch-protection.ps1`.
-  This repo: `["build"]`, the single job `.github/workflows/ci.yml` defines.
 - `docCurrencyPaths` (array of strings). Allowed: any list of source paths, or `[]`; paths whose
   change triggers the orchestrator's `doc-currency` step (`agents/orchestrator.md` § "Doc-currency
-  step"). This repo: `[]` (a docs-only repo has no source surface for that step to compare
-  against).
+  step").
 - `goalsDoc` (string). Allowed: a repo-relative path to this repo's own goals doc, or an empty
-  string if it has none. This repo: `"README.md"`.
+  string if it has none.
 - `checkCommands` (object). Allowed: any object whose values are shell-runnable command strings,
   keyed by whatever names the repo's own standards cite (`"install"`, `"test"`, and `"emdash"` are
   the three this repo's own ported standards expect; a repo may declare more). `"install"` is the
   command that gets a fresh, lockfile-exact set of dependencies before the test suite runs
   (`definition-of-done.md` § "6. Clean test run" defers to this key rather than naming `npm ci`
   itself, so the clause reads correctly for a non-npm repo whose install step is something else
-  entirely). This repo: `{"install": "npm ci", "test": "npm test", "emdash": "npm run
+  entirely). For example: `{"install": "npm ci", "test": "npm test", "emdash": "npm run
   check:emdash"}`.
-- `ghPath` (string). Allowed: `"gh"` (on PATH) or an absolute path to the GitHub CLI binary. This
-  repo: `"gh"`. A machine where `gh` lives elsewhere records the absolute path as a per-machine
-  note in that machine's own `CLAUDE.local.md`, never in this committed file.
+- `ghPath` (string). Allowed: `"gh"` (on PATH) or an absolute path to the GitHub CLI binary. A
+  machine where `gh` lives elsewhere records the absolute path as a per-machine note in that
+  machine's own `CLAUDE.local.md`, never in this committed file.
 - `defaultBranch` (string). Allowed: any git branch name that exists on the remote; the branch
   `tools/check-freshness.ps1`, `tools/new-agent-worktree.ps1`, `tools/apply-branch-protection.ps1`,
   and `tools/repo-profile-core.ps1`'s callers treat as the remote default, instead of a hardcoded
-  `origin/main`. This repo: `"main"`.
+  `origin/main`.
 
 **`tools/repo-profile-core.ps1`.** All profile-reading PowerShell logic (resolving
 `repo-profile.json`'s path, reading it if present, falling back to a named default if missing or

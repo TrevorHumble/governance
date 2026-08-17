@@ -1,18 +1,11 @@
 # check-freshness: read-only staleness + overlap check, shared by the owner-review
-# path (README.md) and the build-session path
-# (.claude/commands/build.md step 0, .claude/commands/realign.md). Build sessions work in isolated worktrees, push
-# branches, and merge on GitHub; nothing ever pulls those merges back into the primary
-# checkout, so drift can accumulate silently on either side of that boundary (the
-# wedding-scavenger-hunt repo's issue #200 recorded an owner local main 32 commits behind
-# with nobody noticing; its issue #357 recorded a build worktree cut from a local main 76
-# commits behind the remote default branch, with a sibling issue that had already rewritten
-# a file the session also edited; every review passed, and the review had certified work
-# against an abandoned base). This script is the missing signal for both
-# holes. Pure check, no side effects on the working tree: mirrors the shape
-# of tools/assert-worktree.ps1. It runs read-only git commands only: `fetch`
-# (updates remote-tracking refs, never the working tree), `rev-list --count`,
-# `merge-base`, and `diff --name-only`. It never runs pull, merge, checkout,
-# or reset.
+# path (README.md) and the build-session path (.claude/commands/build.md step 0,
+# .claude/commands/realign.md). Rationale and incident history: DESIGN.md § "Hazards
+# from the classification report: disposition" (items 10-11).
+#
+# Pure check, no side effects on the working tree: it runs read-only git commands
+# only (fetch, rev-list --count, merge-base, diff --name-only); it never runs pull,
+# merge, checkout, or reset.
 #
 # Single-homed constants and helpers: the carve-out list and MAX_DRIFT_COMMITS
 # threshold are defined ONCE, in this file, and .claude/commands/realign.md consumes them
@@ -20,10 +13,6 @@
 # the list), so nothing else can quietly disagree about what counts as a hard collision.
 # Do not copy $CARVE_OUT_PATHS, $MAX_DRIFT_COMMITS, Test-CarvedOut, or
 # Get-OverlapFiles into another file; extend them here.
-#
-# Default branch: read from repo-profile.json's defaultBranch field (falls back to
-# 'main' if the profile is missing or the field is absent), never hardcoded, so this
-# script works unmodified in any child repo that declares its own default branch.
 param(
   # Explicit file list to check for overlap against the drift range (an
   # issue's Touches list, or a wave's combined Touches), as one
@@ -43,7 +32,7 @@ param(
 # ---- Single-homed constants -------------------------------------------------
 
 . (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
-$DefaultBranch = Get-RepoProfileValue -Field 'defaultBranch' -Default 'main'
+$DefaultBranch = Get-RepoProfileValue -Field 'defaultBranch'
 $RemoteDefault = "origin/$DefaultBranch"
 
 # MAX_DRIFT_COMMITS: the single source of truth for "how many commits behind
@@ -53,21 +42,12 @@ $RemoteDefault = "origin/$DefaultBranch"
 # one owner).
 $MAX_DRIFT_COMMITS = 10
 
-# CARVE_OUT_PATHS (append-only): paths whose overlap with the drift range
-# never counts as a hard resync/collision trigger, because they are
-# append-only bookkeeping, not code whose behavior a stale review could get
-# wrong: two writers both touching them in the same drift window cannot
-# corrupt each other's entries; a merge conflict there is a formatting
-# nuisance, not a behavioral collision.
-#
-# Membership in THIS SLICE is exactly one path:
-#   - BUILDLOG.md (append-only changelog; every entry is a distinct line
-#     appended at the end).
-# Explicitly OUT of scope for this slice: "governance files" broadly
-# (standards/, agents/, DESIGN.md, .claude/, etc.) are NOT carved
-# out here: they can carry real behavioral drift (e.g. a reviewer-bar
-# change), so an overlap there must still raise the flag. A future issue can
-# widen this list; until then this is the whole list.
+# CARVE_OUT_PATHS (append-only): paths whose overlap with the drift range never
+# counts as a hard resync/collision trigger, because two writers both appending
+# to them in the same drift window cannot corrupt each other's entries. Only
+# BUILDLOG.md qualifies today; governance files (standards/, agents/, DESIGN.md,
+# .claude/, etc.) are deliberately NOT carved out, since they can carry real
+# behavioral drift an overlap must still flag.
 $CARVE_OUT_PATHS = @('BUILDLOG.md')
 
 # Test-CarvedOut -- true when $RelativePath is on the append-only carve-out
@@ -161,10 +141,8 @@ if ($MyInvocation.InvocationName -ne '.') {
 
   $overlap = @(Get-OverlapFiles -DriftFiles $driftFiles -TouchFiles $touchFiles)
 
-  # Overlap is the load-bearing signal: one touched file that the remote default branch
-  # also rewrote matters more than any number of unrelated commits, so it is a hard
-  # trigger regardless of commit count, unless every overlapping path
-  # is carve-out-only, in which case Get-OverlapFiles already excluded it.
+  # Overlap is the load-bearing signal: one touched file the remote default branch
+  # also rewrote is a hard trigger regardless of commit count.
   if ($overlap.Count -gt 0) {
     foreach ($f in $overlap) {
       Write-Output "OVERLAP: $f changed on $RemoteDefault since this branch forked, AND is in the touched-file list, resync required regardless of commit count."

@@ -30,8 +30,7 @@ param(
     [string]$DepType
 )
 
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-. (Join-Path $scriptDir 'classify-dep-pr-core.ps1')
+. (Join-Path $PSScriptRoot 'classify-dep-pr-core.ps1')
 
 Write-Output (Get-DepPrTier -Ecosystem $Ecosystem -DepName $DepName -SemverBump $SemverBump -DepType $DepType)
 

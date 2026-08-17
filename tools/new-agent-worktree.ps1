@@ -1,28 +1,13 @@
 # new-agent-worktree: give one file-mutating agent its own working directory on
-# its own branch, sharing this repo's history via `git worktree add`. Two agent
-# sessions sharing a single folder can stash, revert, or switch-branch-under each
-# other's uncommitted work (the wedding-scavenger-hunt repo hit exactly this failure
-# once, per that repo's own issue history). One working tree, one driver. The commit
-# gate is live in the new worktree with zero extra config: core.hooksPath=.githooks is
-# a relative path in shared git config, and .githooks/ is a tracked directory, so it
-# resolves to <worktree>/.githooks automatically. This script asserts that rather than
-# assuming it.
+# its own branch, sharing this repo's history via `git worktree add`. One working
+# tree, one driver: two sessions sharing a folder can stash, revert, or
+# switch-branch under each other's uncommitted work. The commit gate is live in
+# the new worktree with zero extra config, since core.hooksPath=.githooks is a
+# relative path in shared git config and .githooks/ is a tracked directory.
 #
-# Fetch-fresh, always. The pattern this guards against: a worktree cut from local
-# default branch at a commit dozens behind the remote, because nobody ever ran `git
-# fetch` first, so the branch inherited a local default branch that had simply never
-# been pulled, and a full adversarial review certified work against a base the remote
-# had already abandoned. A NEW branch is therefore based on the remote default branch
-# explicitly, never on local HEAD: `git fetch` fails loud (never a silent fall-back to
-# whatever HEAD happens to be), and `git worktree add -b` names the remote default
-# branch as the start point so the new branch is 0 commits behind at birth regardless
-# of how stale the primary checkout's local default branch is. An EXISTING branch (the
-# resume path) still fetches, so a later freshness check has a true remote view to
-# compare against, but is checked out as-is, with no rebase/merge/reset: resuming a
-# session must never silently rewrite history out from under it.
-#
-# Default branch: read from repo-profile.json's defaultBranch field (falls back to
-# 'main' if the profile is missing or the field is absent), never hardcoded.
+# Fetch-fresh, always, before any branch decision: see the fetch failure and
+# branch-base comments below for why (a worktree built on a stale local default
+# branch is exactly the failure this guards against).
 param(
   [Parameter(Mandatory = $true)]
   [string]$Branch
@@ -32,7 +17,7 @@ $top = (& git rev-parse --show-toplevel 2>$null)
 if (-not $top) { [Console]::Error.WriteLine('new-agent-worktree: not inside a git repo'); exit 1 }
 
 . (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
-$DefaultBranch = Get-RepoProfileValue -Field 'defaultBranch' -Default 'main'
+$DefaultBranch = Get-RepoProfileValue -Field 'defaultBranch'
 $RemoteDefault = "origin/$DefaultBranch"
 
 # Fetch first, unconditionally, before any branch decision. On failure, exit

@@ -138,10 +138,10 @@ repo's architecture doc and `README.md`'s feature claims, and fix any drift by c
 correction into the same PR.
 
 **`.md`-only; halt-and-report on anything wider.** The doc-currency agent's commit is `.md`-only.
-If it concludes a non-`.md` file needs changing to fix the drift, it stops and
-reports the need instead of committing it (build speed over serialization is the deliberate
-tradeoff) rather than the orchestrator routing that non-`.md` fix through the normal
-`agents/implementation-agent.md` path instead.
+If it concludes a non-`.md` file needs changing to fix the drift, it stops and reports the need
+instead of committing it (build speed over serialization is the deliberate tradeoff); the
+orchestrator then routes that non-`.md` fix through the normal `agents/implementation-agent.md`
+path.
 
 **Staged before the PR is reviewed.** The doc-currency agent's `.md` corrections are staged into the
 working tree, and included in the diff, before the PR review in step 6 runs, so the single combined

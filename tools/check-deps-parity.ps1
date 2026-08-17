@@ -11,14 +11,7 @@
 # It never runs npm install/ci itself: reconciling a flagged mismatch is
 # running `npm ci` to reinstall from the lockfile.
 
-# ---- Single-homed constants -------------------------------------------------
-
-# TEST_REQUIRED_DEV_DEPS: devDependencies the test suite needs installed to
-# *collect* its files at all -- a missing one means test files fail to import
-# (not that an assertion fails), so a local `npm test` silently under-reports
-# coverage without ever going red. Defined ONCE, here; nothing else in the
-# repo re-lists these three package names.
-$TEST_REQUIRED_DEV_DEPS = @('jsdom', 'supertest', 'vitest')
+# ---- Helpers -----------------------------------------------------------------
 
 # Get-InstalledVersion -- reads the "version" field out of
 # node_modules/<Name>/package.json. Returns $null (never throws) when the
@@ -126,12 +119,22 @@ if ($MyInvocation.InvocationName -ne '.') {
   $pkgJson = Get-Content -Raw -Path $pkgJsonPath | ConvertFrom-Json
   $lockPackages = Read-LockPackages -LockJsonPath $lockJsonPath
 
+  # package.json is the owner of both lists: no separate hardcoded dev-deps
+  # list to fall out of sync with it. A missing dev dep means test files fail
+  # to import (not that an assertion fails), so a local `npm test` would
+  # silently under-report coverage without ever going red; checking every
+  # declared dev dep, not a hand-picked subset, catches that regardless of
+  # which package it is.
   $prodDeps = @()
   if ($pkgJson.dependencies) {
     $prodDeps = @($pkgJson.dependencies.PSObject.Properties | ForEach-Object { $_.Name })
   }
+  $devDeps = @()
+  if ($pkgJson.devDependencies) {
+    $devDeps = @($pkgJson.devDependencies.PSObject.Properties | ForEach-Object { $_.Name })
+  }
 
-  $names = @($prodDeps + $TEST_REQUIRED_DEV_DEPS)
+  $names = @($prodDeps + $devDeps)
   $mismatches = @(Get-ParityMismatches -Names $names -LockPackages $lockPackages -RepoRoot $repoRoot)
 
   if ($mismatches.Count -gt 0) {

@@ -13,7 +13,7 @@
 # A CODE commit must name an issue: (#N), a GitHub closing keyword + #N, or an
 # issue-N branch (see Resolve-IssueNumber in tools/issue-core.ps1). No review
 # evidence is checked here; review practice is unmechanized (see
-# WHAT-IT-CHECKS.md and CLAUDE.md "Governing-artifact surface" for the history).
+# WHAT-IT-CHECKS.md and CLAUDE.md "Governing-artifact surface" for the surface path list).
 # --no-verify bypasses this hook; CI is the backstop.
 set -e
 
@@ -34,7 +34,6 @@ is_code="$(printf '%s' "$is_code" | tr -d '[:space:]')"
 if [ "$is_code" = "DOC" ]; then
   exit 0
 fi
-# Anything not explicitly DOC (CODE, empty, or PowerShell error) -> enforce. Fail-closed.
 
 # CODE commit: read the commit message, resolve an issue number.
 msg="$(cat "$msg_file")"

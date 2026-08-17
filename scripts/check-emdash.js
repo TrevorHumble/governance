@@ -17,24 +17,28 @@ const ESCAPE_HINT = `${BACKSLASH}u2014`;
 // disagree about what the cap actually is.
 const MAX_BUFFER_BYTES = 256 * 1024 * 1024;
 
+// DEFAULT_BRANCH_FALLBACK: this file's one copy of the 'main' fallback value.
+// tools/repo-profile-core.ps1's $FieldDefaults table is the PowerShell-side
+// owner of the same fallback for every PowerShell tool; a Node script cannot
+// dot-source a `.ps1` file, so this stays the one sanctioned cross-language
+// copy.
+const DEFAULT_BRANCH_FALLBACK = 'main';
+
 /**
  * Reads `defaultBranch` from this repo's `repo-profile.json`, resolved
  * relative to this script's own location so it works regardless of the
- * caller's working directory. Fails soft to `'main'` if the profile file is
- * missing, unreadable, or the field is absent -- this check must never crash
- * for a missing or incomplete profile. This is the one cross-language copy of
- * the profile-reading logic `tools/repo-profile-core.ps1` owns for every
- * PowerShell tool; a Node script cannot dot-source a `.ps1` file, so this
- * function stays its own small reader rather than shelling out to PowerShell.
+ * caller's working directory. Fails soft to `DEFAULT_BRANCH_FALLBACK` if the
+ * profile file is missing, unreadable, or the field is absent -- this check
+ * must never crash for a missing or incomplete profile.
  * @returns {string}
  */
 function readDefaultBranch() {
   try {
     const profilePath = path.join(__dirname, '..', 'repo-profile.json');
     const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
-    return profile.defaultBranch || 'main';
+    return profile.defaultBranch || DEFAULT_BRANCH_FALLBACK;
   } catch (err) {
-    return 'main';
+    return DEFAULT_BRANCH_FALLBACK;
   }
 }
 

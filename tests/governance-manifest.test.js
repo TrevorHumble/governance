@@ -39,32 +39,29 @@ function listFilesUnder(dir) {
 }
 
 /**
- * True when `entry` resolves to at least one existing file. A `**`-suffixed
- * entry (e.g. "standards/**") resolves if the directory exists and contains
- * at least one file anywhere below it; any other entry resolves only as an
- * exact existing file path.
+ * Decodes one manifest path entry (the glob syntax `sharedPaths` and
+ * `excludedPaths` both use) against a single candidate file. A `path/**`
+ * entry matches the prefix itself or anything nested below it; any other
+ * entry is a bare path, matched only by exact equality. Non-glob semantic,
+ * picked once here: a bare entry names one specific file, which AC5 requires
+ * to actually exist -- this function itself makes no filesystem call, so a
+ * caller checking existence (entryResolves, below) does that by testing
+ * against a real file listing, not by re-deciding the glob syntax.
  */
-function entryResolves(entry, allFiles) {
+function matchesManifestEntry(file, entry) {
   if (entry.endsWith('/**')) {
     const prefix = entry.slice(0, -3); // drop the trailing "/**"
-    return allFiles.some((f) => f === prefix || f.startsWith(`${prefix}/`));
-  }
-  return fs.existsSync(path.join(REPO_ROOT, entry));
-}
-
-/**
- * True when `file` is matched by `entry`: either an exact match, or, for a
- * `**`-suffixed entry, `file` equal to or nested under the entry's prefix
- * directory. The inverse direction of entryResolves above (that checks a
- * declared entry resolves to a real file; this checks a real file is
- * declared by some entry).
- */
-function fileMatchesEntry(file, entry) {
-  if (entry.endsWith('/**')) {
-    const prefix = entry.slice(0, -3);
     return file === prefix || file.startsWith(`${prefix}/`);
   }
   return file === entry;
+}
+
+/**
+ * True when `entry` resolves to at least one file in `allFiles`: for a
+ * `**`-suffixed entry, anything under its prefix; for a bare entry, itself.
+ */
+function entryResolves(entry, allFiles) {
+  return allFiles.some((f) => matchesManifestEntry(f, entry));
 }
 
 /** List every git-tracked file, relative to REPO_ROOT, forward-slashed. */
@@ -75,7 +72,7 @@ function listTrackedFiles() {
 
 /** True when `file` is matched by any entry in `sharedPaths`. */
 function isShared(file, sharedPaths) {
-  return sharedPaths.some((entry) => fileMatchesEntry(file, entry));
+  return sharedPaths.some((entry) => matchesManifestEntry(file, entry));
 }
 
 /**
@@ -91,8 +88,8 @@ function isExcluded(file, excludedPaths) {
   let excluded = false;
   for (const raw of excludedPaths) {
     if (raw.startsWith('!')) {
-      if (fileMatchesEntry(file, raw.slice(1))) excluded = false;
-    } else if (fileMatchesEntry(file, raw)) {
+      if (matchesManifestEntry(file, raw.slice(1))) excluded = false;
+    } else if (matchesManifestEntry(file, raw)) {
       excluded = true;
     }
   }

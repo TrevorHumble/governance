@@ -2,18 +2,8 @@
 #
 # WHAT: PUTs GitHub branch protection onto the target branch requiring a pull
 # request, the repo's declared status checks, and required_status_checks.strict
-# always true (not a parameter; see below).
-#
-# WHY: two PRs can each go green against an older default branch, then both merge
-# close together. The second merge lands without ever running CI against the tree
-# that includes the first merge's changes: the default branch ends up in a state CI
-# never actually checked. `strict = true` closes that: a branch that has fallen
-# behind must update and re-run CI before GitHub will allow the merge, serializing
-# concurrent merges through CI instead of racing them. `strict` is always true --
-# it is the whole point of the tool. See DESIGN.md § "Branch-protection strictness"
-# for why this stays fixed rather than becoming a per-repo profile field: a repo
-# that wants different behavior adds a profile field through a governance issue,
-# not by editing its own copy of this script.
+# always true (not a parameter). Why it stays fixed instead of a per-repo profile
+# field: DESIGN.md § "Branch-protection strictness".
 #
 # Required checks are a parameter, not a hardcoded list: pass -RequiredChecks, or
 # let it default to repo-profile.json's ciCheckNames field. A required context
@@ -21,10 +11,8 @@
 # merge, so keep this list in sync with the repo's real CI job names, not names
 # guessed from workflow YAML.
 #
-# required_approving_review_count stays 0 by default: a solo-maintainer repo
-# cannot have its owner approve their own PR, so requiring >= 1 would lock the
-# owner out of merging their own work. CI plus review practice is the review
-# gate here, not a human approval click; see DESIGN.md § "Lean review process
+# required_approving_review_count stays 0 by default (a solo-maintainer repo
+# cannot approve their own PR). Rationale: DESIGN.md § "Lean review process
 # rationale".
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
@@ -47,7 +35,7 @@ param(
 $gh = Get-RepoProfileValue -Field 'ghPath' -Default 'gh'
 
 if (-not $Branch) {
-  $Branch = Get-RepoProfileValue -Field 'defaultBranch' -Default 'main'
+  $Branch = Get-RepoProfileValue -Field 'defaultBranch'
 }
 
 # Slug resolution is deferred to the network path (just before the PUT) so that
