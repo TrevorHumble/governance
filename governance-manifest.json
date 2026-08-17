@@ -1,0 +1,27 @@
+{
+  "retired": [],
+  "sharedPaths": [
+    "standards/**",
+    "agents/**",
+    ".claude/commands/build.md",
+    ".claude/commands/buildlog.md",
+    ".claude/commands/post-wave-review.md",
+    ".claude/commands/realign.md",
+    ".claude/commands/resume.md",
+    ".claude/rules/dependencies.md",
+    ".claude/hooks/goal-gate.ps1",
+    ".claude/hooks/loop-gate.ps1",
+    ".claude/hooks/session-greeting.ps1",
+    ".claude/skills/capture-system-defect/SKILL.md",
+    ".claude/skills/github-write/SKILL.md",
+    ".claude/settings.json",
+    ".githooks/**",
+    "tools/**",
+    "scripts/**",
+    "AGENTS.md",
+    "definition-of-done.md",
+    "WHAT-IT-CHECKS.md",
+    "buildlog/README.md",
+    ".gitattributes"
+  ]
+}
