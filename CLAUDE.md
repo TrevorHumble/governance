@@ -52,8 +52,9 @@ step", not restated here. This repo's own profile declares `"preReview": "none"`
 ## Model policy
 
 Every spawned agent sets its `model` explicitly; never rely on a default that may escalate
-silently. Role tiers, the `sonnet-only` exception, the Pre-review-surface carve-out, and the
-Fable policy are all authoritative in `agents/orchestrator.md` § "Model policy".
+silently. Role tiers, the `sonnet-only` exception, the Pre-review-surface carve-out, the
+Fable policy, and the Gemini / Antigravity mapping are all authoritative in
+`agents/orchestrator.md` § "Model policy".
 
 ## Adversarial review
 

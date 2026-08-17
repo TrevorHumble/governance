@@ -39,7 +39,7 @@ maybeDescribe('apply-branch-protection -EmitPayload', () => {
   // Required checks are parameterized (issue #1): no wedding-repo check names are
   // baked in. Passing -RequiredChecks explicitly makes the payload assertion
   // independent of whatever repo-profile.json happens to declare.
-  it('-EmitPayload -RequiredChecks a,b,c -> exact contexts round-tripped, app_id -1, strict false, no "contexts" key', () => {
+  it('-EmitPayload -RequiredChecks a,b,c -> exact contexts round-tripped, app_id -1, strict true, no "contexts" key', () => {
     const r = run(['-RequiredChecks', 'a,b,c']);
     expect(r.status).toBe(0);
 
@@ -54,7 +54,7 @@ maybeDescribe('apply-branch-protection -EmitPayload', () => {
       expect(check.app_id).toBe(-1);
     }
 
-    expect(body.required_status_checks.strict).toBe(false);
+    expect(body.required_status_checks.strict).toBe(true);
     expect(r.stdout).not.toContain('"contexts"');
   });
 

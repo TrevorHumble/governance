@@ -47,7 +47,7 @@ Example: if the PR says "operators can hide a submitted entry from the feed," th
 
 ## 6. Clean test run
 
-The test suite is run on a fresh tree, one that is not behind the remote default branch (`repo-profile.json`'s `defaultBranch` field), using `npm ci` (not a stale local `node_modules`), with the CI run itself treated as authoritative over any local pass. A local environment that predates the change, or that drifted from the lockfile, can go green while CI would go red. Every failing test is diagnosed to a specific, named cause before it is dismissed or deferred: an undiagnosed red test is not a license to file a follow-up issue and move on.
+The test suite is run on a fresh tree, one that is not behind the remote default branch (`repo-profile.json`'s `defaultBranch` field), using the repo's declared install command (`repo-profile.json`'s `checkCommands.install` field, not a stale set of locally-installed dependencies), with the CI run itself treated as authoritative over any local pass. A local environment that predates the change, or that drifted from the declared dependency lock, can go green while CI would go red. Every failing test is diagnosed to a specific, named cause before it is dismissed or deferred: an undiagnosed red test is not a license to file a follow-up issue and move on.
 
 Example: a test fails locally, the author reruns it once, it passes, and they ship without knowing why it flaked: that is not a clean run. The cause (a timing race, a shared fixture, a real bug) has to be named.
 

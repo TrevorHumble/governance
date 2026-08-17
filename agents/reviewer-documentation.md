@@ -43,7 +43,7 @@ One token verdict followed by the numbered defect list. A PASS with any open blo
 
 ## Checklist (from `standards/documentation-standards.md`)
 
-- [ ] All acceptance criteria referenced by this doc are answerable yes/no by a competent reviewer, per `issue-standards.md` § "Acceptance criteria" (no "an agent can understand X" criteria).
+- [ ] All acceptance criteria referenced by this doc are answerable yes/no by a competent reviewer, per `standards/issue-standards.md` § "Acceptance criteria" (no "an agent can understand X" criteria).
 - [ ] User story names a consumer and follows `As a [consumer], I need…` form.
 - [ ] No preamble sentences, restatements of section headers, or padding are present (quote any bloat candidate as evidence).
 - [ ] No banned slop words: `elegantly`, `robustly`, `seamlessly`, `comprehensively`, `holistically`, `notably`, `importantly`, `leverages`, `cutting-edge`, `game-changing`, `powerful`, `innovative`.

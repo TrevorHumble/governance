@@ -20,7 +20,7 @@ that repo's own `CLAUDE.local.md`, never in the committed profile.
 & "<resolved ghPath>" <subcommand>
 ```
 
-The remote is this project's own GitHub repo (set when you created it from the template). `gh` commands default to it, so you rarely need `--repo`.
+The remote is whatever `git remote -v` reports for this checkout. `gh` commands default to it, so you rarely need `--repo`.
 
 ## GitHub is the single source of truth, keep issues in sync
 

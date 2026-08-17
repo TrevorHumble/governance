@@ -4,7 +4,6 @@ paths:
   - package-lock.json
   - tools/classify-dep-pr.ps1
   - tools/classify-dep-pr-core.ps1
-  - tests/classify-dep-pr.test.js
   - repo-profile.json
 ---
 

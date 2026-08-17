@@ -23,7 +23,7 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   exact early-exit failure the never-stop loop exists to prevent. **At the end of every increment, emit one
   ledger line to the Live log**, form: `[HH:MM] elapsed=Xm/budget=Ym | selector→{DO <item> | CASCADE | WRAP}
 | next=<item>`. Worked example: clock reads `14:52`, run started `13:30` with a 180-minute budget, item
-  #142 is ready and #147 is behind it: `[14:52] elapsed=82m/budget=180m | selector→DO #142 | next=#147`.
+  #142 is ready and #147 is behind it (issue numbers illustrative): `[14:52] elapsed=82m/budget=180m | selector→DO #142 | next=#147`.
   The selector result is a visible token the agent must produce before acting; a compacted
   instance verifies the loop is live by reading the last ledger line.
 - **Next-action selector: never returns "stop" while time remains.** The `elapsed` driving EVERY selector

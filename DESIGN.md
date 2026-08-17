@@ -70,9 +70,13 @@ repo may declare (not only this repo's own choice):
 - `goalsDoc` (string). Allowed: a repo-relative path to this repo's own goals doc, or an empty
   string if it has none. This repo: `"README.md"`.
 - `checkCommands` (object). Allowed: any object whose values are shell-runnable command strings,
-  keyed by whatever names the repo's own standards cite (a `"test"` key and an `"emdash"` key are
-  the two this repo's own ported standards expect; a repo may declare more). This repo:
-  `{"test": "npm test", "emdash": "npm run check:emdash"}`.
+  keyed by whatever names the repo's own standards cite (`"install"`, `"test"`, and `"emdash"` are
+  the three this repo's own ported standards expect; a repo may declare more). `"install"` is the
+  command that gets a fresh, lockfile-exact set of dependencies before the test suite runs
+  (`definition-of-done.md` § "6. Clean test run" defers to this key rather than naming `npm ci`
+  itself, so the clause reads correctly for a non-npm repo whose install step is something else
+  entirely). This repo: `{"install": "npm ci", "test": "npm test", "emdash": "npm run
+  check:emdash"}`.
 - `ghPath` (string). Allowed: `"gh"` (on PATH) or an absolute path to the GitHub CLI binary. This
   repo: `"gh"`. A machine where `gh` lives elsewhere records the absolute path as a per-machine
   note in that machine's own `CLAUDE.local.md`, never in this committed file.
@@ -106,19 +110,25 @@ does; empty at seed time (nothing has been retired yet).
 receive on a future sync. A `path/**` entry means "everything under this directory that exists at
 sync time," so a wildcard entry never goes stale as files are added or removed beneath it; a bare
 path entry names one specific file, and is checked to exist by `tests/governance-manifest.test.js`.
-Deliberately excluded: this repo's own build and record files (`package.json` and its lockfile,
-`vitest.config.mjs`, `.prettierrc.json`, `.gitignore`, `.github/**`, `tests/**`, `README.md`,
-`BUILDLOG.md`, `buildlog/**` (the fragments themselves; `buildlog/README.md` is separately a
-`sharedPaths` entry, since the template is shared even though the fragments are not), `docs/**`,
-`repo-profile.json`, `CLAUDE.md`, `CLAUDE.local.md`, `DESIGN.md`, and the manifest file itself).
+
+`excludedPaths` (array of glob-ish strings): this repo's own build and record files, the mirror
+image of `sharedPaths` and the manifest's single home for that exclusion set (not restated in
+`tests/governance-manifest.test.js`, which reads this array rather than carrying its own copy). It
+uses the same `path/**` glob syntax as `sharedPaths`, plus one addition: a `!`-prefixed entry is a
+gitignore-style negation, carving a file back out of a broader exclusion that would otherwise also
+cover it. This is how `buildlog/**` (the fragments, not shared) and `buildlog/README.md` (the
+template, a `sharedPaths` entry) coexist without both arrays claiming the same file: `excludedPaths`
+lists `"buildlog/**"` then `"!buildlog/README.md"`, so the file resolves to shared and shared only.
 Whether a child receiving a sync also receives this repo's own enforcement tooling (`tests/**`,
 the vitest/prettier configs) is the sync issue's question, not answered here.
 
 `tests/governance-manifest.test.js` guards both directions: every declared `sharedPaths` entry
 resolves to a real file (the AC5 promise), and, in the other direction, every git-tracked file in
-this repo is claimed by either `sharedPaths` or the test's own `EXCLUDED` record, so a new
-governance file landing in neither silently fails the test rather than silently never reaching a
-child on sync.
+this repo matches exactly one of `sharedPaths` or `excludedPaths`, never neither (a new governance
+file landing in neither would silently never reach a child on sync) and never both (a file claimed
+by both would hide a misclassification, the way `buildlog/README.md` used to be covered by a
+blanket `buildlog/**` exclusion even while also declared shared, until the negation entry above
+was added to keep the two sets disjoint).
 
 **CLAUDE.md is excluded from `sharedPaths` but its `## Governing-artifact surface` section is not
 optional for a child.** Every child repo must carry its own `## Governing-artifact surface`
@@ -126,6 +136,23 @@ section in its own `CLAUDE.md`, naming its own governing-artifact path list; how
 CLAUDE.md template (including that section) reaches a child is the sync issue's design question,
 not answered here, but the requirement itself is recorded here so the sync issue has a concrete
 target: delivering the section, not inventing whether it is needed.
+
+**`DESIGN.md` is excluded from `sharedPaths` but nine shared files cite specific sections of it by
+name.** `standards/adversarial-review-protocol.md`, `standards/design-philosophy.md`,
+`agents/orchestrator.md`, `tools/apply-branch-protection.ps1`, `tools/check-freshness.ps1`,
+`tools/classify-dep-pr-core.ps1`, `agents/reviewer-architecture.md`,
+`agents/reviewer-documentation.md`, and `standards/documentation-standards.md` all point a reader
+at this file for the argument behind a rule they only state the conclusion of. The sections cited
+this way are: "Lean review process rationale," "Merge policy and pre-review rationale," "Keep-test
+rationale," "Wave-governance mechanisms," "Branch-protection strictness" (the rationale for
+`strict = $true` staying fixed, referenced from `tools/apply-branch-protection.ps1`'s own header
+comment), and the profile-reader ownership note under "repo-profile.json schema" (the
+`tools/repo-profile-core.ps1` paragraph). None of these sections is itself in `sharedPaths`,
+so a citation to any of them dangles in a child repo unless that child's own `DESIGN.md` carries
+the section, or the sync mechanism rewrites the citation to point somewhere the child actually
+has. This is a recorded target for the sync issue, not resolved here: a receiving child must
+either carry these sections in its own `DESIGN.md` or the sync mechanism must rewrite the
+citations that name them.
 
 **Ecosystem-specific shared tool.** `tools/check-deps-parity.ps1` is shared even though it is
 Node-ecosystem-specific: a child repo without `package.json` is expected to have it no-op or fail
@@ -194,9 +221,10 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
    cross-platform commit-msg gate if that becomes load-bearing.
 8. **`reviewer-architecture.md` naming `.agents/skills/` as an externally-managed excluded
    directory a repo without it would carry as a dangling exclusion** (the source hazard also named
-   a periodic-audit section in `orchestrator.md`; that section was not ported to this repo's
-   `agents/orchestrator.md` at all, so there is nothing there to carry the same wording).
-   Resolved in `reviewer-architecture.md`: reworded to "if such a directory exists," never
+   a periodic-audit section in `orchestrator.md`; that section WAS ported, at
+   `agents/orchestrator.md:351` ("Periodic full-system architectural audit"), and already carries
+   the same qualified wording, "an externally-managed design-skills directory, if this repo has
+   one"). Resolved in `reviewer-architecture.md`: reworded to "if such a directory exists," never
    asserted as fact about this repo.
 9. **`realign.md` cites a wedding-repo `data/wip-issues/357-...md` file by literal path, already
    dead in the source since `data/` is gitignored there too.** Resolved by not re-introducing it:
@@ -261,6 +289,18 @@ is the wedding-scavenger-hunt repo's own `DESIGN.md`, an explicitly-marked prove
 repo's own history begins at its 2026-08-16 seed and does not carry that teardown ADR forward. The
 posture this leaves behind is tamper-evident, not tamper-proof, the same honest framing
 `WHAT-IT-CHECKS.md` uses for what is and is not mechanically enforced here.
+
+## Branch-protection strictness
+
+`tools/apply-branch-protection.ps1` always sends `required_status_checks.strict = true`. This is
+not a per-repo choice the tool exposes: `strict = true` is GitHub's "require branches to be up to
+date before merging," and closing the stale-merge race it prevents (two PRs each going green
+against an older default branch, then merging close together so the second lands on a tree CI
+never actually ran) is the whole reason this tool exists. A repo that wants different behavior
+does not get it by passing a switch or editing its own copy of the script: it adds a profile field
+(a new `repo-profile.json` key the script reads, the pattern every other repo-specific value in
+this tool already follows) through a governance issue, so the change is reviewed and the resulting
+behavior is declared, not silently forked per checkout.
 
 ## Merge policy and pre-review rationale
 

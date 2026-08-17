@@ -2,16 +2,18 @@
 #
 # WHAT: PUTs GitHub branch protection onto the target branch requiring a pull
 # request, the repo's declared status checks, and required_status_checks.strict
-# per this script's own default (false; see below).
+# always true (not a parameter; see below).
 #
 # WHY: two PRs can each go green against an older default branch, then both merge
 # close together. The second merge lands without ever running CI against the tree
 # that includes the first merge's changes: the default branch ends up in a state CI
 # never actually checked. `strict = true` closes that: a branch that has fallen
 # behind must update and re-run CI before GitHub will allow the merge, serializing
-# concurrent merges through CI instead of racing them. This repo ships `strict =
-# false` by default; a child repo that wants the stricter behavior passes
-# `-Strict` or edits its own copy.
+# concurrent merges through CI instead of racing them. `strict` is always true --
+# it is the whole point of the tool. See DESIGN.md § "Branch-protection strictness"
+# for why this stays fixed rather than becoming a per-repo profile field: a repo
+# that wants different behavior adds a profile field through a governance issue,
+# not by editing its own copy of this script.
 #
 # Required checks are a parameter, not a hardcoded list: pass -RequiredChecks, or
 # let it default to repo-profile.json's ciCheckNames field. A required context
@@ -73,7 +75,7 @@ if ($RequiredChecks) {
 # app and could narrow which run satisfies the check).
 $payload = [ordered]@{
   required_status_checks = [ordered]@{
-    strict = $false
+    strict = $true
     checks = @($requiredChecksList | ForEach-Object { [ordered]@{ context = $_; app_id = -1 } })
   }
   enforce_admins          = $true

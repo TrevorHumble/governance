@@ -4,6 +4,11 @@
 // at least one existing file in the tree. A prose sync guarantee shipped
 // without a guard is exactly the kind of silent-drift risk this repo exists
 // to avoid (see docs/seed-classification-2026-08-16.md, "Hazards").
+//
+// The shared/excluded partition is single-homed in governance-manifest.json
+// itself (`sharedPaths` and `excludedPaths`), not restated here: this file
+// reads both arrays from the manifest rather than carrying its own copy
+// (`DESIGN.md` § "governance-manifest.json semantics").
 'use strict';
 
 const fs = require('fs');
@@ -12,33 +17,6 @@ const { execFileSync } = require('child_process');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'governance-manifest.json');
-
-/**
- * This repo's own build and record files: deliberately excluded from
- * `sharedPaths` per `governance-manifest.json`'s documented semantics
- * (`DESIGN.md` § "governance-manifest.json semantics"). Single-homed here so
- * both the "excludes this repo's own files" test and the reverse-coverage
- * test below read the same list; a file belongs in exactly one of
- * `sharedPaths` or this array, never neither.
- */
-const EXCLUDED = [
-  'package.json',
-  'package-lock.json',
-  'vitest.config.mjs',
-  '.prettierrc.json',
-  '.gitignore',
-  '.github/**',
-  'tests/**',
-  'README.md',
-  'BUILDLOG.md',
-  'buildlog/**',
-  'docs/**',
-  'repo-profile.json',
-  'CLAUDE.md',
-  'CLAUDE.local.md',
-  'DESIGN.md',
-  'governance-manifest.json',
-];
 
 /** Recursively list every file under dir, relative to REPO_ROOT, forward-slashed. */
 function listFilesUnder(dir) {
@@ -95,17 +73,45 @@ function listTrackedFiles() {
   return raw.split('\n').filter(Boolean);
 }
 
+/** True when `file` is matched by any entry in `sharedPaths`. */
+function isShared(file, sharedPaths) {
+  return sharedPaths.some((entry) => fileMatchesEntry(file, entry));
+}
+
+/**
+ * True when `file` is matched by `excludedPaths`, gitignore-style: entries
+ * are applied in order, a plain entry adds the file to the excluded set, a
+ * `!`-prefixed entry removes it. This lets a broad entry (e.g. "buildlog/**")
+ * exclude a whole directory while a later negation (e.g. "!buildlog/README.md")
+ * carves out the one file that is separately a sharedPaths entry, without the
+ * two arrays ever both claiming the same file (see DESIGN.md § "governance-
+ * manifest.json semantics").
+ */
+function isExcluded(file, excludedPaths) {
+  let excluded = false;
+  for (const raw of excludedPaths) {
+    if (raw.startsWith('!')) {
+      if (fileMatchesEntry(file, raw.slice(1))) excluded = false;
+    } else if (fileMatchesEntry(file, raw)) {
+      excluded = true;
+    }
+  }
+  return excluded;
+}
+
 describe('governance-manifest.json', () => {
   it('parses as JSON', () => {
     const raw = fs.readFileSync(MANIFEST_PATH, 'utf8');
     expect(() => JSON.parse(raw)).not.toThrow();
   });
 
-  it('has a `retired` array (present, per AC5) and a `sharedPaths` array', () => {
+  it('has a `retired` array (present, per AC5), a `sharedPaths` array, and an `excludedPaths` array', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     expect(Array.isArray(manifest.retired)).toBe(true);
     expect(Array.isArray(manifest.sharedPaths)).toBe(true);
     expect(manifest.sharedPaths.length).toBeGreaterThan(0);
+    expect(Array.isArray(manifest.excludedPaths)).toBe(true);
+    expect(manifest.excludedPaths.length).toBeGreaterThan(0);
   });
 
   it('every sharedPaths entry resolves to at least one existing file in the tree', () => {
@@ -127,36 +133,62 @@ describe('governance-manifest.json', () => {
 
   it("excludes this repo's own build and record files, per AC5", () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    for (const entry of EXCLUDED) {
+    for (const entry of manifest.excludedPaths) {
+      if (entry.startsWith('!')) continue; // a negation carves shared territory back out, not a shared-list entry
       expect(manifest.sharedPaths).not.toContain(entry);
     }
   });
 
   // Reverse-coverage: AC5 guards sharedPaths -> real file (above), but says
   // nothing about the other direction. A new governance file (standard,
-  // agent, tool, hook) that lands in neither sharedPaths nor the EXCLUDED
-  // record above would silently never reach a child repo on sync, with no
-  // test failure to catch it. This test closes that gap: every tracked file
-  // must be claimed by one list or the other.
-  it('every tracked file is covered by sharedPaths or the EXCLUDED record, with none uncovered', () => {
+  // agent, tool, hook) that lands in neither sharedPaths nor excludedPaths
+  // would silently never reach a child repo on sync, with no test failure to
+  // catch it. This test closes that gap in both directions at once: every
+  // tracked file must be claimed by exactly one of the two lists, never
+  // neither (would silently drop the file from sync) and never both (would
+  // hide a misclassification, as buildlog/README.md's overlap with the old
+  // blanket "buildlog/**" exclusion did before this manifest gained
+  // excludedPaths -- see DESIGN.md § "governance-manifest.json semantics").
+  it('every tracked file matches exactly one of sharedPaths or excludedPaths', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     const tracked = listTrackedFiles();
-    const uncovered = tracked.filter(
-      (file) =>
-        !manifest.sharedPaths.some((entry) => fileMatchesEntry(file, entry)) &&
-        !EXCLUDED.some((entry) => fileMatchesEntry(file, entry))
-    );
-    expect(uncovered).toEqual([]);
+    const neither = [];
+    const both = [];
+    for (const file of tracked) {
+      const shared = isShared(file, manifest.sharedPaths);
+      const excluded = isExcluded(file, manifest.excludedPaths);
+      if (!shared && !excluded) neither.push(file);
+      if (shared && excluded) both.push(file);
+    }
+    expect(neither).toEqual([]);
+    expect(both).toEqual([]);
+  });
+
+  // Concrete regression case for the overlap this test class exists to catch:
+  // buildlog/README.md is a sharedPaths entry (the template is shared) sitting
+  // inside the buildlog/** directory excludedPaths also covers (the fragments
+  // are not shared). The "!buildlog/README.md" negation must carve it back out
+  // of excludedPaths so it lands in exactly the shared set.
+  it('buildlog/README.md is shared, not excluded, despite sitting under the excluded buildlog/** prefix', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    expect(isShared('buildlog/README.md', manifest.sharedPaths)).toBe(true);
+    expect(isExcluded('buildlog/README.md', manifest.excludedPaths)).toBe(false);
   });
 
   // Mutation-coverage: a real tracked file matched by neither list must be
   // caught, proving the reverse-coverage test doesn't just vacuously pass.
-  it('rejects a tracked-file-shaped path covered by neither sharedPaths nor EXCLUDED', () => {
+  it('rejects a tracked-file-shaped path covered by neither sharedPaths nor excludedPaths', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     const phantom = 'not-a-real-governance-file.md';
-    const covered =
-      manifest.sharedPaths.some((entry) => fileMatchesEntry(phantom, entry)) ||
-      EXCLUDED.some((entry) => fileMatchesEntry(phantom, entry));
-    expect(covered).toBe(false);
+    expect(isShared(phantom, manifest.sharedPaths)).toBe(false);
+    expect(isExcluded(phantom, manifest.excludedPaths)).toBe(false);
+  });
+
+  // Mutation-coverage: a phantom file inside the excluded buildlog/** prefix
+  // (but not the negated README.md) must be caught, proving isExcluded
+  // doesn't just return false for everything post-negation.
+  it('a hypothetical buildlog fragment other than README.md is excluded', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    expect(isExcluded('buildlog/99-phantom-fragment.md', manifest.excludedPaths)).toBe(true);
   });
 });

@@ -8,6 +8,7 @@
   "docCurrencyPaths": [],
   "goalsDoc": "README.md",
   "checkCommands": {
+    "install": "npm ci",
     "test": "npm test",
     "emdash": "npm run check:emdash"
   },

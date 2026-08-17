@@ -23,5 +23,24 @@
     "WHAT-IT-CHECKS.md",
     "buildlog/README.md",
     ".gitattributes"
+  ],
+  "excludedPaths": [
+    "package.json",
+    "package-lock.json",
+    "vitest.config.mjs",
+    ".prettierrc.json",
+    ".gitignore",
+    ".github/**",
+    "tests/**",
+    "README.md",
+    "BUILDLOG.md",
+    "buildlog/**",
+    "!buildlog/README.md",
+    "docs/**",
+    "repo-profile.json",
+    "CLAUDE.md",
+    "CLAUDE.local.md",
+    "DESIGN.md",
+    "governance-manifest.json"
   ]
 }
