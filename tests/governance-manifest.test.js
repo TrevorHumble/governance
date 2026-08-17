@@ -100,13 +100,9 @@ const DESIGN_PATH = path.join(REPO_ROOT, 'DESIGN.md');
 
 /**
  * Joins a file's lines into one blob for citation scanning, stripping a
- * leading comment marker (#, //, *) from each line first so a citation split
- * across a wrapped comment continuation -- the common style in this repo's
- * .ps1 header comments, e.g. `DESIGN.md § "Lean review process\n# rationale".`
- * in tools/apply-branch-protection.ps1 -- rejoins as plain prose rather than
- * picking up a stray "#" mid-title. Whitespace runs collapse to one space so
- * multi-line indentation does not widen the gap the adjacency check in
- * extractDesignCitations relies on.
+ * leading comment marker (#, //, *) from each line so a citation wrapped
+ * across a comment continuation reassembles as one title, then collapses
+ * whitespace runs to one space.
  */
 function dewrapText(fileText) {
   const stripped = fileText
@@ -120,14 +116,10 @@ function dewrapText(fileText) {
  * Extracts every DESIGN.md section citation from a file's dewrapped text, in
  * the two live forms: `DESIGN.md § "Title"` / `DESIGN.md § 'Title'` (an
  * optional backtick around "DESIGN.md" is allowed) and `DESIGN.md "Title"`.
- * "DESIGN.md" (or its closing backtick) must be followed immediately, with
- * only whitespace between, by the § or the opening quote -- a line that
- * merely mentions DESIGN.md near an unrelated quoted title later in the same
- * sentence is not a citation. This adjacency requirement is load-bearing: it
- * is what correctly leaves standards/adversarial-review-protocol.md's "owner
- * decision, recorded in `DESIGN.md`, per § "Advisory-lens lifecycle" below"
- * uncited -- that quoted title names a section of THAT file (line 213 of the
- * same document), not of DESIGN.md, and DESIGN.md has no such heading.
+ * "DESIGN.md" must be immediately adjacent to the § or opening quote --
+ * mere co-occurrence with a quoted title later in the same sentence is not
+ * a citation. See DESIGN.md § "governance-manifest.json semantics" for the
+ * worked example this adjacency rule exists to handle.
  */
 function extractDesignCitations(text) {
   const patterns = [
@@ -240,12 +232,9 @@ describe('governance-manifest.json', () => {
 });
 
 // Mechanizes the citation-coverage promise DESIGN.md § "governance-manifest.json
-// semantics" now states as a standing rule rather than a hand-enumerated list: any
-// sharedPaths file that cites a DESIGN.md section by name creates a child-repo
-// obligation, and that obligation is only real if the cited section actually
-// exists. A hand-rebuilt inventory went stale twice across two fix rounds on this
-// issue; this test replaces it with a scan so the set can never silently drift
-// again.
+// semantics" states: any sharedPaths file that cites a DESIGN.md section by name
+// creates a child-repo obligation, real only if the cited section actually exists.
+// Hand inventories of this set rot; this scan is the owner.
 describe('DESIGN.md section citations from sharedPaths files', () => {
   it('every DESIGN.md section cited by a sharedPaths file matches a real DESIGN.md heading', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
@@ -257,14 +246,17 @@ describe('DESIGN.md section citations from sharedPaths files', () => {
     expect(citingFiles.length).toBeGreaterThan(0);
 
     const dangling = [];
+    let totalCitations = 0;
     for (const file of citingFiles) {
       const text = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       const citations = extractDesignCitations(dewrapText(text));
+      totalCitations += citations.length;
       for (const title of citations) {
-        const found = headings.some((h) => h.includes(title));
+        const found = headings.includes(title);
         if (!found) dangling.push(`${file}: "${title}"`);
       }
     }
+    expect(totalCitations).toBeGreaterThan(0);
     expect(dangling).toEqual([]);
   });
 
@@ -277,7 +269,7 @@ describe('DESIGN.md section citations from sharedPaths files', () => {
     const bogusLine = 'See `DESIGN.md` § "This Section Does Not Exist In DESIGN.md".';
     const citations = extractDesignCitations(dewrapText(bogusLine));
     expect(citations).toEqual(['This Section Does Not Exist In DESIGN.md']);
-    expect(headings.some((h) => h.includes(citations[0]))).toBe(false);
+    expect(headings.includes(citations[0])).toBe(false);
   });
 
   // Proves the adjacency requirement: a line that mentions DESIGN.md and, later

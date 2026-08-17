@@ -141,20 +141,25 @@ sections do this: the current set is derived mechanically, not hand-enumerated, 
 stale the way a written inventory did twice across two fix rounds on this issue. The guard is
 `tests/governance-manifest.test.js`'s citation-coverage test, which scans every `sharedPaths` file
 for a `DESIGN.md § "Title"` (or `DESIGN.md "Title"`) citation and fails if the quoted title has no
-matching `## ` heading in this file. A human can run the same check by hand: `grep -rn
-"DESIGN.md.*§" standards agents tools scripts .claude AGENTS.md definition-of-done.md
-WHAT-IT-CHECKS.md buildlog/README.md` and eyeball each hit against this file's headings. None of
-the cited sections is itself in `sharedPaths`, so a citation dangles in a child repo unless that
-child's own `DESIGN.md` carries the section, or the sync mechanism rewrites the citation to point
-somewhere the child actually has. This is a recorded target for the sync issue, not resolved here:
+matching `## ` heading in this file. A human can run the same check directly: `npx vitest run
+tests/governance-manifest.test.js`. None of the cited sections is itself in `sharedPaths`, so a
+citation dangles in a child repo unless that child's own `DESIGN.md` carries the section, or the
+sync mechanism rewrites the citation to point somewhere the child actually has. This is a
+recorded target for the sync issue, not resolved here:
 a receiving child must either carry the cited sections in its own `DESIGN.md` or the sync
 mechanism must rewrite the citations that name them.
 
 A larger set of shared files mention `DESIGN.md` without naming a section (reading it wholesale
-for context, or listing the path alongside `CLAUDE.md`/`README.md` in a doc-split description);
-`tools/check-freshness.ps1`, `agents/reviewer-architecture.md`, `agents/reviewer-documentation.md`,
-and `standards/documentation-standards.md` are examples. These are not section-citation promises:
-such references resolve to whatever `DESIGN.md` a child carries and need no section guarantee.
+for context, or listing the path alongside `CLAUDE.md`/`README.md` in a doc-split description).
+These are not section-citation promises: such references resolve to whatever `DESIGN.md` a child
+carries and need no section guarantee.
+
+**The scanner requires "DESIGN.md" immediately adjacent to the § or opening quote, not mere
+co-occurrence in the same sentence.** This is what correctly leaves
+`standards/adversarial-review-protocol.md`'s "owner decision, recorded in `DESIGN.md`, per §
+"Advisory-lens lifecycle" below" uncited: that quoted title names a section of
+`adversarial-review-protocol.md`'s own § "Advisory-lens lifecycle", not of `DESIGN.md`, and
+`DESIGN.md` has no such heading.
 
 **Ecosystem-specific shared tool.** `tools/check-deps-parity.ps1` is shared even though it is
 Node-ecosystem-specific: a child repo without `package.json` is expected to have it no-op or fail

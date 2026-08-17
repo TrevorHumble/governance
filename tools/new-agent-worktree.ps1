@@ -4,9 +4,6 @@
 # switch-branch under each other's uncommitted work. The commit gate is live in
 # the new worktree with zero extra config, since core.hooksPath=.githooks is a
 # relative path in shared git config and .githooks/ is a tracked directory.
-#
-# Fetch-fresh, always, before any branch decision (a worktree built on a
-# stale local default branch is exactly the failure this guards against).
 param(
   [Parameter(Mandatory = $true)]
   [string]$Branch
