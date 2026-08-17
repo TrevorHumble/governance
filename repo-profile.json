@@ -1,0 +1,17 @@
+{
+  "preReview": "none",
+  "surfaceGlobs": [],
+  "shipMode": "pr",
+  "criticalDependencies": [],
+  "criticalPaths": [],
+  "ciCheckNames": ["build"],
+  "docCurrencyPaths": [],
+  "goalsDoc": "README.md",
+  "checkCommands": {
+    "install": "npm ci",
+    "test": "npm test",
+    "emdash": "npm run check:emdash"
+  },
+  "ghPath": "gh",
+  "defaultBranch": "main"
+}

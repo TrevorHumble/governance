@@ -1,0 +1,15 @@
+{
+  "name": "governance",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Parent governance repo: standards, agent definitions, pipeline commands, hooks, and the checks that enforce them.",
+  "scripts": {
+    "test": "vitest run",
+    "buildlog": "node scripts/buildlog-glue.js",
+    "check:emdash": "node scripts/check-emdash.js"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "vitest": "^4.1.9"
+  }
+}

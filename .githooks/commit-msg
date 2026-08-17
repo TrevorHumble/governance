@@ -1,0 +1,57 @@
+#!/bin/sh
+# commit-msg: tie every code commit to a GitHub issue reference.
+# Fails CLOSED. One cheap check, no evidence machinery.
+#
+# Classification: staged paths determine whether a commit is CODE or doc-only.
+# Delegates to Test-StagedHasCode in tools/issue-core.ps1 (PowerShell) so that
+# NUL-delimited path splitting is done in PowerShell, not sh.  POSIX command
+# substitution strips NUL bytes, making a pure-sh NUL split unreliable.
+# A path is a doc iff it ends in .md or .markdown (case-insensitive extension check).
+# Folder location does NOT exempt a path: a code file under docs/ (e.g. docs/evil.ps1)
+# is still CODE. Only the file extension determines the classification.
+#
+# A CODE commit must name an issue: (#N), a GitHub closing keyword + #N, or an
+# issue-N branch (see Resolve-IssueNumber in tools/issue-core.ps1). No review
+# evidence is checked here; review practice is unmechanized (see
+# WHAT-IT-CHECKS.md and CLAUDE.md "Governing-artifact surface" for the surface path list).
+# --no-verify bypasses this hook; CI is the backstop.
+set -e
+
+msg_file="$1"
+root="$(git rev-parse --show-toplevel)"
+
+# Require PowerShell before classification: classification itself calls into PS.
+_ps="$(command -v powershell 2>/dev/null)" || _ps=""
+if [ -z "$_ps" ]; then
+  echo "commit-msg (BLOCKED): 'powershell' not found on PATH. Cannot verify issue reference. Failing closed." >&2
+  exit 1
+fi
+
+# Classify staged paths via PowerShell (NUL-safe).
+# Anything not explicitly DOC (CODE, empty output, or PS error) -> enforce. Fail-closed.
+is_code="$(powershell -NoProfile -ExecutionPolicy Bypass -Command ". '$root/tools/issue-core.ps1'; if (Test-StagedHasCode) { 'CODE' } else { 'DOC' }" 2>/dev/null)"
+is_code="$(printf '%s' "$is_code" | tr -d '[:space:]')"
+if [ "$is_code" = "DOC" ]; then
+  exit 0
+fi
+
+# CODE commit: read the commit message, resolve an issue number.
+msg="$(cat "$msg_file")"
+branch="$(git symbolic-ref --short HEAD 2>/dev/null)" || branch=""
+
+issue_num="$(powershell -ExecutionPolicy Bypass -NoProfile -Command "
+  . '$root/tools/issue-core.ps1'
+  \$n = Resolve-IssueNumber -Message '$( echo "$msg" | sed "s/'/\\''/g" )' -Branch '$branch'
+  Write-Output \$n
+" 2>/dev/null)" || issue_num="0"
+
+issue_num="$(echo "$issue_num" | tr -d '[:space:]')"
+
+if [ -z "$issue_num" ] || [ "$issue_num" -eq 0 ] 2>/dev/null; then
+  echo "commit-msg (BLOCKED): commit changes code but names no issue." >&2
+  echo "  Add (#N) or 'Closes #N' to the message, or use a branch named feat/issue-N." >&2
+  echo "  Doc-only commits (*.md / *.markdown) are exempt; a code file under docs/ is still CODE." >&2
+  exit 1
+fi
+
+exit 0

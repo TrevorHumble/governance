@@ -1,0 +1,187 @@
+# Issue Standards
+
+**As a reviewer or implementer of an issue, I need a single checkable standard so I can determine whether an issue passes or fails without guessing.**
+
+---
+
+## User story
+
+Written from the end-consumer POV: the agent, human, or system that will use the produced artifact. Format: `As a [consumer], I need... so that....` If you cannot name a consumer, the issue has no purpose.
+
+---
+
+## Acceptance criteria
+
+Written as Given/When/Then criteria testable by an agent. **An acceptance criterion is a promise: when this is true, we are done.** Criteria exist to align the owner, issue reviewer, implementer, and PR reviewer around one shared picture of what "done" means, not to catch anyone. A criterion must be readable by the product owner: if the owner cannot read a criterion and know what was promised, it is not a contract. The mechanical checking is already done for free by this repo's declared check commands (`repo-profile.json`'s `checkCommands` field).
+
+A criterion need only be answerable yes/no by a competent reviewer against real evidence: that bar does not move, but the old requirement that answering it involve no judgment is dropped. In practice, two reviewers may disagree on the same criterion, and that is accepted knowingly. The alternative is criteria shredded into dozens of greppable strings that nobody could hold in the first place.
+
+**Write 1-6 criteria; 8 is the ceiling, not a target.** More criteria are not more safety; past the ceiling, nobody can hold them, and a reviewer ends up picking one, citing it, and missing the rest. Blowing the ceiling is at least major severity (the wedding-scavenger-hunt repo's issue #410 carried 34 criteria, and its review spent itself on one of them while the real question went unasked).
+
+**A ready-tier issue's criteria must include at least one that asserts a behavioral output value** (input to expected output), so the criteria can catch a wrong implementation. An issue whose criteria are all presence/structural checks cannot, since a broken implementation can satisfy every "file contains X" check.
+
+**Documentation-only issues** (those whose `Touches` paths are all docs, `.md` or under `docs/`) are exempt from the behavioral-value requirement above and may use purely structural criteria. (Backlog-tier issues capture intent before implementation and need only one such criterion, answerable yes/no by a competent reviewer; see Issue tiers.)
+
+**For a declared Pre-review surface only, the approved artifact is the acceptance criterion.** Taste is discovered, not specified: nobody knows a decoration is clutter until they see it. So for work on the surface named in `repo-profile.json`'s `surfaceGlobs` that goes through the phase-1 live pre-review loop (`agents/orchestrator.md` § "Pre-review step"), the written criteria **transcribe** what the owner already approved on the seeded preview, rather than **defining** it up front the way every other criterion in this standard does. Any behavior phase 1 faked to settle the shape (for example a hard-coded count just to see the layout) becomes real, specified work in the phase-2 criteria: the faked shortcut is not shipped as-is. **This transcription rule applies only to a declared Pre-review surface.** Logic, data, and tests, everything that is not the approved artifact itself, still take spec-first, adversarial criteria written before implementation, exactly as the rest of this standard describes; a criterion that is not about how the pre-reviewed artifact looks or reads does not get to claim this exemption.
+
+No criterion of the form "an agent can understand X": that is unfalsifiable and is a FAIL. Every AC that says "an agent can answer X" is unfalsifiable; rewrite as "the file contains the phrase `X`" or a behavioral input-to-output assertion.
+
+---
+
+## Acceptance-criteria amendment (bounded, mid-flight)
+
+An issue's acceptance criteria are not frozen the instant the issue passes review. They may be amended mid-flight, but only under two conditions together: **owner approval plus one reviewer** sign off on the amended text before the implementer treats it as the new contract. Neither alone is sufficient: owner approval without a reviewer skips the adversarial check this whole standard exists to force; a reviewer alone cannot authorize spending the owner's scope without the owner's own approval.
+
+The amendment is bounded to the issue's existing footprint: it may only add work **inside files already on the issue's `Touches` list**. Put plainly, an amendment never adds a file. The `Touches` list is a hard line set at issue-review time (it is what makes concurrent waves safe, since two agents must never share a file). An amendment that needs a file outside that list is not an amendment, it is a new issue, filed and reviewed on its own.
+
+**A widening is not an amendment.** `standards/adversarial-review-protocol.md` § "Finding
+disposition" disposition 1's widening adds a file outside `Touches` to repair a defect the change
+itself caused. It changes no acceptance criterion and needs no owner-plus-reviewer sign-off,
+unlike an amendment, which spends new scope on purpose. It also does not get the concurrency
+property the `Touches` lock exists for, the same way: a widening lands after the mechanisms keyed
+off the declared list have already run against the shorter list, both the by-hand in-batch
+collision check at issue-review time and the `/realign` overlap report run through
+`tools/check-freshness.ps1` (`.claude/commands/realign.md`), so file exclusivity for the
+widened file rests on the widening being recorded, not on tooling that ran before it existed.
+
+Example: an issue touching one service file may be amended to also validate a field's format inside that same file, with owner + reviewer sign-off. It may not be amended to also touch an unrelated admin route to add a moderation control: that is a new, separately-reviewed issue, even if the owner wants it done "at the same time."
+
+---
+
+## The Haiku bar
+
+The implementation plan is a clarity heuristic: it must be clear and unambiguous enough that following it would not send a weak model off the rails. It is a thought experiment about plan clarity, not a requirement to inline every fact. Current implementer/reviewer tiers: `agents/orchestrator.md` § "Model policy".
+
+If a step says "do the thing," rewrite it. Each step names what to create, read, or write and where.
+
+**Example plan step, before:** "2. Update the input handling to reject bad values."
+**After:** "2. In the input-validation module, in the field-filter function, reject any value whose type is not a key of `ALLOWED_TYPES` by calling the callback with an error whose message names the rejected type."
+The before step forces the implementer to decide which file, which mechanism, and what "bad" means; the after step decides all three.
+
+---
+
+## Dependency map
+
+Every issue must include:
+
+```
+Depends on: <issue number(s) or "none">
+Blocks: <issue number(s) or "none">
+Touches: <file paths or artifacts modified>
+```
+
+All three fields are required. Missing a field is a FAIL.
+
+---
+
+## Naming
+
+A draft's identity is its GitHub issue number, not a locally-minted one: the draft file in `data/wip-issues/` is named `<N>-slug.md`, where `N` is the number GitHub assigned when the issue was created (`gh issue create`), captured before the draft is written. The file's `N`, its `# N:` header, and any self-referential `(#N)` must all equal that GitHub issue number. No FINAL, LAST, or TRULY_FINAL.
+
+A draft with **no** `# N:` header is a **nit** (non-blocking): GitHub's own issue title is the canonical identity, and the in-file header is a convenience, not the source of truth. A **present-but-wrong** header (`N` or a `(#N)` self-reference disagreeing with the GitHub-assigned number) is a blocking **FAIL**: a wrong number actively misdirects a reader to the wrong issue, which a missing header does not.
+
+---
+
+## Issue tiers
+
+Issues are filed at one of two tiers. The tier is declared in the issue's `**Type:**` line: either `ready` or `backlog`.
+
+### ready tier
+
+A ready-issue must include all of the following before it can be reviewed:
+
+- **user story**: `As a [consumer], I need... so that....`
+- **Acceptance criteria**: each criterion in **Given/When/Then** form; see § "Acceptance criteria" above for what a criterion must be.
+- **implementation plan**: at least three numbered steps, each naming a file path or concrete deliverable.
+- **Dependency map**: `Depends on`, `Blocks`, and `Touches` all present.
+
+The reviewer applies the full checklist to a ready-issue.
+
+### backlog tier
+
+A backlog-issue captures intent before implementation is possible. It requires:
+
+- **user story**: same form as the ready tier.
+- **Acceptance criteria**: at least one criterion, answerable yes/no by a competent reviewer, per § "Acceptance criteria" above.
+- **`Graduate after:`** field: a **deterministic** condition the orchestrator can evaluate without human judgment (e.g., "after issue #NNNN merges"). A `Graduate after` condition that requires human approval is a FAIL.
+
+A backlog tier omits `Blocks`/`Touches` and omits a full implementation plan. The reviewer does not fail a backlog issue for missing those fields.
+
+### Graduation
+
+A backlog issue is never implemented in place. When its `Graduate after` condition is met, the orchestrator opens a new numbered ready-issue. The backlog issue is then closed.
+
+---
+
+## Sonnet tier eligibility
+
+A ready-tier issue's implementation and review may run on Sonnet instead of the standard reviewer policy (`agents/orchestrator.md` § "Model policy"), not by a classifier script, but by a judgment the issue reviewer (`reviewer-issue`) makes once, at issue-review time, since it already reads the issue and every path in its `Touches` list. The reviewer emits exactly one of `AWARD sonnet-only` or `DENY sonnet-only` as part of its verdict, per `agents/reviewer-issue.md`.
+
+An award requires all three gates to hold, stated once here:
+
+- **(a) Off the governing-artifact surface, and not security-flagged or escalated**: the issue does not touch the surface named in `CLAUDE.md` § "Governing-artifact surface", and nothing about it is security-flagged or has already been escalated to Opus.
+- **(b) Off any path this repo has declared critical** (see `repo-profile.json`'s `criticalPaths` field; a repo may name join/auth, payment, moderation, or export-core equivalents as its own critical paths).
+- **(c) Small and reversible**: no schema or data migration.
+
+Any borderline case, a gate the reviewer cannot confidently confirm, is a `DENY`. The award is recorded by the `sonnet-only` GitHub label, applied by the orchestrator after reading the reviewer's verdict; the reviewer itself never applies the label or edits any file.
+
+---
+
+## Spawn justification
+
+Any issue an agent creates **during a run** (as opposed to an issue the owner files directly) carries the `spawned-in-run` label and must contain a `## Spawn justification` section in its body. The label is the machine signal that this block is required; an issue without the label is not subject to it.
+
+The block has four required fields, each non-empty:
+
+- **Spawned by**: the spawning issue `#`, PR `#`, or run identifier the finding came from (provenance).
+- **Why**: the defect or gap the new work addresses (the need).
+- **Why separable**: why the work is more work, not absorbed into the spawning change. The value must name one of the three defer categories `standards/adversarial-review-protocol.md` § "Finding disposition" defines. That section is the single owner of the categories' substance; this section only requires citing one of them, it does not restate them.
+- **Why not solved in the spawning session:** the concrete blocker that kept the work out of the spawning change (e.g. needs an owner design decision; would exceed the change's bounded scope). A file outside the spawning change's touched files is a sufficient reason only when the defect is not one the spawning change itself caused; a defect the change caused is repaired in place under `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1, not filed as a separate issue, so "outside the touched files" alone does not justify filing when the diff caused the gap.
+
+Example block:
+
+```
+## Spawn justification
+
+- **Spawned by:** #\<N>
+- **Why:** <the defect or gap this issue addresses>
+- **Why separable:** <one of the three § "Finding disposition" defer categories>
+- **Why not solved in the spawning session:** <the concrete blocker>
+```
+
+A `spawned-in-run` issue missing the block, or with any of the four fields empty, fails review; see the Reviewer checklist below.
+
+---
+
+## Reviewer checklist
+
+### Ready-tier checklist
+
+- [ ] PASS/FAIL - User story names an end-consumer (not the author) and follows `As a [consumer], I need...` form.
+- [ ] PASS/FAIL - Every acceptance criterion is in Given/When/Then form and is answerable yes/no by a competent reviewer, or asserts a behavioral input-to-output value.
+- [ ] PASS/FAIL - At least one acceptance criterion asserts a behavioral output value (input to expected output), not only presence/structural checks, except documentation-only issues, per the exemption defined in § "Acceptance criteria" above. An all-presence-check issue a wrong implementation could pass is a FAIL.
+- [ ] PASS/FAIL - Implementation plan is present and contains at least three numbered steps, each naming a file path or a concrete deliverable.
+- [ ] PASS/FAIL - Dependency map contains all three fields: `Depends on`, `Blocks`, `Touches`.
+- [ ] PASS/FAIL - No FINAL, LAST, or TRULY_FINAL in filenames or section headers referenced by this issue.
+
+### Backlog-tier checklist
+
+- [ ] PASS/FAIL - User story is written from the consumer POV and follows `As a [consumer], I need...` form.
+- [ ] PASS/FAIL - At least one acceptance criterion names a testable desired outcome, answerable yes/no by a competent reviewer.
+- [ ] PASS/FAIL - `Depends on` field is present.
+- [ ] PASS/FAIL - `Graduate after` field is present and states a deterministic condition (not a human approval).
+- [ ] PASS/FAIL - Tier is declared as `backlog` in the `**Type:**` line.
+
+---
+
+## In-license check (all tiers)
+
+An issue that requires an `external/paid API`, a `non-Anthropic model key`, or a `hosted third-party service` is `out of license`: return `FAIL`.
+
+---
+
+## Definition of Done ownership
+
+`definition-of-done.md` (repo root) is not on the governing-artifact surface (`CLAUDE.md` § "Governing-artifact surface"), so changing it takes the routine one-reviewer bar like any other change. That placement is deliberate: the DoD needs to stay cheap to amend as the project learns what "done" actually requires.
+
+Cheap to review is not the same as unowned. Changing `definition-of-done.md` requires **owner approval** before it merges: the owner is the one person who can add or loosen a clause that every future PR review will be judged against. This is a recorded rule, not a mechanically enforced one: on a solo-maintainer repo (`required_approving_review_count = 0`), a CODEOWNERS-style gate cannot force owner sign-off, so the check is tamper-evident, not tamper-proof, the same honest posture as the rest of this pipeline (see `DESIGN.md` § "Lean review process rationale").

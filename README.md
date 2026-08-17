@@ -17,4 +17,39 @@ Rules of the road, settled 2026-08-16:
   does the new global rule contradict a local rule? No contradiction: merge. One clear
   fix: fix and merge. Multiple ways to fix: stop and ask the owner.
 
-Seed content comes from wedding-scavenger-hunt, the current gold standard.
+Seed content comes from wedding-scavenger-hunt, the gold standard at the time this repo was
+created (2026-08-16). See `docs/seed-classification-2026-08-16.md` for the file-by-file
+classification that produced this tree, and `DESIGN.md` for the full rationale.
+
+## Goals
+
+- **One canonical governance home.** Standards, agent definitions, pipeline commands, hooks, and
+  worktree tools live in exactly one place instead of a separate copy per repo.
+- **Zero drift across child repos.** A child pulls updates from here instead of maintaining its
+  own diverging fork of the governance layer.
+- **Every improvement lands once.** A fix or a new rule discovered in any child's work is made
+  here, in this repo, and reaches every other child through the same sync path, rather than being
+  patched locally and never propagated.
+
+## Getting started
+
+```
+npm install
+npm test
+node scripts/check-emdash.js
+```
+
+`tools/setup-hooks.ps1` wires the local `.githooks/commit-msg` gate into a fresh clone.
+
+## Where things live
+
+- `CLAUDE.md`: the operating rules an AI agent working in this repo follows (the pipeline, the
+  governing-artifact surface, the federalism rules above stated as law, repo conventions).
+- `repo-profile.json`: this repo's own declared values for every field a shared governance file
+  may need (pre-review process, CI check names, critical dependencies, default branch, and the
+  rest). Schema documented in `DESIGN.md`.
+- `governance-manifest.json`: the declared set of files a child repo is meant to receive on a
+  future sync, and any retired tombstones. Schema documented in `DESIGN.md`.
+- `DESIGN.md`: architecture decisions and rationale, including the founding ADR for this repo.
+- `standards/`, `agents/`, `.claude/`, `.githooks/`, `tools/`, `scripts/`: the governance layer
+  itself.
