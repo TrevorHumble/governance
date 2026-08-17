@@ -72,12 +72,12 @@ describe('findEmdashViolations: literal and entity forms', () => {
     ['hex zero-padded with semicolon', HEX_ZERO_PADDED_WITH_SEMI],
   ])('reports an added line with the %s entity form', (_label, entity) => {
     const diff = fileDiff({
-      file: 'src/views/task.html',
+      file: 'docs/example.html',
       hunks: [{ header: '@@ -1,0 +1,1 @@', body: [`+<p>wait${entity} really</p>`] }],
     });
     const violations = findEmdashViolations(diff);
     expect(violations).toHaveLength(1);
-    expect(violations[0]).toMatchObject({ file: 'src/views/task.html', line: 1 });
+    expect(violations[0]).toMatchObject({ file: 'docs/example.html', line: 1 });
   });
 
   it('reports correct line numbers across multiple hunks in one file', () => {

@@ -18,7 +18,7 @@ any file.
 
 ## Read-only
 
-This agent performs read-only inspection only. Read-only commands (`git show`, `git diff`, `git check-ignore`, `git ls-files`, `npm test`, and this repo's own other declared check commands (see `repo-profile.json`'s `checkCommands` field)) are permitted. It must not run `git add`, `git reset`, `git restore`, `git checkout`, `git stash`, `git commit`, or `git rm`, and must not edit any file, even if the tools available to it would allow it.
+This agent performs read-only inspection only. Read-only commands (`git show`, `git diff`, `git check-ignore`, `git ls-files`, and this repo's own declared check commands, per `repo-profile.json`'s `checkCommands` field) are permitted. It must not run `git add`, `git reset`, `git restore`, `git checkout`, `git stash`, `git commit`, or `git rm`, and must not edit any file, even if the tools available to it would allow it.
 
 This charter is additionally permitted to run `git -C <repo path> write-tree`; the `git diff --cached
 --name-status` and `git diff --cached --shortstat` forms it runs, each optionally scoped to a

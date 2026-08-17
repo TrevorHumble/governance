@@ -11,7 +11,7 @@ Single responsibility: judge one agent file against `standards/agent-standards.m
 
 ## Read-only
 
-This agent performs read-only inspection only. Read-only commands (`git show`, `git diff`, `git check-ignore`, `git ls-files`, `npm test`, and this repo's own other declared check commands (see `repo-profile.json`'s `checkCommands` field)) are permitted. It must not run `git add`, `git reset`, `git restore`, `git checkout`, `git stash`, `git commit`, or `git rm`, and must not edit any file, even if the tools available to it would allow it.
+This agent performs read-only inspection only. Read-only commands (`git show`, `git diff`, `git check-ignore`, `git ls-files`, and this repo's own declared check commands, per `repo-profile.json`'s `checkCommands` field) are permitted. It must not run `git add`, `git reset`, `git restore`, `git checkout`, `git stash`, `git commit`, or `git rm`, and must not edit any file, even if the tools available to it would allow it.
 
 ## When to invoke
 

@@ -22,7 +22,8 @@
 # required_approving_review_count stays 0 by default: a solo-maintainer repo
 # cannot have its owner approve their own PR, so requiring >= 1 would lock the
 # owner out of merging their own work. CI plus review practice is the review
-# gate here, not a human approval click; see DESIGN.md.
+# gate here, not a human approval click; see DESIGN.md § "Lean review process
+# rationale".
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 param(
@@ -40,18 +41,11 @@ param(
 # Resolve the gh path and the default branch/required-checks fallback from
 # repo-profile.json, never hardcoded, so this tool works unmodified in any
 # child repo that declares its own values.
-$profilePath = Join-Path $PSScriptRoot '..\repo-profile.json'
-$repoProfile = $null
-if (Test-Path $profilePath) {
-  $repoProfile = Get-Content $profilePath -Raw | ConvertFrom-Json
-}
-
-$gh = 'gh'
-if ($repoProfile -and $repoProfile.ghPath) { $gh = $repoProfile.ghPath }
+. (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
+$gh = Get-RepoProfileValue -Field 'ghPath' -Default 'gh'
 
 if (-not $Branch) {
-  $Branch = 'main'
-  if ($repoProfile -and $repoProfile.defaultBranch) { $Branch = $repoProfile.defaultBranch }
+  $Branch = Get-RepoProfileValue -Field 'defaultBranch' -Default 'main'
 }
 
 # Slug resolution is deferred to the network path (just before the PUT) so that
@@ -62,8 +56,8 @@ if (-not $Branch) {
 $requiredChecksList = @()
 if ($RequiredChecks) {
   $requiredChecksList = @($RequiredChecks -split ',\s*' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-} elseif ($repoProfile -and $repoProfile.ciCheckNames) {
-  $requiredChecksList = @($repoProfile.ciCheckNames)
+} else {
+  $requiredChecksList = @(Get-RepoProfileValue -Field 'ciCheckNames' -Default @())
 }
 
 # restrictions must be present and explicitly null in the payload: GitHub's

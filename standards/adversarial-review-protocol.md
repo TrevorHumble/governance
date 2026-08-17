@@ -5,7 +5,8 @@
 
 This protocol reflects a lean, always-on review practice: no proof-layer bureaucracy (evidence
 artifacts, verdict capture, a severity adjudicator, reviewer panels, a system-level two-reviewer
-bar) sits between an artifact and its review. See `DESIGN.md` for this repo's own rationale.
+bar) sits between an artifact and its review. See `DESIGN.md` § "Lean review process rationale"
+for this repo's own rationale.
 
 ---
 
@@ -156,7 +157,7 @@ Round 1 of code review runs the PR reviewer and the design-philosophy reviewer t
   no reviewer panel. A PASS with an open blocker or major finding is never a PASS.
 
 This is a deliberately lean process: no multi-round soft-cap-and-severity-gate machinery
-sits behind it (see `DESIGN.md` for the rationale).
+sits behind it (see `DESIGN.md` § "Lean review process rationale").
 
 ---
 
@@ -418,7 +419,8 @@ cached-prefix size; below that minimum the ordering has no effect.
 
 ## Wave governance: grandfathering, owner-invoked wave review, doc-currency step
 
-Three governance mechanisms, recorded by owner decision in `DESIGN.md`.
+Three governance mechanisms, recorded by owner decision in `DESIGN.md` § "Wave-governance
+mechanisms: owner decisions".
 
 **Grandfathering: a mid-wave governance change does not reach back.** A governance or process change (an edit to this protocol, an agent charter, or a standard) that merges mid-wave governs from the **next issue picked up onward**. An open sibling PR already in flight, its implementation began before the governance change merged, merges under the bar that was in force when its implementation began; it is not required to re-satisfy a bar that landed after it started, and a reviewer must not flag it as a defect for that reason alone. This is a deliberate **grandfather** clause.
 

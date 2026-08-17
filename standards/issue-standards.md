@@ -120,7 +120,7 @@ A ready-tier issue's implementation and review may run on Sonnet instead of the 
 An award requires all three gates to hold, stated once here:
 
 - **(a) Off the governing-artifact surface, and not security-flagged or escalated**: the issue does not touch the surface named in `CLAUDE.md` § "Governing-artifact surface", and nothing about it is security-flagged or has already been escalated to Opus.
-- **(b) Off any path this repo has declared critical** (see `repo-profile.json`; a repo may name join/auth, payment, moderation, or export-core equivalents as its own critical paths).
+- **(b) Off any path this repo has declared critical** (see `repo-profile.json`'s `criticalPaths` field; a repo may name join/auth, payment, moderation, or export-core equivalents as its own critical paths).
 - **(c) Small and reversible**: no schema or data migration.
 
 Any borderline case, a gate the reviewer cannot confidently confirm, is a `DENY`. The award is recorded by the `sonnet-only` GitHub label, applied by the orchestrator after reading the reviewer's verdict; the reviewer itself never applies the label or edits any file.
@@ -143,7 +143,7 @@ Example block:
 ```
 ## Spawn justification
 
-- **Spawned by:** #514
+- **Spawned by:** #\<N>
 - **Why:** <the defect or gap this issue addresses>
 - **Why separable:** <one of the three § "Finding disposition" defer categories>
 - **Why not solved in the spawning session:** <the concrete blocker>
@@ -184,4 +184,4 @@ An issue that requires an `external/paid API`, a `non-Anthropic model key`, or a
 
 `definition-of-done.md` (repo root) is not on the governing-artifact surface (`CLAUDE.md` § "Governing-artifact surface"), so changing it takes the routine one-reviewer bar like any other change. That placement is deliberate: the DoD needs to stay cheap to amend as the project learns what "done" actually requires.
 
-Cheap to review is not the same as unowned. Changing `definition-of-done.md` requires **owner approval** before it merges: the owner is the one person who can add or loosen a clause that every future PR review will be judged against. This is a recorded rule, not a mechanically enforced one: on a solo-maintainer repo (`required_approving_review_count = 0`), a CODEOWNERS-style gate cannot force owner sign-off, so the check is tamper-evident, not tamper-proof, the same honest posture as the rest of this pipeline (see `DESIGN.md`).
+Cheap to review is not the same as unowned. Changing `definition-of-done.md` requires **owner approval** before it merges: the owner is the one person who can add or loosen a clause that every future PR review will be judged against. This is a recorded rule, not a mechanically enforced one: on a solo-maintainer repo (`required_approving_review_count = 0`), a CODEOWNERS-style gate cannot force owner sign-off, so the check is tamper-evident, not tamper-proof, the same honest posture as the rest of this pipeline (see `DESIGN.md` § "Lean review process rationale").

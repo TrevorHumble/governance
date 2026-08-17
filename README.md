@@ -21,6 +21,16 @@ Seed content comes from wedding-scavenger-hunt, the gold standard at the time th
 created (2026-08-16). See `docs/seed-classification-2026-08-16.md` for the file-by-file
 classification that produced this tree, and `DESIGN.md` for the full rationale.
 
+## Goals
+
+- **One canonical governance home.** Standards, agent definitions, pipeline commands, hooks, and
+  worktree tools live in exactly one place instead of a separate copy per repo.
+- **Zero drift across child repos.** A child pulls updates from here instead of maintaining its
+  own diverging fork of the governance layer.
+- **Every improvement lands once.** A fix or a new rule discovered in any child's work is made
+  here, in this repo, and reaches every other child through the same sync path, rather than being
+  patched locally and never propagated.
+
 ## Getting started
 
 ```

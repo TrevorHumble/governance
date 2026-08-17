@@ -33,7 +33,7 @@ equal, see `CLAUDE.md` § "Repo conventions". The sync rule:
   `--label needs-issue-review` applied at creation time alongside the tier label: `ready` /
   `backlog` / `low priority`. Capture the number GitHub assigns before writing the local draft
   file, since that number is the draft's identity. The issue body can summarize and link the file.
-- **On merge to `main` (via pull request)** → `gh issue close` the matching card, referencing the commit.
+- **On merge to the default branch (via pull request, or a direct commit in `shipMode: "direct"`)** → `gh issue close` the matching card, referencing the commit.
 - **On graduation/supersession** → update the card (re-label, or close with a pointer to the successor).
 - Never leave the board disagreeing with the issue files / BUILDLOG (the folded archive plus any
   pending fragment in `buildlog/`); the orchestrator's own close-out step keeps them in sync as

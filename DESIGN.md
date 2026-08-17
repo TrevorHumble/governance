@@ -39,35 +39,61 @@ job, not this one's.
 
 ## repo-profile.json schema
 
-Every field a shared governance file may need to read, one per line, with allowed values:
+Every field a shared governance file may need to read, one per line, with the allowed values any
+repo may declare (not only this repo's own choice):
 
-- `preReview` (string): the name of this repo's declared pre-review process, or the literal
-  `"none"`. When not `"none"`, it should name (in the repo's own docs) a process file describing
-  the mechanism, e.g. a live visual-approval loop.
-- `surfaceGlobs` (array of strings): the pre-review surface, path globs a change must touch to
-  trigger the declared pre-review step. Empty when `preReview` is `"none"`.
-- `shipMode` (string): how a passing change reaches its default branch. This repo: `"pr"` (branch,
-  PR, CI, merge on green).
-- `criticalDependencies` (array of strings): package names whose bump is held for review
-  regardless of semver, per `.claude/rules/dependencies.md`. This repo: `[]` (no production
-  runtime dependencies to protect).
-- `ciCheckNames` (array of strings): the real, observed CI check-run names required on the
-  default branch before merge, consumed by `tools/apply-branch-protection.ps1`. This repo:
-  `["build"]`, the single job `.github/workflows/ci.yml` defines.
-- `docCurrencyPaths` (array of strings): source paths whose change triggers the orchestrator's
-  `doc-currency` step (`agents/orchestrator.md` § "Doc-currency step"). This repo: `[]` (a
-  docs-only repo has no source surface for that step to compare against).
-- `goalsDoc` (string): the path to this repo's own goals/north-star doc, if any. This repo:
-  `"README.md"`.
-- `checkCommands` (object): the mechanical check commands standards and docs should defer to
-  instead of hardcoding an `npm run <script>` literal. This repo: `{"test": "npm test",
-  "emdash": "npm run check:emdash"}`.
-- `ghPath` (string): the GitHub CLI invocation. This repo: `"gh"` (on PATH). A machine where `gh`
-  lives elsewhere records the absolute path as a per-machine note in that machine's own
-  `CLAUDE.local.md`, never in this committed file.
-- `defaultBranch` (string): the branch `tools/check-freshness.ps1`, `tools/new-agent-worktree.ps1`,
-  and `tools/apply-branch-protection.ps1` treat as the remote default, instead of a hardcoded
+- `preReview` (string). Allowed: the literal `"none"`, or any other string naming this repo's
+  declared pre-review process (for example a live visual-approval loop); when not `"none"`, it
+  should name, in the repo's own docs, a process file describing the mechanism. This repo:
+  `"none"`.
+- `surfaceGlobs` (array of strings). Allowed: any list of path globs, or `[]`; the pre-review
+  surface, path globs a change must touch to trigger the declared pre-review step, empty when
+  `preReview` is `"none"`. This repo: `[]`.
+- `shipMode` (string). Allowed: `"pr"` (branch, PR, CI, merge on green) or `"direct"` (commit
+  straight to the default branch, watch CI to green there, no branch or PR). This repo: `"pr"`.
+- `criticalDependencies` (array of strings). Allowed: any list of npm package names, or `[]`;
+  package names whose bump is held for review regardless of semver, per
+  `.claude/rules/dependencies.md`. This repo: `[]` (no production runtime dependencies to
+  protect).
+- `criticalPaths` (array of strings). Allowed: any list of path globs, or `[]`; a repo's own
+  critical paths (join/auth, payment, moderation, export-core equivalents), consumed by
+  `standards/issue-standards.md` § "Sonnet tier eligibility" gate (b): an issue touching a
+  critical path is denied the `sonnet-only` award. This repo: `[]` (a docs-only governance repo
+  has no runtime path to protect).
+- `ciCheckNames` (array of strings). Allowed: any list of real, observed CI check-run names
+  required on the default branch before merge, consumed by `tools/apply-branch-protection.ps1`.
+  This repo: `["build"]`, the single job `.github/workflows/ci.yml` defines.
+- `docCurrencyPaths` (array of strings). Allowed: any list of source paths, or `[]`; paths whose
+  change triggers the orchestrator's `doc-currency` step (`agents/orchestrator.md` § "Doc-currency
+  step"). This repo: `[]` (a docs-only repo has no source surface for that step to compare
+  against).
+- `goalsDoc` (string). Allowed: a repo-relative path to this repo's own goals doc, or an empty
+  string if it has none. This repo: `"README.md"`.
+- `checkCommands` (object). Allowed: any object whose values are shell-runnable command strings,
+  keyed by whatever names the repo's own standards cite (a `"test"` key and an `"emdash"` key are
+  the two this repo's own ported standards expect; a repo may declare more). This repo:
+  `{"test": "npm test", "emdash": "npm run check:emdash"}`.
+- `ghPath` (string). Allowed: `"gh"` (on PATH) or an absolute path to the GitHub CLI binary. This
+  repo: `"gh"`. A machine where `gh` lives elsewhere records the absolute path as a per-machine
+  note in that machine's own `CLAUDE.local.md`, never in this committed file.
+- `defaultBranch` (string). Allowed: any git branch name that exists on the remote; the branch
+  `tools/check-freshness.ps1`, `tools/new-agent-worktree.ps1`, `tools/apply-branch-protection.ps1`,
+  and `tools/repo-profile-core.ps1`'s callers treat as the remote default, instead of a hardcoded
   `origin/main`. This repo: `"main"`.
+
+**`tools/repo-profile-core.ps1`.** All profile-reading PowerShell logic (resolving
+`repo-profile.json`'s path, reading it if present, falling back to a named default if missing or
+the field is absent) is single-homed in this file's `Get-RepoProfileValue -Field <name> -Default
+<value>` function, resolved at `$PSScriptRoot\..\repo-profile.json` (the repo root). Every
+PowerShell tool that reads the profile (`tools/check-freshness.ps1`,
+`tools/new-agent-worktree.ps1`, `tools/apply-branch-protection.ps1`,
+`tools/classify-dep-pr-core.ps1`) dot-sources it rather than carrying its own copy. This file was
+added during the PR-review fix round on this issue's implementation, after the review found the
+same profile-reading logic duplicated across four tools with two different resolution strategies;
+it widens this issue's `Touches` beyond the originally-filed set (`tools/**` already covers it, so
+no manifest change was needed). `scripts/check-emdash.js` is the one deliberate exception: a
+Node script cannot dot-source a `.ps1` file, so it keeps its own small JS reader, with a comment
+naming this file as the PowerShell-side owner.
 
 ---
 
@@ -81,11 +107,25 @@ receive on a future sync. A `path/**` entry means "everything under this directo
 sync time," so a wildcard entry never goes stale as files are added or removed beneath it; a bare
 path entry names one specific file, and is checked to exist by `tests/governance-manifest.test.js`.
 Deliberately excluded: this repo's own build and record files (`package.json` and its lockfile,
-`vitest.config.mjs`, `.prettierrc.json`, `.gitignore`, the CI workflow, `tests/**`, `README.md`,
-`BUILDLOG.md`, the `buildlog/` fragments themselves, `docs/**`, `repo-profile.json`, `CLAUDE.md`,
-`CLAUDE.local.md`, and the manifest file itself). Whether a child receiving a sync also receives
-this repo's own enforcement tooling (`tests/**`, the vitest/prettier configs) is the sync issue's
-question, not answered here.
+`vitest.config.mjs`, `.prettierrc.json`, `.gitignore`, `.github/**`, `tests/**`, `README.md`,
+`BUILDLOG.md`, `buildlog/**` (the fragments themselves; `buildlog/README.md` is separately a
+`sharedPaths` entry, since the template is shared even though the fragments are not), `docs/**`,
+`repo-profile.json`, `CLAUDE.md`, `CLAUDE.local.md`, `DESIGN.md`, and the manifest file itself).
+Whether a child receiving a sync also receives this repo's own enforcement tooling (`tests/**`,
+the vitest/prettier configs) is the sync issue's question, not answered here.
+
+`tests/governance-manifest.test.js` guards both directions: every declared `sharedPaths` entry
+resolves to a real file (the AC5 promise), and, in the other direction, every git-tracked file in
+this repo is claimed by either `sharedPaths` or the test's own `EXCLUDED` record, so a new
+governance file landing in neither silently fails the test rather than silently never reaching a
+child on sync.
+
+**CLAUDE.md is excluded from `sharedPaths` but its `## Governing-artifact surface` section is not
+optional for a child.** Every child repo must carry its own `## Governing-artifact surface`
+section in its own `CLAUDE.md`, naming its own governing-artifact path list; how the global
+CLAUDE.md template (including that section) reaches a child is the sync issue's design question,
+not answered here, but the requirement itself is recorded here so the sync issue has a concrete
+target: delivering the section, not inventing whether it is needed.
 
 **Ecosystem-specific shared tool.** `tools/check-deps-parity.ps1` is shared even though it is
 Node-ecosystem-specific: a child repo without `package.json` is expected to have it no-op or fail
@@ -152,10 +192,12 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
    PowerShell exists even on non-Windows CI.** Not resolved; ported as-is. This is a real
    limitation this repo inherits unchanged; a future issue on the sync backlog can address a
    cross-platform commit-msg gate if that becomes load-bearing.
-8. **`reviewer-architecture.md` and `orchestrator.md`'s periodic audit naming `.agents/skills/`
-   as an externally-managed excluded directory a repo without it would carry as a dangling
-   exclusion.** Resolved: reworded to "if such a directory exists," never asserted as fact about
-   this repo.
+8. **`reviewer-architecture.md` naming `.agents/skills/` as an externally-managed excluded
+   directory a repo without it would carry as a dangling exclusion** (the source hazard also named
+   a periodic-audit section in `orchestrator.md`; that section was not ported to this repo's
+   `agents/orchestrator.md` at all, so there is nothing there to carry the same wording).
+   Resolved in `reviewer-architecture.md`: reworded to "if such a directory exists," never
+   asserted as fact about this repo.
 9. **`realign.md` cites a wedding-repo `data/wip-issues/357-...md` file by literal path, already
    dead in the source since `data/` is gitignored there too.** Resolved by not re-introducing it:
    the port drops the dead citation rather than carrying it forward.
@@ -167,9 +209,13 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
     this issue alone.
 11. **Branch name `main` assumed throughout, not parameterized.** Resolved for the three tools
     named in the report (`apply-branch-protection.ps1`, `new-agent-worktree.ps1`,
-    `check-freshness.ps1`): each now reads `repo-profile.json`'s `defaultBranch` field, falling
-    back to the literal `main` only if the profile is unreadable. `realign.md`'s prose was
-    reworded to speak of "the default branch" generically rather than a literal `main` string.
+    `check-freshness.ps1`, all three now reading `repo-profile.json`'s `defaultBranch` field via
+    the shared `tools/repo-profile-core.ps1` reader, falling back to the literal `main` only if
+    the profile is unreadable or the field is absent). `realign.md`'s prose was also reworded to
+    speak of "the default branch" generically rather than a literal `main` string, but that
+    rewording had not actually landed at the initial seed commit despite this entry claiming it
+    had; the PR-review fix round on this issue's implementation caught the gap and did the
+    rewording for real. This entry now matches the tree.
 12. **`orchestrator.md`'s Write/Edit scope comment hardcodes bookkeeping filenames
     (`buildlog/<N>-<PR>.md`, `BUILDLOG.md`).** Not a hazard in this repo: `buildlog/` and
     `BUILDLOG.md` are this repo's own bookkeeping convention too (ported by plan step 4), so the
@@ -178,9 +224,73 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
     needs an equivalent goals-doc convention or the references dangle.** Resolved: every
     reference to a specific goals-doc filename (`.claude/hooks/goal-gate.ps1`,
     `.claude/commands/resume.md`, `standards/decision-heuristics.md`) was reworded to defer to
-    `repo-profile.json`'s `goalsDoc` field. This repo declares `"README.md"`.
+    `repo-profile.json`'s `goalsDoc` field. This repo declares `"README.md"`. As with hazard 11,
+    two of the three files (`goal-gate.ps1`, `resume.md`) were genuinely reworded at the initial
+    seed commit; `standards/decision-heuristics.md` still named `docs/north-star.md` literally
+    despite this entry claiming otherwise. The PR-review fix round on this issue's implementation
+    caught and fixed the gap; this entry now matches the tree.
 
 ---
+
+## Governing-artifact surface: membership fixes
+
+`CLAUDE.md` § "Governing-artifact surface" was corrected during the PR-review fix round on this
+issue's implementation:
+
+- **Added `.github/` and `scripts/`.** Both carry enforcement machinery, not just prose: `.github/`
+  holds the CI workflow that runs the em-dash and test gates, and `scripts/` holds the gate
+  scripts themselves (`check-emdash.js` and `buildlog-glue.js` plus their `-core.js` pairs). A
+  change to either changes what the pipeline enforces, which is exactly what the governing-artifact
+  surface exists to catch, so omitting them was a gap, not a deliberate scoping choice.
+- **Dropped `docs/`.** `docs/` holds provenance records (`docs/seed-classification-2026-08-16.md`,
+  the evidence for this seed) and any future archival write-ups, not enforcement machinery. A
+  change there does not change what any gate checks or what any agent is bound to, so it does not
+  belong on a list whose purpose is routing enforcement-affecting changes through the normal
+  pipeline like any other change; `docs/` content still goes through the normal pipeline regardless
+  (every change does), it just is not what makes a change count as a "governance change" for
+  purposes of this list.
+
+## Lean review process rationale
+
+This repo runs adversarial review with no proof-layer bureaucracy: no evidence-capture artifacts,
+no severity adjudicator, no reviewer panels, and (per `tools/apply-branch-protection.ps1`)
+`required_approving_review_count` stays 0 by default, since a solo-maintainer repo cannot have its
+owner approve their own PR. CI plus independent adversarial review is the gate, not a human
+approval click. The full history of that decision, including the proof-layer teardown it replaced,
+is the wedding-scavenger-hunt repo's own `DESIGN.md`, an explicitly-marked provenance note; this
+repo's own history begins at its 2026-08-16 seed and does not carry that teardown ADR forward. The
+posture this leaves behind is tamper-evident, not tamper-proof, the same honest framing
+`WHAT-IT-CHECKS.md` uses for what is and is not mechanically enforced here.
+
+## Merge policy and pre-review rationale
+
+This repo's merge policy: a change off the declared Pre-review surface merges once adversarial
+review passes and CI is green, with owner control staying upstream (which work is specced, via
+issues) and downstream (revert, via git history); a change on the declared Pre-review surface is
+the deliberate exception, passing the Pre-review step (`agents/orchestrator.md` § "Pre-review
+step") before its criteria are even written. This repo's own profile declares `"preReview":
+"none"` and `"surfaceGlobs": []` (see hazard 4's disposition above), so the Pre-review step never
+triggers here today; the mechanism stays documented so a child repo that declares a real
+pre-review process (for example a live visual-approval loop) has somewhere generic to defer to.
+
+## Keep-test rationale
+
+`standards/design-philosophy.md`'s three-prong keep test for comments (why-not-what, trap,
+pointer) is ported as-is from the wedding-scavenger-hunt repo, where the pattern traces to that
+repo's issue #1167 (an explicitly-marked provenance note). The full worked argument and examples
+live in that repo's own `DESIGN.md`, not reproduced here: this repo has no `src/**` application
+code surface of its own yet to anchor fresh examples against, so re-deriving the argument from
+scratch would be invention, not the resolved pointer AC 6 requires.
+
+## Wave-governance mechanisms: owner decisions
+
+Grandfathering (a mid-wave governance change governs from the next issue picked up onward, not
+retroactively), owner-invoked whole-of-wave review (`/post-wave-review`, never automatic, never a
+gate), and the doc-currency step (an implementer-side, `.md`-only step, no reviewer of its own)
+are all owner decisions carried forward from the wedding-scavenger-hunt repo's governance history
+as already-settled policy, per `standards/adversarial-review-protocol.md` § "Wave governance:
+grandfathering, owner-invoked wave review, doc-currency step". None of the three has been
+re-litigated in this repo; the mechanics live in that standard's section, not restated here.
 
 ## Reviewer-architecture lens promotion
 

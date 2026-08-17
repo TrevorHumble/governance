@@ -9,7 +9,7 @@
 # installed binary against the lockfile.) Pure check, no side effects: it only
 # reads package.json, package-lock.json, and node_modules/<pkg>/package.json.
 # It never runs npm install/ci itself: reconciling a flagged mismatch is
-# `npm ci`, documented in docs/dependency-upgrade.md.
+# running `npm ci` to reinstall from the lockfile.
 
 # ---- Single-homed constants -------------------------------------------------
 

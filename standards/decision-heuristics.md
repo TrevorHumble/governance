@@ -11,7 +11,7 @@
 When a decision surfaces mid-task, run this procedure before considering asking anyone:
 
 1. **Restate the decision in one sentence**, naming the two (or more) concrete options. If you cannot name the options, you have a research gap, not a decision, go find the options first.
-2. **Find the governing constraint.** Check, in order: the issue's acceptance criteria, `CLAUDE.md`, the North Star goals (`docs/north-star.md`), and the relevant standard. One of them usually settles it outright.
+2. **Find the governing constraint.** Check, in order: the issue's acceptance criteria, `CLAUDE.md`, this repo's own goals doc (the path declared in `repo-profile.json`'s `goalsDoc` field), and the relevant standard. One of them usually settles it outright.
 3. **If settled, act.** Record nothing beyond the normal trail. A question answerable by re-reading the goals is not a question for the owner.
 4. **If it is a pure tradeoff** (both options satisfy the constraints), pick the option that is cheaper to reverse; if equally reversible, pick the one touching fewer files. State the choice and the reason in one line where the work is recorded (PR body or issue comment) and move on.
 5. **Surface to the owner ONLY when all three hold:** the action is irreversible, it is owner-exclusive (spends money, publishes outward, deletes owner data, changes owner-recorded intent), AND steps 2 to 4 did not settle it. Surface as a one-line non-blocking note; keep working on independent items.

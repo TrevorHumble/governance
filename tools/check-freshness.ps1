@@ -42,12 +42,8 @@ param(
 
 # ---- Single-homed constants -------------------------------------------------
 
-$DefaultBranch = 'main'
-$profilePath = Join-Path $PSScriptRoot '..\repo-profile.json'
-if (Test-Path $profilePath) {
-  $repoProfile = Get-Content $profilePath -Raw | ConvertFrom-Json
-  if ($repoProfile.defaultBranch) { $DefaultBranch = $repoProfile.defaultBranch }
-}
+. (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
+$DefaultBranch = Get-RepoProfileValue -Field 'defaultBranch' -Default 'main'
 $RemoteDefault = "origin/$DefaultBranch"
 
 # MAX_DRIFT_COMMITS: the single source of truth for "how many commits behind

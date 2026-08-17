@@ -22,7 +22,10 @@ everyday pushes. It judges only the lines a PR adds against the merge-base diff 
 default branch (see `repo-profile.json`'s `defaultBranch` field), never the existing tree, and it
 recognizes two escapes: a genuine `git revert`, and a line moved rather than newly written. It
 does not reach commit messages, pull request bodies, or GitHub issue bodies. Those stay enforced
-by discipline, not CI.
+by discipline, not CI. **It also cannot see into a file git treats as binary** (for example a
+`.md` file saved with UTF-16 encoding): git's own diff machinery reports no text lines for a
+binary-classified file, so an em dash inside one passes with nothing to flag. This is a known,
+inherited limitation of reading `git diff` text, not something this repo's port fixed.
 
 **A code commit must name a GitHub issue.**
 A cheap local check (`.githooks/commit-msg`) blocks a commit that changes a non-`.md` file and

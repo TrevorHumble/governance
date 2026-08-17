@@ -86,7 +86,23 @@ name from a plan doc this repo keeps, if any (not every repo keeps one). All pri
    Then **close the GitHub issue** for this work (`gh issue close`, referencing the commit) so the board
    matches reality. The board is kept current at every transition: issue created, `gh issue` opened;
    committed to the default branch, `gh issue` closed.
-   - **Ship flow: branch to PR to CI to merge on green.** After committing, push the branch and run `gh pr create` to open a pull request. Write the per-ship entry as a new file, `buildlog/<N>-<PR>.md` (`N` the issue number, `PR` the pull request number `gh pr create` just assigned), in the shape `buildlog/README.md` defines, naming the PR and never the merge SHA (which does not exist yet at this point), and push it as a commit on this same branch, so the fragment carries its own PR number and the green CI run covers the final commit. Watch CI to green. Once the adversarial review has passed and CI is green, merge the PR, for every non-pre-review change type. A change on the declared pre-review surface additionally requires step 2 to have reached explicit owner approval before this merge. The owner does not perform merges; owner control is upstream (issue-speccing), downstream (revert via git history), and, for a declared pre-review surface only, the pre-merge pre-review step. The default branch is never knowingly left red. If CI goes red, fix the cause or revert the commit before proceeding: a red default branch is a stop-and-fix condition, not something to push past.
+   - **Ship flow: defers to `repo-profile.json`'s `shipMode` field; no step here asserts which
+     mode is operative.** In `shipMode: "pr"`, push the branch and run `gh pr create` to open a
+     pull request, watch CI to green, then merge. In `shipMode: "direct"`, the commit above already
+     landed on the default branch; watch CI to green there, with no branch or PR step. Either way,
+     write the per-ship entry as a new file, `buildlog/<N>-<PR>.md` (`N` the issue number, `PR`
+     the pull request number `gh pr create` assigned in `pr` mode, or the commit's short SHA in
+     `direct` mode), in the shape `buildlog/README.md` defines, naming that identifier and never a
+     merge SHA that does not exist yet at this point, and push it as a commit on the same branch
+     (the default branch itself, in `direct` mode), so the fragment carries its own identifier and
+     the green CI run covers the final commit. Once the adversarial review has passed and CI is
+     green, merge the PR (or, in `direct` mode, consider the ship complete), for every
+     non-pre-review change type. A change on the declared pre-review surface additionally requires
+     step 2 to have reached explicit owner approval before this merge. The owner does not perform
+     merges; owner control is upstream (issue-speccing), downstream (revert via git history), and,
+     for a declared pre-review surface only, the pre-merge pre-review step. The default branch is
+     never knowingly left red. If CI goes red, fix the cause or revert the commit before
+     proceeding: a red default branch is a stop-and-fix condition, not something to push past.
 
 ---
 
@@ -376,8 +392,8 @@ The trigger is the agent noticing. No telemetry or automated detection is requir
   (which work is specced, via issues) and downstream (revert, via git history). **A change on the
   declared pre-review surface is the one deliberate exception:** it passes the "Pre-review step"
   (above), the owner settling the artifact live against a seeded preview or equivalent, never by
-  reading a diff, before its criteria are even written. See `DESIGN.md` for this repo's own merge
-  policy and pre-review rationale.
+  reading a diff, before its criteria are even written. See `DESIGN.md` § "Merge policy and
+  pre-review rationale" for this repo's own merge policy and pre-review rationale.
 - Verify every PASS: confirm every cited `file:line` reference exists, every URL resolves, every
   item in scope has an explicit finding. This check is the orchestrator's responsibility and is
   not delegated to the reviewer.

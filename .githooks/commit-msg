@@ -13,7 +13,7 @@
 # A CODE commit must name an issue: (#N), a GitHub closing keyword + #N, or an
 # issue-N branch (see Resolve-IssueNumber in tools/issue-core.ps1). No review
 # evidence is checked here; review practice is unmechanized (see
-# WHAT-IT-CHECKS.md and CLAUDE.md "Governance freeze" for the history).
+# WHAT-IT-CHECKS.md and CLAUDE.md "Governing-artifact surface" for the history).
 # --no-verify bypasses this hook; CI is the backstop.
 set -e
 

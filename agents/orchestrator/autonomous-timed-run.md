@@ -34,7 +34,7 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   item exists → do it; else run the Done-Early Cascade, then re-check. **"Done early" is not a state: it is
   the trigger to generate more high-standard work.**
 - **Done-Early Cascade** (empty-queue branch, in order; each step refills the queue): (a) holistic review of
-  the whole against the North Star; (b) revisit every parked blocker, re-verify it is real and research a
+  the whole against the repo's goals doc (profile `goalsDoc`); (b) revisit every parked blocker, re-verify it is real and research a
   no-human workaround; (c) deep web research for better/standard practice; (d) raise the bar to match it;
   (e) weed stale issues and reconcile the board. **The Cascade may not exit with the queue still empty: if
   (a)+(b) add nothing, (c) MUST run and MUST return at least one concrete improvement candidate before the
@@ -46,11 +46,12 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   across routes" (no file, no concrete change, no source: a theme, not a candidate). Research output stays
   within the in-license constraint (DESIGN.md governance); a
   "better practice" needing an external/paid API or SaaS is out of scope and is surfaced as a note, not adopted.
-- **Watch CI to green before the increment counts as done.** Each increment that pushes to `main` is not
-  complete until its CI run is watched to completion and confirmed green: same guarantee as the Commit
-  step. `main` is never knowingly left red. This is part of completing the increment, not a new run-exit:
-  if CI goes red, fix the cause or revert the commit _within the run_ before the selector advances to the
-  next item. A red `main` is fixed in-loop; it never stops the timed run.
+- **Watch CI to green before the increment counts as done.** Each increment that reaches the default branch
+  (directly, or via a merged PR, per `repo-profile.json`'s `shipMode`) is not complete until its CI run is
+  watched to completion and confirmed green: same guarantee as the Commit step. The default branch is never
+  knowingly left red. This is part of completing the increment, not a new run-exit: if CI goes red, fix the
+  cause or revert the commit _within the run_ before the selector advances to the next item. A red default
+  branch is fixed in-loop; it never stops the timed run.
 - **A halt is per-segment, never a run exit.** An impasse on a single _segment_ (§ "One-round stop rule" in
   `standards/adversarial-review-protocol.md` cannot resolve it) still halts that segment; during a timed run
   the orchestrator logs it, the halted work becomes a parked blocker (revisited in the Cascade), and control
@@ -70,4 +71,4 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   decision that is BOTH irreversible/owner-exclusive AND not determined by the goals (not merely a technical
   choice with a tradeoff; those are the orchestrator's to make from the goals). The `fix-now` pause
   (`.claude/skills/capture-system-defect/SKILL.md`) still applies.
-- The standard is excellence, not the minimum: push the loop harder and do more, held to the North Star.
+- The standard is excellence, not the minimum: push the loop harder and do more, held to the repo's goals doc (profile `goalsDoc`).

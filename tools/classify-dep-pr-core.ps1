@@ -4,7 +4,8 @@
 #
 # Single source of truth for the auto/review precedence rules, reused by
 # tools/classify-dep-pr.ps1 (thin CLI: classifies one real Dependabot PR).
-# See .claude/rules/dependencies.md and DESIGN.md for the policy.
+# See .claude/rules/dependencies.md and DESIGN.md's Hazards disposition
+# (hazard 3) for the policy.
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 
@@ -24,13 +25,8 @@ if ($env:CRITICAL_DEPS_JSON) {
   $parsed = $env:CRITICAL_DEPS_JSON | ConvertFrom-Json
   if ($null -ne $parsed) { $CriticalDeps = @($parsed) }
 } else {
-  $profilePath = Join-Path $PSScriptRoot '..\repo-profile.json'
-  if (Test-Path $profilePath) {
-    $repoProfile = Get-Content $profilePath -Raw | ConvertFrom-Json
-    if ($repoProfile.criticalDependencies) {
-      $CriticalDeps = @($repoProfile.criticalDependencies)
-    }
-  }
+  . (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
+  $CriticalDeps = @(Get-RepoProfileValue -Field 'criticalDependencies' -Default @())
 }
 
 # Get-DepPrTier: classifies a single dependency bump into 'auto' or 'review'.

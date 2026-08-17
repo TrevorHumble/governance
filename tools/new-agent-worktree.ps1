@@ -31,12 +31,8 @@ param(
 $top = (& git rev-parse --show-toplevel 2>$null)
 if (-not $top) { [Console]::Error.WriteLine('new-agent-worktree: not inside a git repo'); exit 1 }
 
-$DefaultBranch = 'main'
-$profilePath = Join-Path $top 'repo-profile.json'
-if (Test-Path $profilePath) {
-  $repoProfile = Get-Content $profilePath -Raw | ConvertFrom-Json
-  if ($repoProfile.defaultBranch) { $DefaultBranch = $repoProfile.defaultBranch }
-}
+. (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
+$DefaultBranch = Get-RepoProfileValue -Field 'defaultBranch' -Default 'main'
 $RemoteDefault = "origin/$DefaultBranch"
 
 # Fetch first, unconditionally, before any branch decision. On failure, exit

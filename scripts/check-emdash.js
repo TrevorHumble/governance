@@ -22,7 +22,10 @@ const MAX_BUFFER_BYTES = 256 * 1024 * 1024;
  * relative to this script's own location so it works regardless of the
  * caller's working directory. Fails soft to `'main'` if the profile file is
  * missing, unreadable, or the field is absent -- this check must never crash
- * for a missing or incomplete profile.
+ * for a missing or incomplete profile. This is the one cross-language copy of
+ * the profile-reading logic `tools/repo-profile-core.ps1` owns for every
+ * PowerShell tool; a Node script cannot dot-source a `.ps1` file, so this
+ * function stays its own small reader rather than shelling out to PowerShell.
  * @returns {string}
  */
 function readDefaultBranch() {

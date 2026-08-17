@@ -8,9 +8,37 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'governance-manifest.json');
+
+/**
+ * This repo's own build and record files: deliberately excluded from
+ * `sharedPaths` per `governance-manifest.json`'s documented semantics
+ * (`DESIGN.md` § "governance-manifest.json semantics"). Single-homed here so
+ * both the "excludes this repo's own files" test and the reverse-coverage
+ * test below read the same list; a file belongs in exactly one of
+ * `sharedPaths` or this array, never neither.
+ */
+const EXCLUDED = [
+  'package.json',
+  'package-lock.json',
+  'vitest.config.mjs',
+  '.prettierrc.json',
+  '.gitignore',
+  '.github/**',
+  'tests/**',
+  'README.md',
+  'BUILDLOG.md',
+  'buildlog/**',
+  'docs/**',
+  'repo-profile.json',
+  'CLAUDE.md',
+  'CLAUDE.local.md',
+  'DESIGN.md',
+  'governance-manifest.json',
+];
 
 /** Recursively list every file under dir, relative to REPO_ROOT, forward-slashed. */
 function listFilesUnder(dir) {
@@ -46,6 +74,27 @@ function entryResolves(entry, allFiles) {
   return fs.existsSync(path.join(REPO_ROOT, entry));
 }
 
+/**
+ * True when `file` is matched by `entry`: either an exact match, or, for a
+ * `**`-suffixed entry, `file` equal to or nested under the entry's prefix
+ * directory. The inverse direction of entryResolves above (that checks a
+ * declared entry resolves to a real file; this checks a real file is
+ * declared by some entry).
+ */
+function fileMatchesEntry(file, entry) {
+  if (entry.endsWith('/**')) {
+    const prefix = entry.slice(0, -3);
+    return file === prefix || file.startsWith(`${prefix}/`);
+  }
+  return file === entry;
+}
+
+/** List every git-tracked file, relative to REPO_ROOT, forward-slashed. */
+function listTrackedFiles() {
+  const raw = execFileSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' });
+  return raw.split('\n').filter(Boolean);
+}
+
 describe('governance-manifest.json', () => {
   it('parses as JSON', () => {
     const raw = fs.readFileSync(MANIFEST_PATH, 'utf8');
@@ -78,24 +127,36 @@ describe('governance-manifest.json', () => {
 
   it("excludes this repo's own build and record files, per AC5", () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const excluded = [
-      'package.json',
-      'package-lock.json',
-      'vitest.config.mjs',
-      '.prettierrc.json',
-      '.gitignore',
-      '.github/workflows/ci.yml',
-      'tests/**',
-      'README.md',
-      'BUILDLOG.md',
-      'docs/**',
-      'repo-profile.json',
-      'CLAUDE.md',
-      'CLAUDE.local.md',
-      'governance-manifest.json',
-    ];
-    for (const entry of excluded) {
+    for (const entry of EXCLUDED) {
       expect(manifest.sharedPaths).not.toContain(entry);
     }
+  });
+
+  // Reverse-coverage: AC5 guards sharedPaths -> real file (above), but says
+  // nothing about the other direction. A new governance file (standard,
+  // agent, tool, hook) that lands in neither sharedPaths nor the EXCLUDED
+  // record above would silently never reach a child repo on sync, with no
+  // test failure to catch it. This test closes that gap: every tracked file
+  // must be claimed by one list or the other.
+  it('every tracked file is covered by sharedPaths or the EXCLUDED record, with none uncovered', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const tracked = listTrackedFiles();
+    const uncovered = tracked.filter(
+      (file) =>
+        !manifest.sharedPaths.some((entry) => fileMatchesEntry(file, entry)) &&
+        !EXCLUDED.some((entry) => fileMatchesEntry(file, entry))
+    );
+    expect(uncovered).toEqual([]);
+  });
+
+  // Mutation-coverage: a real tracked file matched by neither list must be
+  // caught, proving the reverse-coverage test doesn't just vacuously pass.
+  it('rejects a tracked-file-shaped path covered by neither sharedPaths nor EXCLUDED', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const phantom = 'not-a-real-governance-file.md';
+    const covered =
+      manifest.sharedPaths.some((entry) => fileMatchesEntry(phantom, entry)) ||
+      EXCLUDED.some((entry) => fileMatchesEntry(phantom, entry));
+    expect(covered).toBe(false);
   });
 });

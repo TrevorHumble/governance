@@ -3,6 +3,7 @@
   "surfaceGlobs": [],
   "shipMode": "pr",
   "criticalDependencies": [],
+  "criticalPaths": [],
   "ciCheckNames": ["build"],
   "docCurrencyPaths": [],
   "goalsDoc": "README.md",

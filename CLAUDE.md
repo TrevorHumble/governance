@@ -17,8 +17,8 @@ for the founding rationale and `README.md` for the federalism rules.
 The governing-artifact surface, the files a change to which counts as a governance change and
 routes through the normal pipeline like any other change, is exactly:
 
-`.githooks/`, `tools/`, `standards/`, `agents/`, `.claude/`, `CLAUDE.md`, `AGENTS.md`,
-`governance-manifest.json`, `repo-profile.json`, and `docs/`.
+`.githooks/`, `tools/`, `scripts/`, `standards/`, `agents/`, `.claude/`, `.github/`, `CLAUDE.md`,
+`AGENTS.md`, `governance-manifest.json`, and `repo-profile.json`.
 
 This is the one home for that list: every other file in this repo that needs to refer to "the
 governing-artifact surface" points here rather than repeating or paraphrasing it.
@@ -37,9 +37,12 @@ and do not skip steps.
 4. **Adversarial review of the PR**: independent reviewers attack the implementation against the
    issue and the standards. Which reviewers gate, and how a finding gets resolved:
    `standards/adversarial-review-protocol.md`.
-5. **Commit / PR**: only after review passes. Push the branch, open a pull request
-   (`gh pr create`), watch CI to green, then merge. `.githooks/commit-msg` (a code commit must
-   name a GitHub issue) is the only local hook; CI is the rest of the gate.
+5. **Commit / ship**: only after review passes. How the change reaches the default branch defers
+   to `repo-profile.json`'s `shipMode` field: a `"pr"`-mode repo branches, opens a pull request
+   (`gh pr create`), watches CI to green, then merges; a `"direct"`-mode repo commits straight to
+   the default branch and watches CI to green there. No file asserts which mode any particular
+   repo runs. `.githooks/commit-msg` (a code commit must name a GitHub issue) is the only local
+   hook; CI is the rest of the gate. This repo's own profile declares `"shipMode": "pr"`.
 
 **Pre-review step.** A repo may declare its own pre-review process in its `repo-profile.json`'s
 `preReview` field (for example a live visual-approval loop, or `"none"`). When declared, it runs
