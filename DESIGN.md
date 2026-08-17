@@ -137,22 +137,28 @@ CLAUDE.md template (including that section) reaches a child is the sync issue's 
 not answered here, but the requirement itself is recorded here so the sync issue has a concrete
 target: delivering the section, not inventing whether it is needed.
 
-**`DESIGN.md` is excluded from `sharedPaths` but nine shared files cite specific sections of it by
-name.** `standards/adversarial-review-protocol.md`, `standards/design-philosophy.md`,
-`agents/orchestrator.md`, `tools/apply-branch-protection.ps1`, `tools/check-freshness.ps1`,
-`tools/classify-dep-pr-core.ps1`, `agents/reviewer-architecture.md`,
-`agents/reviewer-documentation.md`, and `standards/documentation-standards.md` all point a reader
+**`DESIGN.md` is excluded from `sharedPaths` but six shared files cite specific sections of it by
+name.** `standards/issue-standards.md`, `standards/design-philosophy.md`,
+`standards/adversarial-review-protocol.md`, `agents/orchestrator.md`,
+`tools/apply-branch-protection.ps1`, and `tools/classify-dep-pr-core.ps1` all point a reader
 at this file for the argument behind a rule they only state the conclusion of. The sections cited
-this way are: "Lean review process rationale," "Merge policy and pre-review rationale," "Keep-test
-rationale," "Wave-governance mechanisms," "Branch-protection strictness" (the rationale for
-`strict = $true` staying fixed, referenced from `tools/apply-branch-protection.ps1`'s own header
-comment), and the profile-reader ownership note under "repo-profile.json schema" (the
-`tools/repo-profile-core.ps1` paragraph). None of these sections is itself in `sharedPaths`,
+this way are: "Lean review process rationale," "Keep-test rationale," "Merge policy and
+pre-review rationale," "Wave-governance mechanisms: owner decisions," "Branch-protection
+strictness" (the rationale for `strict = $true` staying fixed, referenced from
+`tools/apply-branch-protection.ps1`'s own header comment), and "Hazards from the classification
+report: disposition" (referenced from `tools/classify-dep-pr-core.ps1`'s own header comment,
+informally, as "Hazards disposition"). None of these sections is itself in `sharedPaths`,
 so a citation to any of them dangles in a child repo unless that child's own `DESIGN.md` carries
 the section, or the sync mechanism rewrites the citation to point somewhere the child actually
 has. This is a recorded target for the sync issue, not resolved here: a receiving child must
 either carry these sections in its own `DESIGN.md` or the sync mechanism must rewrite the
 citations that name them.
+
+A larger set of shared files mention `DESIGN.md` without naming a section (reading it wholesale
+for context, or listing the path alongside `CLAUDE.md`/`README.md` in a doc-split description);
+`tools/check-freshness.ps1`, `agents/reviewer-architecture.md`, `agents/reviewer-documentation.md`,
+and `standards/documentation-standards.md` are examples. These are not section-citation promises:
+such references resolve to whatever `DESIGN.md` a child carries and need no section guarantee.
 
 **Ecosystem-specific shared tool.** `tools/check-deps-parity.ps1` is shared even though it is
 Node-ecosystem-specific: a child repo without `package.json` is expected to have it no-op or fail
