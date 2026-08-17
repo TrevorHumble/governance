@@ -8,7 +8,7 @@
 // The shared/excluded partition is single-homed in governance-manifest.json
 // itself (`sharedPaths` and `excludedPaths`), not restated here: this file
 // reads both arrays from the manifest rather than carrying its own copy
-// (`DESIGN.md` § "governance-manifest.json semantics").
+// (see DESIGN.md's governance-manifest semantics section).
 'use strict';
 
 const fs = require('fs');
@@ -113,12 +113,10 @@ function dewrapText(fileText) {
 }
 
 /**
- * Extracts every DESIGN.md section citation from a file's dewrapped text, in
- * the two live forms: `DESIGN.md § "Title"` / `DESIGN.md § 'Title'` (an
- * optional backtick around "DESIGN.md" is allowed) and `DESIGN.md "Title"`.
+ * Extracts every DESIGN.md section citation from a file's dewrapped text.
  * "DESIGN.md" must be immediately adjacent to the § or opening quote --
  * mere co-occurrence with a quoted title later in the same sentence is not
- * a citation. See DESIGN.md § "governance-manifest.json semantics" for the
+ * a citation. See DESIGN.md's governance-manifest semantics section for the
  * worked example this adjacency rule exists to handle.
  */
 function extractDesignCitations(text) {
@@ -135,6 +133,11 @@ function extractDesignCitations(text) {
     }
   }
   return titles;
+}
+
+/** True when `headings` contains a heading exactly matching `title`. */
+function headingExists(headings, title) {
+  return headings.includes(title);
 }
 
 describe('governance-manifest.json', () => {
@@ -186,7 +189,7 @@ describe('governance-manifest.json', () => {
   // neither (would silently drop the file from sync) and never both (would
   // hide a misclassification, as buildlog/README.md's overlap with the old
   // blanket "buildlog/**" exclusion did before this manifest gained
-  // excludedPaths -- see DESIGN.md § "governance-manifest.json semantics").
+  // excludedPaths -- see DESIGN.md's governance-manifest semantics section).
   it('every tracked file matches exactly one of sharedPaths or excludedPaths', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     const tracked = listTrackedFiles();
@@ -232,8 +235,7 @@ describe('governance-manifest.json', () => {
 });
 
 // Mechanizes the citation-coverage promise DESIGN.md § "governance-manifest.json
-// semantics" states: any sharedPaths file that cites a DESIGN.md section by name
-// creates a child-repo obligation, real only if the cited section actually exists.
+// semantics" states.
 // Hand inventories of this set rot; this scan is the owner.
 describe('DESIGN.md section citations from sharedPaths files', () => {
   it('every DESIGN.md section cited by a sharedPaths file matches a real DESIGN.md heading', () => {
@@ -252,7 +254,7 @@ describe('DESIGN.md section citations from sharedPaths files', () => {
       const citations = extractDesignCitations(dewrapText(text));
       totalCitations += citations.length;
       for (const title of citations) {
-        const found = headings.includes(title);
+        const found = headingExists(headings, title);
         if (!found) dangling.push(`${file}: "${title}"`);
       }
     }
@@ -269,7 +271,7 @@ describe('DESIGN.md section citations from sharedPaths files', () => {
     const bogusLine = 'See `DESIGN.md` § "This Section Does Not Exist In DESIGN.md".';
     const citations = extractDesignCitations(dewrapText(bogusLine));
     expect(citations).toEqual(['This Section Does Not Exist In DESIGN.md']);
-    expect(headings.includes(citations[0])).toBe(false);
+    expect(headingExists(headings, citations[0])).toBe(false);
   });
 
   // Proves the adjacency requirement: a line that mentions DESIGN.md and, later

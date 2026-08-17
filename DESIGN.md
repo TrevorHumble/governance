@@ -145,9 +145,9 @@ matching `## ` heading in this file. A human can run the same check directly: `n
 tests/governance-manifest.test.js`. None of the cited sections is itself in `sharedPaths`, so a
 citation dangles in a child repo unless that child's own `DESIGN.md` carries the section, or the
 sync mechanism rewrites the citation to point somewhere the child actually has. This is a
-recorded target for the sync issue, not resolved here:
-a receiving child must either carry the cited sections in its own `DESIGN.md` or the sync
-mechanism must rewrite the citations that name them.
+recorded target for the sync issue, not resolved here: a receiving child must either carry the
+cited sections in its own `DESIGN.md` or the sync mechanism must rewrite the citations that name
+them.
 
 A larger set of shared files mention `DESIGN.md` without naming a section (reading it wholesale
 for context, or listing the path alongside `CLAUDE.md`/`README.md` in a doc-split description).
