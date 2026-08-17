@@ -10,9 +10,7 @@
 # FieldDefaults -- per-field fallback values a caller needs no -Default
 # argument for; Get-RepoProfileValue supplies one automatically when the
 # field is listed here. A field not listed here still requires -Default from
-# the caller (or falls back to $null with none). 'main' was previously
-# passed by hand as -Default 'main' from three separate tools; single-homed
-# here instead.
+# the caller (or falls back to $null with none).
 $FieldDefaults = @{
   defaultBranch = 'main'
 }

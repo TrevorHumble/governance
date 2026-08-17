@@ -100,7 +100,7 @@ function Get-ParityMismatches {
 
 # ---- Executable body --------------------------------------------------------
 # Runs only when this file is invoked directly, never when another script
-# dot-sources it just to reuse the constants/functions above (matches
+# dot-sources it just to reuse the helpers above (matches
 # tools/check-freshness.ps1's guard).
 if ($MyInvocation.InvocationName -ne '.') {
   $repoRoot = Split-Path -Parent $PSScriptRoot

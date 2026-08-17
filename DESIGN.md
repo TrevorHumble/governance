@@ -83,7 +83,10 @@ repo may declare (not only this repo's own choice):
 **`tools/repo-profile-core.ps1`.** All profile-reading PowerShell logic (resolving
 `repo-profile.json`'s path, reading it if present, falling back to a named default if missing or
 the field is absent) is single-homed in this file's `Get-RepoProfileValue -Field <name> -Default
-<value>` function, resolved at `$PSScriptRoot\..\repo-profile.json` (the repo root). Every
+<value>` function, resolved at `$PSScriptRoot\..\repo-profile.json` (the repo root). Its
+`$FieldDefaults` table is the single home of per-field fallbacks a caller needs no `-Default`
+argument for (the `defaultBranch` fallback of `'main'` lives there, mirrored once, deliberately, in
+`scripts/check-emdash.js` as the sanctioned cross-language copy noted below). Every
 PowerShell tool that reads the profile (`tools/check-freshness.ps1`,
 `tools/new-agent-worktree.ps1`, `tools/apply-branch-protection.ps1`,
 `tools/classify-dep-pr-core.ps1`) dot-sources it rather than carrying its own copy. This file was
@@ -132,22 +135,20 @@ CLAUDE.md template (including that section) reaches a child is the sync issue's 
 not answered here, but the requirement itself is recorded here so the sync issue has a concrete
 target: delivering the section, not inventing whether it is needed.
 
-**`DESIGN.md` is excluded from `sharedPaths` but six shared files cite specific sections of it by
-name.** `standards/issue-standards.md`, `standards/design-philosophy.md`,
-`standards/adversarial-review-protocol.md`, `agents/orchestrator.md`,
-`tools/apply-branch-protection.ps1`, and `tools/classify-dep-pr-core.ps1` all point a reader
-at this file for the argument behind a rule they only state the conclusion of. The sections cited
-this way are: "Lean review process rationale," "Keep-test rationale," "Merge policy and
-pre-review rationale," "Wave-governance mechanisms: owner decisions," "Branch-protection
-strictness" (the rationale for `strict = $true` staying fixed, referenced from
-`tools/apply-branch-protection.ps1`'s own header comment), and "Hazards from the classification
-report: disposition" (referenced from `tools/classify-dep-pr-core.ps1`'s own header comment,
-informally, as "Hazards disposition"). None of these sections is itself in `sharedPaths`,
-so a citation to any of them dangles in a child repo unless that child's own `DESIGN.md` carries
-the section, or the sync mechanism rewrites the citation to point somewhere the child actually
-has. This is a recorded target for the sync issue, not resolved here: a receiving child must
-either carry these sections in its own `DESIGN.md` or the sync mechanism must rewrite the
-citations that name them.
+**`DESIGN.md` is excluded from `sharedPaths`, but any `sharedPaths` file that cites one of its
+sections by name creates a child-repo obligation.** There is no frozen list of which files and
+sections do this: the current set is derived mechanically, not hand-enumerated, so it cannot go
+stale the way a written inventory did twice across two fix rounds on this issue. The guard is
+`tests/governance-manifest.test.js`'s citation-coverage test, which scans every `sharedPaths` file
+for a `DESIGN.md § "Title"` (or `DESIGN.md "Title"`) citation and fails if the quoted title has no
+matching `## ` heading in this file. A human can run the same check by hand: `grep -rn
+"DESIGN.md.*§" standards agents tools scripts .claude AGENTS.md definition-of-done.md
+WHAT-IT-CHECKS.md buildlog/README.md` and eyeball each hit against this file's headings. None of
+the cited sections is itself in `sharedPaths`, so a citation dangles in a child repo unless that
+child's own `DESIGN.md` carries the section, or the sync mechanism rewrites the citation to point
+somewhere the child actually has. This is a recorded target for the sync issue, not resolved here:
+a receiving child must either carry the cited sections in its own `DESIGN.md` or the sync
+mechanism must rewrite the citations that name them.
 
 A larger set of shared files mention `DESIGN.md` without naming a section (reading it wholesale
 for context, or listing the path alongside `CLAUDE.md`/`README.md` in a doc-split description);

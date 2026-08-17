@@ -96,6 +96,55 @@ function isExcluded(file, excludedPaths) {
   return excluded;
 }
 
+const DESIGN_PATH = path.join(REPO_ROOT, 'DESIGN.md');
+
+/**
+ * Joins a file's lines into one blob for citation scanning, stripping a
+ * leading comment marker (#, //, *) from each line first so a citation split
+ * across a wrapped comment continuation -- the common style in this repo's
+ * .ps1 header comments, e.g. `DESIGN.md § "Lean review process\n# rationale".`
+ * in tools/apply-branch-protection.ps1 -- rejoins as plain prose rather than
+ * picking up a stray "#" mid-title. Whitespace runs collapse to one space so
+ * multi-line indentation does not widen the gap the adjacency check in
+ * extractDesignCitations relies on.
+ */
+function dewrapText(fileText) {
+  const stripped = fileText
+    .split('\n')
+    .map((line) => line.replace(/^\s*(#|\/\/|\*)+\s?/, ''))
+    .join(' ');
+  return stripped.replace(/\s+/g, ' ');
+}
+
+/**
+ * Extracts every DESIGN.md section citation from a file's dewrapped text, in
+ * the two live forms: `DESIGN.md § "Title"` / `DESIGN.md § 'Title'` (an
+ * optional backtick around "DESIGN.md" is allowed) and `DESIGN.md "Title"`.
+ * "DESIGN.md" (or its closing backtick) must be followed immediately, with
+ * only whitespace between, by the § or the opening quote -- a line that
+ * merely mentions DESIGN.md near an unrelated quoted title later in the same
+ * sentence is not a citation. This adjacency requirement is load-bearing: it
+ * is what correctly leaves standards/adversarial-review-protocol.md's "owner
+ * decision, recorded in `DESIGN.md`, per § "Advisory-lens lifecycle" below"
+ * uncited -- that quoted title names a section of THAT file (line 213 of the
+ * same document), not of DESIGN.md, and DESIGN.md has no such heading.
+ */
+function extractDesignCitations(text) {
+  const patterns = [
+    /`?DESIGN\.md`?\s*§\s*"([^"]+)"/g,
+    /`?DESIGN\.md`?\s*§\s*'([^']+)'/g,
+    /`?DESIGN\.md`?\s+"([^"]+)"/g,
+  ];
+  const titles = [];
+  for (const re of patterns) {
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      titles.push(m[1].trim());
+    }
+  }
+  return titles;
+}
+
 describe('governance-manifest.json', () => {
   it('parses as JSON', () => {
     const raw = fs.readFileSync(MANIFEST_PATH, 'utf8');
@@ -187,5 +236,65 @@ describe('governance-manifest.json', () => {
   it('a hypothetical buildlog fragment other than README.md is excluded', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     expect(isExcluded('buildlog/99-phantom-fragment.md', manifest.excludedPaths)).toBe(true);
+  });
+});
+
+// Mechanizes the citation-coverage promise DESIGN.md § "governance-manifest.json
+// semantics" now states as a standing rule rather than a hand-enumerated list: any
+// sharedPaths file that cites a DESIGN.md section by name creates a child-repo
+// obligation, and that obligation is only real if the cited section actually
+// exists. A hand-rebuilt inventory went stale twice across two fix rounds on this
+// issue; this test replaces it with a scan so the set can never silently drift
+// again.
+describe('DESIGN.md section citations from sharedPaths files', () => {
+  it('every DESIGN.md section cited by a sharedPaths file matches a real DESIGN.md heading', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const designText = fs.readFileSync(DESIGN_PATH, 'utf8');
+    const headings = [...designText.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
+
+    const tracked = listTrackedFiles();
+    const citingFiles = tracked.filter((f) => isShared(f, manifest.sharedPaths));
+    expect(citingFiles.length).toBeGreaterThan(0);
+
+    const dangling = [];
+    for (const file of citingFiles) {
+      const text = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      const citations = extractDesignCitations(dewrapText(text));
+      for (const title of citations) {
+        const found = headings.some((h) => h.includes(title));
+        if (!found) dangling.push(`${file}: "${title}"`);
+      }
+    }
+    expect(dangling).toEqual([]);
+  });
+
+  // Mutation-coverage: a citation naming a heading DESIGN.md does not have must be
+  // caught, proving the scan doesn't just vacuously pass. Exercises the extraction
+  // + lookup directly rather than mutating a real file on disk.
+  it('rejects a citation naming a DESIGN.md heading that does not exist', () => {
+    const designText = fs.readFileSync(DESIGN_PATH, 'utf8');
+    const headings = [...designText.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
+    const bogusLine = 'See `DESIGN.md` § "This Section Does Not Exist In DESIGN.md".';
+    const citations = extractDesignCitations(dewrapText(bogusLine));
+    expect(citations).toEqual(['This Section Does Not Exist In DESIGN.md']);
+    expect(headings.some((h) => h.includes(citations[0]))).toBe(false);
+  });
+
+  // Proves the adjacency requirement: a line that mentions DESIGN.md and, later
+  // in the same sentence, quotes a section title belonging to a DIFFERENT file
+  // (standards/adversarial-review-protocol.md's own "Advisory-lens lifecycle"
+  // heading) must not be extracted as a DESIGN.md citation.
+  it('does not extract a same-file cross-reference that merely co-occurs with the word DESIGN.md', () => {
+    const line =
+      'This promotion to gating is an owner decision, recorded in `DESIGN.md`, per § "Advisory-lens lifecycle" below: the owner approved it.';
+    expect(extractDesignCitations(dewrapText(line))).toEqual([]);
+  });
+
+  // Proves multi-line reassembly: a citation wrapped across a comment
+  // continuation line, the actual shape used throughout this repo's .ps1
+  // header comments, still extracts as one title.
+  it('reassembles a citation title wrapped across a comment continuation line', () => {
+    const wrapped = '# Rationale: DESIGN.md § "Lean review process\n# rationale".';
+    expect(extractDesignCitations(dewrapText(wrapped))).toEqual(['Lean review process rationale']);
   });
 });
