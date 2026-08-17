@@ -81,8 +81,8 @@ function isShared(file, sharedPaths) {
  * `!`-prefixed entry removes it. This lets a broad entry (e.g. "buildlog/**")
  * exclude a whole directory while a later negation (e.g. "!buildlog/README.md")
  * carves out the one file that is separately a sharedPaths entry, without the
- * two arrays ever both claiming the same file (see DESIGN.md § "governance-
- * manifest.json semantics").
+ * two arrays ever both claiming the same file (see DESIGN.md's governance-
+ * manifest semantics section).
  */
 function isExcluded(file, excludedPaths) {
   let excluded = false;
