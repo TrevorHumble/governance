@@ -13,5 +13,6 @@
     "emdash": "npm run check:emdash"
   },
   "ghPath": "gh",
-  "defaultBranch": "main"
+  "defaultBranch": "main",
+  "governanceHome": "self"
 }

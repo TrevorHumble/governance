@@ -2,8 +2,8 @@
 # this file; do not run it directly (mirrors the -core.ps1 convention of
 # tools/issue-core.ps1 and tools/classify-dep-pr-core.ps1).
 #
-# Why this file exists instead of four private copies: DESIGN.md § "repo-profile.json
-# schema" (the "tools/repo-profile-core.ps1" paragraph).
+# Why this file exists instead of four private copies: the governance repo's DESIGN.md
+# § "repo-profile.json schema" (the "tools/repo-profile-core.ps1" paragraph).
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 
@@ -16,23 +16,29 @@ $FieldDefaults = @{
 }
 
 # Get-RepoProfileValue -- reads one field out of repo-profile.json, resolved
-# at <this file's own directory>\..\repo-profile.json (the repo root), so
-# every caller gets the same answer regardless of its own location under
-# tools/. Returns $Default (or, if the caller omitted -Default, this file's
-# own $FieldDefaults entry for $Field, if any) when the profile file does not
-# exist, the field is absent, or the field's value is falsy (empty string,
-# empty array, $null): a caller never has to separately null-check before
-# using the result.
+# by default at <this file's own directory>\..\repo-profile.json (the repo
+# root), so every caller gets the same answer regardless of its own location
+# under tools/. Pass -ProfilePath to read a different profile file instead
+# (the governance-sync tool's own use: reading a child repo's profile rather
+# than this repo's own). Returns $Default (or, if the caller omitted
+# -Default, this file's own $FieldDefaults entry for $Field, if any) when the
+# profile file does not exist, the field is absent, or the field's value is
+# falsy (empty string, empty array, $null): a caller never has to separately
+# null-check before using the result.
 function Get-RepoProfileValue {
   param(
     [Parameter(Mandatory = $true)]
     [string]$Field,
-    $Default = $null
+    $Default = $null,
+    [string]$ProfilePath
   )
   if (-not $PSBoundParameters.ContainsKey('Default') -and $FieldDefaults.ContainsKey($Field)) {
     $Default = $FieldDefaults[$Field]
   }
-  $profilePath = Join-Path $PSScriptRoot '..\repo-profile.json'
+  $profilePath = $ProfilePath
+  if (-not $profilePath) {
+    $profilePath = Join-Path $PSScriptRoot '..\repo-profile.json'
+  }
   if (-not (Test-Path $profilePath)) {
     return $Default
   }

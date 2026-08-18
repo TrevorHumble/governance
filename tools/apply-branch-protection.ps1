@@ -3,7 +3,7 @@
 # WHAT: PUTs GitHub branch protection onto the target branch requiring a pull
 # request, the repo's declared status checks, and required_status_checks.strict
 # always true (not a parameter). Why it stays fixed instead of a per-repo profile
-# field: DESIGN.md § "Branch-protection strictness".
+# field: the governance repo's DESIGN.md § "Branch-protection strictness".
 #
 # Required checks are a parameter, not a hardcoded list: pass -RequiredChecks, or
 # let it default to repo-profile.json's ciCheckNames field. A required context
@@ -12,8 +12,8 @@
 # guessed from workflow YAML.
 #
 # required_approving_review_count stays 0 by default (a solo-maintainer repo
-# cannot approve their own PR). Rationale: DESIGN.md § "Lean review process
-# rationale".
+# cannot approve their own PR). Rationale: the governance repo's DESIGN.md §
+# "Lean review process rationale".
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 param(

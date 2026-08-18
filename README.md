@@ -7,15 +7,14 @@ to every child repo (wedding-scavenger-hunt, the Blender repos, and whatever com
 
 Rules of the road, settled 2026-08-16:
 
-- **Global wins by default.** A child may override a global rule only by declaring it
-  in its own local override file, naming the rule and the reason. The global file itself
-  is never edited in a child.
+- **Global wins by default.** A child overrides only by declaring it in its own tracked override
+  home, never by editing the global file. Full mechanics, including where that home lives:
+  `standards/governance-sync.md`.
 - **Governance fixes are made here**, in this repo, even when discovered mid-build in a
   child. Full review runs here.
 - **Children pull on build.** Every child checks this repo for updates at build start.
-  A pull lands as a small PR in the child with one lightweight review asking only:
-  does the new global rule contradict a local rule? No contradiction: merge. One clear
-  fix: fix and merge. Multiple ways to fix: stop and ask the owner.
+  A pull lands as a small PR in the child with one lightweight review. Full mechanics,
+  including the review's operative question and its outcomes: `standards/governance-sync.md`.
 
 Seed content comes from wedding-scavenger-hunt, the gold standard at the time this repo was
 created (2026-08-16). See `docs/seed-classification-2026-08-16.md` for the file-by-file
@@ -48,8 +47,10 @@ node scripts/check-emdash.js
 - `repo-profile.json`: this repo's own declared values for every field a shared governance file
   may need (pre-review process, CI check names, critical dependencies, default branch, and the
   rest). Schema documented in `DESIGN.md`.
-- `governance-manifest.json`: the declared set of files a child repo is meant to receive on a
-  future sync, and any retired tombstones. Schema documented in `DESIGN.md`.
+- `governance-manifest.json`: the declared set of files a child repo receives on sync, and any
+  retired tombstones. Schema documented in `DESIGN.md`.
+- `tools/governance-sync.ps1`: pulls this repo's declared shared governance into a child as a
+  small PR. The contradiction review a child's reviewer runs on that PR: `standards/governance-sync.md`.
 - `DESIGN.md`: architecture decisions and rationale, including the founding ADR for this repo.
 - `standards/`, `agents/`, `.claude/`, `.githooks/`, `tools/`, `scripts/`: the governance layer
   itself.
