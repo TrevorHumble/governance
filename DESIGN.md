@@ -15,8 +15,11 @@ behind with no mechanism to catch up.
 
 **Decision (owner, 2026-08-16).** Create this repo, `governance`, as the new canonical home for
 the shared governance layer. Rules of the road, settled the same day and recorded in `README.md`:
-global wins by default; a child overrides only by declaring it in its own local override file;
-governance fixes land here; children pull on build. Seed content comes from
+global wins by default; a child overrides only by declaring it in its own local override file
+(superseded 2026-08-18, issue #3: the override home is now the tracked `## Governance overrides`
+heading in the child's own `CLAUDE.md`, per § "Governance sync" below and
+`standards/governance-sync.md`; this sentence stays as the historical record of the seed
+decision); governance fixes land here; children pull on build. Seed content comes from
 wedding-scavenger-hunt, the gold-standard copy at the time, scrubbed of that repo's domain
 content and with every repo-specific value moved into `repo-profile.json`.
 
@@ -74,22 +77,34 @@ repo may declare (not only this repo's own choice):
   check:emdash"}`.
 - `ghPath` (string). Allowed: `"gh"` (on PATH) or an absolute path to the GitHub CLI binary. A
   machine where `gh` lives elsewhere records the absolute path as a per-machine note in that
-  machine's own `CLAUDE.local.md`, never in this committed file.
+  machine's own `CLAUDE.local.md`, never in this committed file, and sets the `GH_PATH`
+  environment variable to match. The full gh resolution chain `tools/governance-sync.ps1` reads
+  is § "Governance sync" below (the gh resolution chain paragraph), the one detailed home.
 - `defaultBranch` (string). Allowed: any git branch name that exists on the remote; the branch
   `tools/check-freshness.ps1`, `tools/new-agent-worktree.ps1`, `tools/apply-branch-protection.ps1`,
   and `tools/repo-profile-core.ps1`'s callers treat as the remote default, instead of a hardcoded
   `origin/main`.
+- `governanceHome` (string). Allowed: the literal `"self"` for the repo that is the governance
+  home, or the URL or filesystem path of the governance home repo for a child. Absent means
+  unconfigured: `tools/governance-sync.ps1` does nothing. This repo's own profile declares
+  `"self"`.
+- `syncIssue` (positive integer). The child's own standing GitHub issue number for governance
+  syncs; required whenever `governanceHome` is not `"self"`. This repo does not declare it.
 
 **`tools/repo-profile-core.ps1`.** All profile-reading PowerShell logic (resolving
-`repo-profile.json`'s path, reading it if present, falling back to a named default if missing or
-the field is absent) is single-homed in this file's `Get-RepoProfileValue -Field <name> -Default
-<value>` function, resolved at `$PSScriptRoot\..\repo-profile.json` (the repo root). Its
+`repo-profile.json`'s path by default, or reading a caller-supplied `-ProfilePath` instead, and
+falling back to a named default if the field is absent) is single-homed in this file's
+`Get-RepoProfileValue -Field <name> -Default <value> [-ProfilePath <file>]` function.
+`-ProfilePath`'s own default is `$PSScriptRoot\..\repo-profile.json` (the repo root); a caller
+that passes `-ProfilePath` explicitly reads a different profile entirely, the mechanism
+`tools/governance-sync.ps1` uses to read a child's profile rather than this repo's own. Its
 `$FieldDefaults` table is the single home of per-field fallbacks a caller needs no `-Default`
 argument for (the `defaultBranch` fallback of `'main'` lives there, mirrored once, deliberately, in
 `scripts/check-emdash.js` as the sanctioned cross-language copy noted below). Every
 PowerShell tool that reads the profile (`tools/check-freshness.ps1`,
 `tools/new-agent-worktree.ps1`, `tools/apply-branch-protection.ps1`,
-`tools/classify-dep-pr-core.ps1`) dot-sources it rather than carrying its own copy. This file was
+`tools/classify-dep-pr-core.ps1`, `tools/governance-sync.ps1`) dot-sources it rather than
+carrying its own copy. This file was
 added during the PR-review fix round on this issue's implementation, after the review found the
 same profile-reading logic duplicated across four tools with two different resolution strategies;
 it widens this issue's `Touches` beyond the originally-filed set (`tools/**` already covers it, so
@@ -101,11 +116,16 @@ naming this file as the PowerShell-side owner.
 
 ## governance-manifest.json semantics
 
-`retired` (array): tombstones for a shared path this repo used to declare shared but no longer
-does; empty at seed time (nothing has been retired yet).
+`retired` (array of `{ "path", "sha256" }` objects): tombstones for a shared path this repo used
+to declare shared but no longer does. `path` is the retired file's repo-relative path; `sha256`
+is the lowercase hex SHA-256 of its last-shipped content, the provenance check
+`tools/governance-sync-core.ps1`'s `Get-SyncPlan` uses to decide whether a child's own copy is
+safe to delete (see § "Governance sync" below). Empty at seed time (nothing has been retired
+yet), so the schema change this repo's issue #3 made (from plain strings to these objects)
+rewrote no existing data.
 
-`sharedPaths` (array of glob-ish strings): exactly the governance files a child repo is meant to
-receive on a future sync. A `path/**` entry means "everything under this directory that exists at
+`sharedPaths` (array of glob-ish strings): exactly the governance files a child repo receives on
+sync. A `path/**` entry means "everything under this directory that exists at
 sync time," so a wildcard entry never goes stale as files are added or removed beneath it; a bare
 path entry names one specific file, and is checked to exist by `tests/governance-manifest.test.js`.
 
@@ -117,8 +137,11 @@ gitignore-style negation, carving a file back out of a broader exclusion that wo
 cover it. This is how `buildlog/**` (the fragments, not shared) and `buildlog/README.md` (the
 template, a `sharedPaths` entry) coexist without both arrays claiming the same file: `excludedPaths`
 lists `"buildlog/**"` then `"!buildlog/README.md"`, so the file resolves to shared and shared only.
-Whether a child receiving a sync also receives this repo's own enforcement tooling (`tests/**`,
-the vitest/prettier configs) is the sync issue's question, not answered here.
+A child receiving a sync does NOT also receive this repo's own enforcement tooling (`tests/**`,
+the vitest/prettier configs): those assert facts about this repo's own tree and would fail on
+arrival in a child whose tree differs; each child keeps its own test surface, adopting its own
+copy of a guard through its own pipeline if it wants one. Resolved and recorded in full in
+§ "Governance sync" below.
 
 `tests/governance-manifest.test.js` guards both directions: every declared `sharedPaths` entry
 resolves to a real file (the AC5 promise), and, in the other direction, every git-tracked file in
@@ -130,10 +153,12 @@ was added to keep the two sets disjoint).
 
 **CLAUDE.md is excluded from `sharedPaths` but its `## Governing-artifact surface` section is not
 optional for a child.** Every child repo must carry its own `## Governing-artifact surface`
-section in its own `CLAUDE.md`, naming its own governing-artifact path list; how the global
-CLAUDE.md template (including that section) reaches a child is the sync issue's design question,
-not answered here, but the requirement itself is recorded here so the sync issue has a concrete
-target: delivering the section, not inventing whether it is needed.
+section in its own `CLAUDE.md`, naming its own governing-artifact path list. The global CLAUDE.md
+template does not reach a child through the sync itself (`CLAUDE.md` stays in `excludedPaths`,
+deliberately: an unconditional overwrite would clobber a child's own local rules); instead,
+`tools/governance-sync-core.ps1`'s `Get-SyncPlan` checks the child's own `CLAUDE.md` for the
+literal heading and emits a warning, surfaced on every sync, until the child adds it. Resolved
+and recorded in full in § "Governance sync" below.
 
 **`DESIGN.md` is excluded from `sharedPaths`, but any `sharedPaths` file that cites one of its
 sections by name creates a child-repo obligation.** There is no frozen list of which files and
@@ -142,12 +167,12 @@ stale the way a written inventory did twice across two fix rounds on this issue.
 `tests/governance-manifest.test.js`'s citation-coverage test, which scans every `sharedPaths` file
 for a `DESIGN.md § "Title"` (or `DESIGN.md "Title"`) citation and fails if the quoted title has no
 matching `## ` heading in this file. A human can run the same check directly: `npx vitest run
-tests/governance-manifest.test.js`. None of the cited sections is itself in `sharedPaths`, so a
-citation dangles in a child repo unless that child's own `DESIGN.md` carries the section, or the
-sync mechanism rewrites the citation to point somewhere the child actually has. This is a
-recorded target for the sync issue, not resolved here: a receiving child must either carry the
-cited sections in its own `DESIGN.md` or the sync mechanism must rewrite the citations that name
-them.
+tests/governance-manifest.test.js`. None of the cited sections is itself in `sharedPaths`, so every such citation is reworded to name
+the governance repo explicitly (`the governance repo's DESIGN.md § "Title"`), a rewrite done once
+at the source, not something the sync mechanism does at delivery: the pointer stays true wherever
+the file lands because it says where the rationale lives, not because a child is assumed to carry
+the section itself. `tests/governance-manifest.test.js`'s citation-prefix check enforces the
+prefix on every future citation. Resolved and recorded in full in § "Governance sync" below.
 
 A larger set of shared files mention `DESIGN.md` without naming a section (reading it wholesale
 for context, or listing the path alongside `CLAUDE.md`/`README.md` in a doc-split description).
@@ -163,8 +188,9 @@ co-occurrence in the same sentence.** This is what correctly leaves
 
 **Ecosystem-specific shared tool.** `tools/check-deps-parity.ps1` is shared even though it is
 Node-ecosystem-specific: a child repo without `package.json` is expected to have it no-op or fail
-fast, not crash unrecoverably. A future sync mechanism should treat that as acceptable, not as a
-sync defect.
+fast, not crash unrecoverably. `tools/governance-sync.ps1` treats this as acceptable, not as a
+sync defect: it copies the file unconditionally, the same as any other `sharedPaths` entry, and
+does not inspect its runtime behavior.
 
 ---
 
@@ -238,10 +264,11 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
    the port drops the dead citation rather than carrying it forward.
 10. **`check-freshness.ps1`'s `$CARVE_OUT_PATHS`/`$MAX_DRIFT_COMMITS` are single-homed constants;
     duplicating the file across repos reintroduces the drift risk its own comment warns against.**
-    Acknowledged, not newly resolved: this is an inherent property of "each repo carries its own
-    copy of the governance tree" until the sync mechanism exists. It is exactly the drift problem
-    this seed repo was created to eventually solve once sync lands; tracked there, not fixed by
-    this issue alone.
+    Resolved by issue #3: the sync mechanism exists now, so "each repo carries its own copy of
+    the governance tree" no longer means "each repo's copy drifts unrecoverably." A child that
+    runs `tools/governance-sync.ps1` at build start pulls this file (and every other
+    `sharedPaths` entry) back into sync with this repo's own copy on every build; see
+    § "Governance sync" below.
 11. **Branch name `main` assumed throughout, not parameterized.** Resolved for the three tools
     named in the report (`apply-branch-protection.ps1`, `new-agent-worktree.ps1`,
     `check-freshness.ps1`, all three now reading `repo-profile.json`'s `defaultBranch` field via
@@ -369,3 +396,112 @@ test rather than merge silently.
 `scripts/check-emdash.js` caps the `git log`/`git diff` output it reads at 256 MiB
 (`MAX_BUFFER_BYTES`) and fails loud with a named remedy (narrow `EMDASH_BASE`, or raise the cap)
 rather than silently truncating a huge diff and missing violations past the cut point.
+
+---
+
+## Governance sync
+
+Issue #3 ships the mechanism `README.md`'s "Rules of the road" and this file's own seed ADR had
+stated as policy but left unbuilt: `tools/governance-sync.ps1` (the wrapper, the only file with
+side effects) and `tools/governance-sync-core.ps1` (the pure planning logic), wired into
+`.claude/commands/build.md` step 0b and `agents/orchestrator.md`'s Operating rules, reviewed per
+the new `standards/governance-sync.md`.
+
+**Pull, not push.** A child repo runs the sync tool against this repo at build start, rather than
+this repo pushing changes out to a registry of children. This was the owner's settled design
+(2026-08-16, recorded in the seed ADR above): no registry file, no fanout workflow, no PAT held
+here with write access to every child. A child opts in by declaring `governanceHome` and
+`syncIssue` in its own `repo-profile.json`, a file the sync never writes (it sits in
+`excludedPaths`), so there is nothing here for this repo to register or track per child.
+
+**Exit-code contract and its no-stuck-state property (non-dry-run runs).** `0` covers every
+outcome where nothing needed doing, or work was handed off cleanly to a PR; `1` is a
+configuration error caught before any clone or network access; `2` covers every operational
+failure, including any unhandled exception, via a `try`/`catch`/`finally` that removes the temp
+clone and any sync worktree on every exit path. Outside `-DryRun`, every exit-0 outcome ends in
+exactly one of two states: nothing to do, or a sync PR open with its URL printed. There is no
+non-dry-run exit-0 state where a sync is pending but no PR exists to carry the decision: a killed
+or interrupted run leaves, at worst, a stale local branch or worktree registration the next run
+cleans up (the branch-rebuild step and the try/finally cleanup in `tools/governance-sync.ps1`),
+never a plan that silently vanishes.
+
+**The same-tree invariant.** The plan a real (non-`-DryRun`) run applies is computed against a
+detached worktree at the child's `origin/<defaultBranch>`, created fresh after a `git fetch`, not
+against the invoking checkout. The invoking checkout's tree only feeds the `-DryRun` preview.
+Without this, a retired path could hash clean in a stale invoking checkout while the branch being
+synced holds diverged content, and a plan computed against the stale tree would silently prune
+content the branch being synced never actually matched.
+
+**One profile, parsed once.** The wrapper reads the resolved profile file exactly once as JSON;
+`governanceHome` and `syncIssue` come directly off that parsed object (property presence, not
+just value, decides `governanceHome`'s outcome), while `defaultBranch` and `ghPath` go through
+`Get-RepoProfileValue -ProfilePath <that same file>` so their fallback defaults stay single-homed
+in `tools/repo-profile-core.ps1`'s `$FieldDefaults` table. `governanceHome` deliberately gets no
+`$FieldDefaults` entry: there is no safe default for "where is my governance home," and a
+defaulted `self` would make a child that lost the field read as the governance home forever.
+
+**The `retired` entry schema and provenance-checked pruning.** A retired entry is
+`{ "path", "sha256" }`, not a plain string: `sha256` is the last-shipped content's hash, and a
+child's copy is pruned only when its current hash still matches. A child holding a copy older
+than the last-shipped version (or any locally edited copy) is retained-divergent instead,
+surfaced in the sync PR body and by a standing `WARNING retained divergent` line on every build
+until the contradiction reviewer disposes of it by hand. This is a deliberately accepted
+single-hash limitation: the mechanism does not attempt to distinguish "diverged before the last
+retirement" from "diverged after."
+
+**`tests/**` and this repo's own config files do not sync.** They assert facts about this repo's
+own tree (manifest coverage of its own file list, its own profile values) and would fail on
+arrival in a child whose tree differs. Each child keeps its own test surface.
+
+**The `.claude/settings.json` relocation.** Moved from `sharedPaths` to `excludedPaths`: a
+child's `settings.json` carries that repo's own permission allowlist and hook wiring, and an
+unconditional sync overwrite would clobber it, a class of damage the contradiction review's one
+rule-conflict question would not catch (a settings clobber is not a rule contradiction). The hook
+scripts themselves (`.claude/hooks/*.ps1`) stay shared; registering them in a child's
+`settings.json` is that child's own adoption work.
+
+**The child `CLAUDE.md` governing-artifact-surface warning.** `CLAUDE.md` itself stays out of
+`sharedPaths` (an unconditional overwrite would clobber a child's local rules), but every child
+must carry its own `## Governing-artifact surface` heading. `Get-SyncPlan` checks the child's
+`CLAUDE.md` for the literal heading and emits a warning when it is absent, printed on every sync
+run until the child adds it.
+
+**The `syncIssue` standing-issue mechanism.** A child's `.githooks/commit-msg` gate blocks a code
+commit (a sync commit stages `.ps1`/`.js`/etc. files) that names no GitHub issue. Rather than
+inventing a per-sync issue, a child declares one standing issue number, and every sync commit
+references it (`(#<N>)`), satisfying the gate without a new issue per pull.
+
+**The citation-prefix rule.** Every `DESIGN.md § "Title"`-shaped citation inside a `sharedPaths`
+file now names the governance repo explicitly (`the governance repo's DESIGN.md § "Title"`),
+rewritten once at the source rather than rewritten by the sync mechanism at delivery (the shipped
+tool does not rewrite file contents beyond copying them verbatim). These citations are rationale
+pointers, not load-bearing definitions: every operative rule a shared file instructs an agent to
+execute lives in that file or another synced file; the citation points at recorded reasoning in
+the home repo, and the prefix makes that explicit instead of implicit.
+`tests/governance-manifest.test.js`'s citation-prefix guard keeps a future citation from
+regressing to the unprefixed form.
+
+**The gh resolution chain.** The committed `ghPath` field alone cannot reach a machine where `gh`
+lives elsewhere (per-machine notes live in the gitignored, unparsed `CLAUDE.local.md`), so
+`tools/governance-sync-core.ps1`'s `Resolve-GhPath` tries, in order: the committed profile value
+(via `Get-Command`), then the `GH_PATH` environment variable (the per-machine override), then the
+vendor default install location under `$env:ProgramFiles` (guarded against an unset
+`$env:ProgramFiles`, which is normal on a non-Windows host), then throws, naming all three probes.
+
+**The `origin` remote-name assumption.** Every clone and worktree this pipeline creates names its
+primary remote `origin` (git's default). Not parameterized speculatively: recorded here as an
+assumption, to be revisited if a real repo ever needs otherwise.
+
+**Declined-sync re-offer, deliberately.** Closing a sync PR unmerged pauses the decision rather
+than resolving it. The next build re-offers the same diff (or its current equivalent, if the
+parent has moved on since): the mechanism supports no permanent silent divergence of a shared
+file. The two permanent resolutions are declaring a local override, or fixing the global rule in
+this repo first.
+
+**Orphan-branch recovery and supersession.** A stale local branch of the exact name a run is
+about to create can only hold a prior machine-generated sync commit, reproducible from the same
+inputs, so it is deleted and rebuilt rather than reused. A remote sync branch is never trusted as
+current either: it is always rebuilt from the current plan and force-pushed
+(`--force-with-lease`) over whatever is there. A branch name for a different parent commit is not
+a collision: the parent moved, and the new sync supersedes the old one; the standard tells the
+reviewer to close the superseded PR.

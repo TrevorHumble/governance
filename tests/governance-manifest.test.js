@@ -113,11 +113,14 @@ function dewrapText(fileText) {
 }
 
 /**
- * Extracts every DESIGN.md section citation from a file's dewrapped text.
- * "DESIGN.md" must be immediately adjacent to the § or opening quote --
- * mere co-occurrence with a quoted title later in the same sentence is not
- * a citation. See DESIGN.md's governance-manifest semantics section for the
- * worked example this adjacency rule exists to handle.
+ * Extracts every DESIGN.md section citation from a file's dewrapped text, as
+ * `{ title, index }` pairs: `index` is the match's start offset in the
+ * dewrapped text, which the citation-prefix guard (below) needs to look at
+ * what immediately precedes the citation. "DESIGN.md" must be immediately
+ * adjacent to the § or opening quote -- mere co-occurrence with a quoted
+ * title later in the same sentence is not a citation. See DESIGN.md's
+ * governance-manifest semantics section for the worked example this
+ * adjacency rule exists to handle.
  */
 function extractDesignCitations(text) {
   const patterns = [
@@ -125,14 +128,26 @@ function extractDesignCitations(text) {
     /`?DESIGN\.md`?\s*§\s*'([^']+)'/g,
     /`?DESIGN\.md`?\s+"([^"]+)"/g,
   ];
-  const titles = [];
+  const citations = [];
   for (const re of patterns) {
     let m;
     while ((m = re.exec(text)) !== null) {
-      titles.push(m[1].trim());
+      citations.push({ title: m[1].trim(), index: m.index });
     }
   }
-  return titles;
+  return citations;
+}
+
+/**
+ * True when `text` immediately before a citation match at `index` ends with
+ * "governance repo's " (the prefix every sharedPaths-file citation must
+ * carry, per AC 3, so the pointer stays true wherever the file lands: a
+ * child reader is told explicitly that the cited section lives in the
+ * governance repo's own DESIGN.md, not implicitly whatever DESIGN.md the
+ * child itself happens to carry).
+ */
+function hasGovernanceRepoPrefix(text, index) {
+  return text.slice(0, index).endsWith("governance repo's ");
 }
 
 /** True when `headings` contains a heading exactly matching `title`. */
@@ -253,9 +268,9 @@ describe('DESIGN.md section citations from sharedPaths files', () => {
       const text = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       const citations = extractDesignCitations(dewrapText(text));
       totalCitations += citations.length;
-      for (const title of citations) {
-        const found = headingExists(headings, title);
-        if (!found) dangling.push(`${file}: "${title}"`);
+      for (const c of citations) {
+        const found = headingExists(headings, c.title);
+        if (!found) dangling.push(`${file}: "${c.title}"`);
       }
     }
     expect(totalCitations).toBeGreaterThan(0);
@@ -270,8 +285,8 @@ describe('DESIGN.md section citations from sharedPaths files', () => {
     const headings = [...designText.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
     const bogusLine = 'See `DESIGN.md` § "This Section Does Not Exist In DESIGN.md".';
     const citations = extractDesignCitations(dewrapText(bogusLine));
-    expect(citations).toEqual(['This Section Does Not Exist In DESIGN.md']);
-    expect(headingExists(headings, citations[0])).toBe(false);
+    expect(citations.map((c) => c.title)).toEqual(['This Section Does Not Exist In DESIGN.md']);
+    expect(headingExists(headings, citations[0].title)).toBe(false);
   });
 
   // Proves the adjacency requirement: a line that mentions DESIGN.md and, later
@@ -289,6 +304,106 @@ describe('DESIGN.md section citations from sharedPaths files', () => {
   // header comments, still extracts as one title.
   it('reassembles a citation title wrapped across a comment continuation line', () => {
     const wrapped = '# Rationale: DESIGN.md § "Lean review process\n# rationale".';
-    expect(extractDesignCitations(dewrapText(wrapped))).toEqual(['Lean review process rationale']);
+    expect(extractDesignCitations(dewrapText(wrapped)).map((c) => c.title)).toEqual([
+      'Lean review process rationale',
+    ]);
+  });
+});
+
+// Mechanizes AC 3's retired-entry schema: since the schema change ships in
+// this issue (string entries become { path, sha256 } objects), a plain
+// string must fail loudly rather than being silently accepted forever.
+describe('retired entry schema (AC 3)', () => {
+  /** True when `entry` is a well-formed retired-entry object. */
+  function isValidRetiredEntry(entry) {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return false;
+    if (typeof entry.path !== 'string' || entry.path.length === 0) return false;
+    if (typeof entry.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(entry.sha256)) return false;
+    return true;
+  }
+
+  it("the live manifest's retired array is entirely well-formed (passes today with [])", () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const invalid = manifest.retired.filter((e) => !isValidRetiredEntry(e));
+    expect(invalid).toEqual([]);
+  });
+
+  // The exercised failing case: a plain-string entry, the old schema.
+  it('rejects a plain-string retired entry', () => {
+    expect(isValidRetiredEntry('tools/old-script.ps1')).toBe(false);
+  });
+
+  it('rejects an object entry whose sha256 is not 64 lowercase hex characters', () => {
+    expect(isValidRetiredEntry({ path: 'tools/old-script.ps1', sha256: 'not-hex' })).toBe(false);
+  });
+
+  it('accepts a well-formed retired entry', () => {
+    expect(isValidRetiredEntry({ path: 'tools/old-script.ps1', sha256: 'a'.repeat(64) })).toBe(true);
+  });
+});
+
+// Mechanizes AC 3's retired/sharedPaths disjointness: a path cannot be both
+// shared and retired at once, or a sync would copy a file and then delete it
+// in the same run.
+describe('retired / sharedPaths disjointness (AC 3)', () => {
+  it('no retired path in the live manifest is matched by any sharedPaths entry', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const overlapping = manifest.retired.filter((e) => isShared(e.path, manifest.sharedPaths));
+    expect(overlapping).toEqual([]);
+  });
+
+  // The exercised failing case: an inline fixture manifest whose retired
+  // path is also covered by a sharedPaths entry.
+  it('rejects a fixture manifest whose retired path is also a sharedPaths entry', () => {
+    const fixtureShared = ['tools/**'];
+    const fixtureRetired = [{ path: 'tools/old-script.ps1', sha256: 'a'.repeat(64) }];
+    const overlapping = fixtureRetired.filter((e) => isShared(e.path, fixtureShared));
+    expect(overlapping).toEqual(fixtureRetired);
+  });
+});
+
+// Mechanizes AC 3's citation-prefix guard: every DESIGN.md citation the
+// scanner matches inside a sharedPaths file must carry the "governance
+// repo's " prefix immediately before it, so the pointer stays true wherever
+// the file lands (see the citation rewrites this issue ships alongside this
+// guard). A future unprefixed citation fails this suite before it can reach
+// a child.
+describe('citation prefix guard (AC 3)', () => {
+  it("every DESIGN.md citation in a sharedPaths file carries the governance repo's prefix, in the live tree", () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const tracked = listTrackedFiles();
+    const citingFiles = tracked.filter((f) => isShared(f, manifest.sharedPaths));
+    const unprefixed = [];
+    let total = 0;
+    for (const file of citingFiles) {
+      const text = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+      const dewrapped = dewrapText(text);
+      const citations = extractDesignCitations(dewrapped);
+      total += citations.length;
+      for (const c of citations) {
+        if (!hasGovernanceRepoPrefix(dewrapped, c.index)) {
+          unprefixed.push(`${file}: "${c.title}"`);
+        }
+      }
+    }
+    expect(total).toBeGreaterThan(0);
+    expect(unprefixed).toEqual([]);
+  });
+
+  // The exercised failing case: an inline fixture line with no prefix.
+  it('rejects an unprefixed citation line', () => {
+    const line = 'See `DESIGN.md` § "Some Section" for more.';
+    const dewrapped = dewrapText(line);
+    const citations = extractDesignCitations(dewrapped);
+    expect(citations).toHaveLength(1);
+    expect(hasGovernanceRepoPrefix(dewrapped, citations[0].index)).toBe(false);
+  });
+
+  it('accepts a properly prefixed citation line', () => {
+    const line = "See the governance repo's `DESIGN.md` § \"Some Section\" for more.";
+    const dewrapped = dewrapText(line);
+    const citations = extractDesignCitations(dewrapped);
+    expect(citations).toHaveLength(1);
+    expect(hasGovernanceRepoPrefix(dewrapped, citations[0].index)).toBe(true);
   });
 });

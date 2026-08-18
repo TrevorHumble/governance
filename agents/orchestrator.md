@@ -54,6 +54,11 @@ name from a plan doc this repo keeps, if any (not every repo keeps one). All pri
    `0 commits behind` for a freshly-cut one. If the check reports drift, its output names the
    count with the literal phrase `commits behind`; resync per its instructions before continuing.
 
+   **Governance sync, same as `.claude/commands/build.md` Step 0b.** After isolation, run
+   `powershell -File tools/governance-sync.ps1` and follow `standards/governance-sync.md` for
+   what its outcome means, so a session invoked directly (not via `/build`) is bound to the
+   same pull.
+
 ---
 
 ## Pipeline (ordered)
@@ -392,8 +397,8 @@ The trigger is the agent noticing. No telemetry or automated detection is requir
   (which work is specced, via issues) and downstream (revert, via git history). **A change on the
   declared pre-review surface is the one deliberate exception:** it passes the "Pre-review step"
   (above), the owner settling the artifact live against a seeded preview or equivalent, never by
-  reading a diff, before its criteria are even written. See `DESIGN.md` § "Merge policy and
-  pre-review rationale" for this repo's own merge policy and pre-review rationale.
+  reading a diff, before its criteria are even written. See the governance repo's `DESIGN.md` § "Merge policy and
+  pre-review rationale" for the merge policy and pre-review rationale recorded there.
 - Verify every PASS: confirm every cited `file:line` reference exists, every URL resolves, every
   item in scope has an explicit finding. This check is the orchestrator's responsibility and is
   not delegated to the reviewer.

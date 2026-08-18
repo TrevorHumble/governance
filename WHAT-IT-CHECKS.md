@@ -81,11 +81,17 @@ a change whose effect is only checkable that way goes through that process befor
 repo currently declares none (`preReview: "none"`); if that changes, this file and
 `definition-of-done.md` clause 9 should be updated together.
 
-**Stated but unmechanized: this repo's README describes a "children pull governance updates on
-build" rule** (every child repo checks this repo for updates at build start, and a pull lands as
-a small PR in the child with a lightweight review). As of this writing there is no CI job or other
-mechanical enforcement that actually runs that pull, or verifies a child has done it. It is a
-stated policy, not a checked one, pending a follow-up sync issue to wire it up.
+**What `tools/governance-sync.ps1` mechanizes, and what it cannot force.** A child repo that
+declares `governanceHome` in its own `repo-profile.json` runs this tool at build start
+(`.claude/commands/build.md` step 0b, and `agents/orchestrator.md`'s Operating rules for a
+session invoked directly). It mechanically diffs the governance home's declared shared files
+against the receiving repo's tree and, when there is anything to pull, opens or refreshes a
+small pull request carrying exactly that diff, with a build-branching stdout marker for each
+outcome (see `standards/governance-sync.md` for what a child's reviewer does with that PR).
+What it cannot force: a child that never runs the tool, or that opens the sync PR but never
+merges it, is not detectable from the governance home; no mechanism here reaches into a child
+and confirms a sync happened. The tool being present and working is what "mechanized" means
+here, not that every child is caught up at any given moment.
 
 **Green means the test suite passes and newly added lines carry no em dash. For anything whose
 correctness depends on how it looks or reads to a person, that judgment is still yours.**

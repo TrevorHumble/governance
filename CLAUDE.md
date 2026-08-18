@@ -8,9 +8,10 @@ operating contract, not a restatement of any child repo's local rules.
 This is the parent governance repo: standards, agent definitions, pipeline commands, hooks and
 their wiring, worktree tools, and the checks that enforce them, scrubbed of any one child
 project's domain content and with every repo-specific value moved into `repo-profile.json`. It
-exists so a canonical, generic, running governance tree can be pulled into child repos (the
-sync mechanism is a separate, later concern; this repo works standalone first). See `DESIGN.md`
-for the founding rationale and `README.md` for the federalism rules.
+exists so a canonical, generic, running governance tree can be pulled into child repos: the pull
+is mechanized by `tools/governance-sync.ps1`, and the review a child runs on its sync PR is
+`standards/governance-sync.md`. See `DESIGN.md` for the founding rationale and `README.md` for
+the federalism rules.
 
 ## Governing-artifact surface
 
@@ -74,17 +75,15 @@ TRULY_FINAL in filenames or headers. No AI-slop filler (`elegantly`, `robustly`,
 
 This repo is the global source of truth for governance. The rules, settled by the owner:
 
-- **Global wins by default.** A child repo may override a global rule only by declaring it in
-  its own local override file, naming the rule and the reason. The global file itself is never
-  edited in a child.
+- **Global wins by default.** A child overrides only by declaring it in its own tracked override
+  home, never by editing the global file. Full mechanics, including where that home lives:
+  `standards/governance-sync.md`.
 - **Governance fixes are made here**, in this repo, even when discovered mid-build in a child.
   Full review runs here.
 - **Children pull on build.** Every child checks this repo for updates at build start. A pull
-  lands as a small PR in the child with one lightweight review asking only: does the new global
-  rule contradict a local rule? No contradiction: merge. One clear fix: fix and merge. Multiple
-  ways to fix: stop and ask the owner. (This rule is stated policy; the mechanical sync tooling
-  that carries it out is a follow-up concern, tracked separately, and is not yet built; see
-  `WHAT-IT-CHECKS.md`.)
+  lands as a small PR in the child with one lightweight review. Full mechanics, including the
+  review's operative question and its outcomes: `standards/governance-sync.md`; what the pull
+  mechanizes and what it cannot force: `WHAT-IT-CHECKS.md`.
 
 ## Repo conventions
 
@@ -92,7 +91,10 @@ This repo is the global source of truth for governance. The rules, settled by th
   the board.
 - **The GitHub CLI path** is declared in `repo-profile.json`'s `ghPath` field (default `gh`,
   meaning on PATH). A machine where `gh` lives elsewhere records its absolute path as a
-  per-machine note in that machine's own `CLAUDE.local.md`, never in the committed profile.
+  per-machine note in that machine's own `CLAUDE.local.md`, never in the committed profile, and
+  sets the `GH_PATH` environment variable to match: `tools/governance-sync.ps1` reads the
+  committed `ghPath`, then `GH_PATH`, then the vendor default install location, in that order
+  (`ghPath` alone cannot reach a machine where `gh` lives elsewhere).
 - **Environment is Windows / PowerShell** for this repo's own tooling. Use PowerShell syntax
   (`$env:VAR`, `$null`, backtick line continuation; no `&&` / `||`) in any script here; a
   cross-platform launcher fallback (`pwsh`) is used where tests need to run on other CI
@@ -108,8 +110,9 @@ This repo is the global source of truth for governance. The rules, settled by th
   are missing before the pipeline's first `gh issue create --label` or `gh issue edit
   --add-label` call needs them.
 - **Local governance convention.** Every child repo (and this repo itself, on any given machine)
-  keeps its own `CLAUDE.local.md` for repo-specific or machine-specific rules that override or
-  supplement this file, referenced from here but never edited from a child.
+  keeps its own gitignored `CLAUDE.local.md` for per-machine notes only (a local gh path, other
+  machine-specific values); it is never a governance-override home. For the tracked override
+  home and why a gitignored file cannot serve as one: `standards/governance-sync.md`.
 
 ## What needs extra rigor
 

@@ -1,7 +1,7 @@
 # check-freshness: read-only staleness + overlap check, shared by the owner-review
 # path (README.md) and the build-session path (.claude/commands/build.md step 0,
-# .claude/commands/realign.md). Rationale: DESIGN.md § "Hazards from the classification
-# report: disposition" (items 10-11); the incident history behind this failure mode
+# .claude/commands/realign.md). Rationale: the governance repo's DESIGN.md § "Hazards from
+# the classification report: disposition" (items 10-11); the incident history behind this failure mode
 # lives in the wedding-scavenger-hunt repo's own DESIGN.md, not duplicated here.
 #
 # Pure check, no side effects on the working tree: it runs read-only git commands
