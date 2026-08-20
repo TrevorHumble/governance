@@ -82,8 +82,8 @@ This repo is the global source of truth for governance. The rules, settled by th
   Full review runs here.
 - **Children pull on build.** Every child checks this repo for updates at build start. A pull
   lands as a small PR in the child with one lightweight review. Full mechanics, including the
-  review's operative question and its outcomes: `standards/governance-sync.md`; what the pull
-  mechanizes and what it cannot force: `WHAT-IT-CHECKS.md`.
+  review's operative question and its outcomes, and what the pull mechanizes and what it cannot
+  force: `standards/governance-sync.md` § "What the tool mechanizes and what it cannot force".
 
 ## Repo conventions
 

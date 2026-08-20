@@ -1,33 +1,23 @@
 // tests/governance-sync.test.js
 // Vitest tests for tools/governance-sync-core.ps1 (pure planning logic) and
 // tools/governance-sync.ps1 (the wrapper: configuration handling and the
-// end-to-end pull-and-PR flow). Windows PowerShell 5.1 is the launcher on
-// win32; pwsh on other platforms, per tests/classify-dep-pr.test.js.
+// end-to-end pull-and-PR flow). Launcher resolution is shared: see
+// tests/ps-launcher.js.
 'use strict';
 
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-
-const PS = process.platform === 'win32' ? 'powershell' : 'pwsh';
-
-let launcherMissing = false;
-try {
-  execFileSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', 'exit 0']);
-} catch (e) {
-  if (e.code === 'ENOENT') {
-    launcherMissing = true;
-  }
-}
+const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const CORE_SCRIPT = path.join(REPO_ROOT, 'tools', 'governance-sync-core.ps1');
 const WRAPPER_SCRIPT = path.join(REPO_ROOT, 'tools', 'governance-sync.ps1');
 
 const maybeDescribe = launcherMissing
-  ? describe.skip.bind(describe, `${PS} not found, skipping governance-sync tests`)
+  ? describe.skip.bind(describe, skipTitle('governance-sync'))
   : describe;
 
 // ---- generic helpers --------------------------------------------------

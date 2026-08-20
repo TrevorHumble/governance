@@ -66,7 +66,7 @@ Elapsed: <N> seconds
 ## Local
 
 | Path | Description | Verdict                 |
-| ---- | ----------- | ------------------------ |
+| ---- | ----------- | ----------------------- |
 | ...  | ...         | adaptable / build-fresh |
 
 ## Domain reference
@@ -82,7 +82,7 @@ Elapsed: <N> seconds
 ## Existing owner of a named rule
 
 | Rule | Existing owner (file:line) | Verdict                          |
-| ---- | --------------------------- | --------------------------------- |
+| ---- | -------------------------- | -------------------------------- |
 | ...  | ...                        | has an owner / no existing owner |
 
 ## Standard / pattern learned

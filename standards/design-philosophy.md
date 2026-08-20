@@ -68,11 +68,11 @@ The following patterns are defects, not style preferences. A finding that matche
 
 | Pattern                  | What it signals                                                                                                                                                                 |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shallow module`         | The interface is nearly as complex as the implementation: depth is missing.                                                                                                    |
+| `shallow module`         | The interface is nearly as complex as the implementation: depth is missing.                                                                                                     |
 | `information leakage`    | An internal decision is visible or duplicated across the interface.                                                                                                             |
 | `temporal decomposition` | Structure follows the order of operations rather than the information being hidden.                                                                                             |
-| `pass-through`           | A module that does nothing but forward arguments to the layer below: no abstraction added.                                                                                     |
-| `vague name`             | A name that does not communicate what the thing is or does, e.g., `tmp`, a variable name so generic it forces the reader to trace the data flow to understand it.              |
+| `pass-through`           | A module that does nothing but forward arguments to the layer below: no abstraction added.                                                                                      |
+| `vague name`             | A name that does not communicate what the thing is or does, e.g., `tmp`, a variable name so generic it forces the reader to trace the data flow to understand it.               |
 | `redundant encoding`     | The same fact is rendered through more than one simultaneous representation on one user-facing surface: a count, a progress bar, and an explainer paragraph for the same value. |
 
 ### Information leakage: duplicated ownership of a formula, filter, or status rule

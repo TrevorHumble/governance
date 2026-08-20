@@ -122,7 +122,11 @@ continuing the build: the pull just changed the governance tree that worktree wa
 
 ## What the tool mechanizes and what it cannot force
 
-Not restated here: see `WHAT-IT-CHECKS.md`, also synced, for what
-`tools/governance-sync.ps1` mechanically checks and what it cannot force (a child that never
-runs it, or opens the PR but never merges it, is not detectable from the home repo). That file
-is the single home of that statement, so this standard and it cannot drift apart on it.
+`tools/governance-sync.ps1` mechanizes the diff and the PR: it computes the plan, opens (or
+refreshes) the sync PR, and prunes a retired path only when the child's copy still matches the
+last-shipped hash. It cannot force a child to run it at all, force an opened sync PR to merge, or
+force the contradiction review above to happen with rigor rather than a rubber stamp: none of
+that is detectable from the governance home. A child may keep its own `WHAT-IT-CHECKS.md`
+describing that child's own CI and coverage; the governance home's own `governance-manifest.json`
+never lists it in `sharedPaths`, so this tool neither creates nor maintains one, and it carries no
+promise about what any given child's build actually checks.

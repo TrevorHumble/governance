@@ -112,6 +112,17 @@ no manifest change was needed). `scripts/check-emdash.js` is the one deliberate 
 Node script cannot dot-source a `.ps1` file, so it keeps its own small JS reader, with a comment
 naming this file as the PowerShell-side owner.
 
+**`tests/ps-launcher.js`.** All PowerShell-launcher resolution for the test suite (probing
+`powershell` then `pwsh`, the same order `.githooks/commit-msg` itself probes in, and exposing the
+resolved launcher name, a `launcherMissing` boolean, and the shared skip-title text) is
+single-homed in this file. It was added during the PR-review fix round on this issue's
+implementation, after the review found the same probe duplicated across five suites with two
+different resolution strategies, one of which (picking `powershell` on win32 and `pwsh` everywhere
+else, then skipping if that one guess was absent) silently skipped whole suites on a Windows host
+carrying only `pwsh`. Every suite that spawns PowerShell (`tests/apply-branch-protection.test.js`,
+`tests/check-freshness.test.js`, `tests/classify-dep-pr.test.js`, `tests/governance-sync.test.js`,
+`tests/commit-msg.test.js`) requires it rather than carrying its own copy.
+
 ---
 
 ## governance-manifest.json semantics
@@ -249,9 +260,13 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
    CI gate); `standards/design-philosophy.md`'s citation to such a gate was reworded to describe
    it as something a repo may declare, not a fact asserted about every repo.
 7. **`.githooks/commit-msg` requires PowerShell on PATH, dot-sources `issue-core.ps1`, assumes
-   PowerShell exists even on non-Windows CI.** Not resolved; ported as-is. This is a real
-   limitation this repo inherits unchanged; a future issue on the sync backlog can address a
-   cross-platform commit-msg gate if that becomes load-bearing.
+   PowerShell exists even on non-Windows CI.** Partially resolved: the hook now probes for either
+   `powershell` or `pwsh` on PATH, in that order, and fails closed with an explicit message if
+   neither is found, rather than assuming `powershell` specifically exists. Not resolved: some
+   PowerShell launcher is still required; a host with neither on PATH cannot commit code without
+   `--no-verify`, and there is still no non-PowerShell classification path for non-Windows CI. A
+   future issue on the sync backlog can address a cross-platform commit-msg gate if that becomes
+   load-bearing. This entry now matches the tree.
 8. **`reviewer-architecture.md` naming `.agents/skills/` as an externally-managed excluded
    directory a repo without it would carry as a dangling exclusion** (the source hazard also named
    a periodic-audit section in `orchestrator.md`; that section WAS ported, at
@@ -326,15 +341,16 @@ posture this leaves behind is tamper-evident, not tamper-proof, the same honest 
 
 ## Branch-protection strictness
 
-`tools/apply-branch-protection.ps1` always sends `required_status_checks.strict = true`. This is
-not a per-repo choice the tool exposes: `strict = true` is GitHub's "require branches to be up to
-date before merging," and closing the stale-merge race it prevents (two PRs each going green
-against an older default branch, then merging close together so the second lands on a tree CI
-never actually ran) is the whole reason this tool exists. A repo that wants different behavior
-does not get it by passing a switch or editing its own copy of the script: it adds a profile field
-(a new `repo-profile.json` key the script reads, the pattern every other repo-specific value in
-this tool already follows) through a governance issue, so the change is reviewed and the resulting
-behavior is declared, not silently forked per checkout.
+`tools/apply-branch-protection.ps1` sends `required_status_checks.strict = $false`. `strict =
+true` is GitHub's "require branches to be up to date before merging"; the owner turned that
+setting off across every protected repo on the account on 2026-07-17 and reconfirmed the decision
+on 2026-08-19, so the tool's fixed payload matches the owner's actual, standing choice rather than
+the stale-merge protection an earlier version of this tool treated as mandatory. This is still not
+a per-repo choice the tool exposes: a repo that wants `strict = true` back does not get it by
+passing a switch or editing its own copy of the script. It adds a profile field (a new
+`repo-profile.json` key the script reads, the pattern every other repo-specific value in this tool
+already follows) through a governance issue, so the change is reviewed and the resulting behavior
+is declared, not silently forked per checkout.
 
 ## Merge policy and pre-review rationale
 
@@ -459,6 +475,14 @@ unconditional sync overwrite would clobber it, a class of damage the contradicti
 rule-conflict question would not catch (a settings clobber is not a rule contradiction). The hook
 scripts themselves (`.claude/hooks/*.ps1`) stay shared; registering them in a child's
 `settings.json` is that child's own adoption work.
+
+**The `WHAT-IT-CHECKS.md` relocation.** Moved from `sharedPaths` to `excludedPaths`, with no
+`retired` entry. Each repo's own `WHAT-IT-CHECKS.md` documents that repo's own CI and coverage
+(this repo's has no eslint and no coverage gate; a child's may run CodeQL, mutation testing, or a
+job this repo has never heard of), so an unconditional sync overwrite would replace a child's true
+owner-facing doc with this repo's false one. No `retired` entry accompanies the move: a tombstone
+would prune or permanently flag a child's own, still-current copy as retained-divergent, exactly
+the outcome this relocation exists to avoid.
 
 **The child `CLAUDE.md` governing-artifact-surface warning.** `CLAUDE.md` itself stays out of
 `sharedPaths` (an unconditional overwrite would clobber a child's local rules), but every child
