@@ -9,23 +9,24 @@ what it cannot check, where you remain the eye after the fact.
 
 When all checks pass, these things have been confirmed automatically, without anyone reading the code:
 
-**The test suite runs on every push and every pull request.**
-`npm test` (`vitest run`) runs in GitHub's CI system on every push and every pull request. It
-checks that this repo's own logic, and any scripts and tooling it ships, produce the right
-results, not just that the code ran without crashing.
+**The test suite runs on every push to `main` and every pull request.**
+`npm test` (`vitest run`) runs in GitHub's CI system on every push to `main` and every pull
+request. It checks that this repo's own logic, and any scripts and tooling it ships, produce the
+right results, not just that the code ran without crashing.
 
 **Newly added lines are checked for the no-em-dash writing rule, but only on a pull request.**
 `scripts/check-emdash.js` rejects a pull request or merge-queue run whose added lines contain an
-em dash or an HTML entity spelling of one. It does not run on a plain push to a branch, only on
-`pull_request` and `merge_group` events, so a long-lived branch's own history never blocks its
-everyday pushes. It judges only the lines a PR adds against the merge-base diff with this repo's
-default branch (see `repo-profile.json`'s `defaultBranch` field), never the existing tree, and it
-recognizes two escapes: a genuine `git revert`, and a line moved rather than newly written. It
-does not reach commit messages, pull request bodies, or GitHub issue bodies. Those stay enforced
-by discipline, not CI. **It also cannot see into a file git treats as binary** (for example a
-`.md` file saved with UTF-16 encoding): git's own diff machinery reports no text lines for a
-binary-classified file, so an em dash inside one passes with nothing to flag. This is a known,
-inherited limitation of reading `git diff` text, not something this repo's port fixed.
+em dash or an HTML entity spelling of one. It does not run on a plain push to `main`, only on
+`pull_request` and `merge_group` events: that push has no pull request, so there is no
+merge-base diff of added lines for it to judge. It judges only the lines a PR adds against the
+merge-base diff with this repo's default branch (see `repo-profile.json`'s `defaultBranch`
+field), never the existing tree, and it recognizes two escapes: a genuine `git revert`, and a
+line moved rather than newly written. It does not reach commit messages, pull request bodies, or
+GitHub issue bodies. Those stay enforced by discipline, not CI. **It also cannot see into a file
+git treats as binary** (for example a `.md` file saved with UTF-16 encoding): git's own diff
+machinery reports no text lines for a binary-classified file, so an em dash inside one passes
+with nothing to flag. This is a known, inherited limitation of reading `git diff` text, not
+something this repo's port fixed.
 
 **A code commit must name a GitHub issue.**
 A cheap local check (`.githooks/commit-msg`) blocks a commit that changes a non-`.md` file and
