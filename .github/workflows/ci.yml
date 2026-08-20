@@ -2,9 +2,18 @@ name: CI
 
 on:
   push:
-    branches-ignore: ['gh-readonly-queue/**']
+    branches: [main]
   pull_request:
   merge_group:
+
+# The group key is the pull request NUMBER, not the branch name: two PRs can
+# share GitHub's default branch name (patch-1), and a shared key would cancel
+# each other's required checks. A push to main or a merge-queue entry has no
+# PR number, so it falls back to github.run_id, unique per run, leaving every
+# such run alone in its group with nothing for cancel-in-progress to cancel.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -25,8 +34,9 @@ jobs:
       - run: npm ci
       - name: Tests
         run: npm test
-      # Runs only on pull_request/merge_group so a divergent branch's plain-push
-      # does not go permanently red. See DESIGN.md "CI gate for added em dashes".
+      # Runs only on pull_request/merge_group: a direct push to main has no
+      # pull request, so no merge-base diff of added lines exists to judge.
+      # See DESIGN.md "CI gate for added em dashes".
       - name: Em-dash gate
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         run: node scripts/check-emdash.js
