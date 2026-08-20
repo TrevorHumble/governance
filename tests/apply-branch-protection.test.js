@@ -1,23 +1,12 @@
 // tests/apply-branch-protection.test.js
 // Vitest tests for apply-branch-protection.ps1, exercised via the -EmitPayload
 // offline seam (no network call, no gh authentication needed).
-// Windows PowerShell 5.1 is the launcher on win32; pwsh on other platforms.
+// Launcher resolution is shared: see tests/ps-launcher.js.
 'use strict';
 
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
-
-const PS = process.platform === 'win32' ? 'powershell' : 'pwsh';
-
-// One-time guard: if the launcher doesn't exist, skip all tests.
-let launcherMissing = false;
-try {
-  execFileSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', 'exit 0']);
-} catch (e) {
-  if (e.code === 'ENOENT') {
-    launcherMissing = true;
-  }
-}
+const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const SCRIPT = path.join(__dirname, '..', 'tools', 'apply-branch-protection.ps1');
 
@@ -32,14 +21,14 @@ function run(extraArgs) {
 }
 
 const maybeDescribe = launcherMissing
-  ? describe.skip.bind(describe, `${PS} not found, skipping apply-branch-protection tests`)
+  ? describe.skip.bind(describe, skipTitle('apply-branch-protection'))
   : describe;
 
 maybeDescribe('apply-branch-protection -EmitPayload', () => {
   // Required checks are parameterized (issue #1): no wedding-repo check names are
   // baked in. Passing -RequiredChecks explicitly makes the payload assertion
   // independent of whatever repo-profile.json happens to declare.
-  it('-EmitPayload -RequiredChecks a,b,c -> exact contexts round-tripped, app_id -1, strict true, no "contexts" key', () => {
+  it('-EmitPayload -RequiredChecks a,b,c -> exact contexts round-tripped, app_id -1, strict false, no "contexts" key', () => {
     const r = run(['-RequiredChecks', 'a,b,c']);
     expect(r.status).toBe(0);
 
@@ -54,7 +43,7 @@ maybeDescribe('apply-branch-protection -EmitPayload', () => {
       expect(check.app_id).toBe(-1);
     }
 
-    expect(body.required_status_checks.strict).toBe(true);
+    expect(body.required_status_checks.strict).toBe(false);
     expect(r.stdout).not.toContain('"contexts"');
   });
 

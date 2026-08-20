@@ -37,7 +37,7 @@ function readDefaultBranch() {
     const profilePath = path.join(__dirname, '..', 'repo-profile.json');
     const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
     return profile.defaultBranch || DEFAULT_BRANCH_FALLBACK;
-  } catch (err) {
+  } catch {
     return DEFAULT_BRANCH_FALLBACK;
   }
 }

@@ -1,9 +1,10 @@
-# apply-branch-protection.ps1: require the default branch to be up to date before merge.
+# apply-branch-protection.ps1: apply GitHub branch protection to the default branch.
 #
 # WHAT: PUTs GitHub branch protection onto the target branch requiring a pull
 # request, the repo's declared status checks, and required_status_checks.strict
-# always true (not a parameter). Why it stays fixed instead of a per-repo profile
-# field: the governance repo's DESIGN.md § "Branch-protection strictness".
+# fixed at $false (not a parameter). Owner's dates and rationale: see the
+# `strict = $false` line below, and the governance repo's DESIGN.md §
+# "Branch-protection strictness".
 #
 # Required checks are a parameter, not a hardcoded list: pass -RequiredChecks, or
 # let it default to repo-profile.json's ciCheckNames field. A required context
@@ -63,7 +64,10 @@ if ($RequiredChecks) {
 # app and could narrow which run satisfies the check).
 $payload = [ordered]@{
   required_status_checks = [ordered]@{
-    strict = $true
+    # strict=false: the owner turned up-to-date-before-merge off on 2026-07-17,
+    # reconfirmed 2026-08-19; re-running this tool must not re-enable it. See
+    # the governance repo's DESIGN.md § "Branch-protection strictness".
+    strict = $false
     checks = @($requiredChecksList | ForEach-Object { [ordered]@{ context = $_; app_id = -1 } })
   }
   enforce_admins          = $true

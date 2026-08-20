@@ -1,23 +1,12 @@
 // tests/classify-dep-pr.test.js
 // Vitest tests for classify-dep-pr.ps1: tier logic and the critical-dependency-list
 // mechanism (env override and repo-profile.json, including this repo's own empty list).
-// Windows PowerShell 5.1 is the launcher on win32; pwsh on other platforms.
+// Launcher resolution is shared: see tests/ps-launcher.js.
 'use strict';
 
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
-
-const PS = process.platform === 'win32' ? 'powershell' : 'pwsh';
-
-// One-time guard: if the launcher doesn't exist, skip all tests.
-let launcherMissing = false;
-try {
-  execFileSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', 'exit 0']);
-} catch (e) {
-  if (e.code === 'ENOENT') {
-    launcherMissing = true;
-  }
-}
+const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const SCRIPT = path.join(__dirname, '..', 'tools', 'classify-dep-pr.ps1');
 
@@ -50,7 +39,7 @@ function run(ecosystem, depName, semverBump, depType, criticalDepsJson) {
 }
 
 const maybeDescribe = launcherMissing
-  ? describe.skip.bind(describe, `${PS} not found, skipping classify-dep-pr tests`)
+  ? describe.skip.bind(describe, skipTitle('classify-dep-pr'))
   : describe;
 
 maybeDescribe('classify-dep-pr', () => {

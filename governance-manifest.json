@@ -19,11 +19,11 @@
     "scripts/**",
     "AGENTS.md",
     "definition-of-done.md",
-    "WHAT-IT-CHECKS.md",
     "buildlog/README.md",
     ".gitattributes"
   ],
   "excludedPaths": [
+    "WHAT-IT-CHECKS.md",
     "package.json",
     "package-lock.json",
     "vitest.config.mjs",

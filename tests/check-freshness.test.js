@@ -1,26 +1,16 @@
 // tests/check-freshness.test.js
 // Vitest tests for tools/check-freshness.ps1: behind-count reporting, the
 // MAX_DRIFT_COMMITS boundary, and overlap detection including the append-only
-// carve-out. Windows PowerShell 5.1 is the launcher on win32; pwsh on other
-// platforms. Uses a git-scratch-repo (makeRepo) and -File/-Command split pattern
-// mirrored from tests/classify-dep-pr.test.js.
+// carve-out. Uses a git-scratch-repo (makeRepo) and -File/-Command split
+// pattern mirrored from tests/classify-dep-pr.test.js. Launcher resolution is
+// shared: see tests/ps-launcher.js.
 'use strict';
 
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-
-const PS = process.platform === 'win32' ? 'powershell' : 'pwsh';
-
-let launcherMissing = false;
-try {
-  execFileSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', 'exit 0']);
-} catch (e) {
-  if (e.code === 'ENOENT') {
-    launcherMissing = true;
-  }
-}
+const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const SCRIPT = path.join(__dirname, '..', 'tools', 'check-freshness.ps1');
 
@@ -111,7 +101,7 @@ function runCheck(cwd, touches) {
 }
 
 const maybeDescribe = launcherMissing
-  ? describe.skip.bind(describe, `${PS} not found, skipping check-freshness tests`)
+  ? describe.skip.bind(describe, skipTitle('check-freshness'))
   : describe;
 
 maybeDescribe('check-freshness.ps1', () => {
@@ -282,7 +272,7 @@ function runOverlapHelper(driftFiles, touchFiles) {
 }
 
 const maybeDescribeHelpers = launcherMissing
-  ? describe.skip.bind(describe, `${PS} not found, skipping Get-OverlapFiles tests`)
+  ? describe.skip.bind(describe, skipTitle('Get-OverlapFiles'))
   : describe;
 
 maybeDescribeHelpers('Get-OverlapFiles / Test-CarvedOut (dot-sourced)', () => {

@@ -6,17 +6,17 @@ An edge is **meaningful when the changed code branches on it**, when the edge in
 
 **When NOT to invent an edge:** if the input domain has no nontrivial edge, a closed enum the code exhausts, or an input the acceptance criteria explicitly exclude, do not manufacture one. (Same rule as `agents/implementation-agent.md` build rule 6.)
 
-| Input type       | Canonical edges                                                                                           | Example from this stack                                       |
-| ----------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| string           | empty `""`; whitespace-only; very long; leading/trailing spaces; unexpected case; non-ASCII/emoji         | a user-supplied display name of `"  "` on signup              |
+| Input type       | Canonical edges                                                                                           | Example from this stack                                                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| string           | empty `""`; whitespace-only; very long; leading/trailing spaces; unexpected case; non-ASCII/emoji         | a user-supplied display name of `"  "` on signup                                       |
 | number           | `0`; negative; non-integer where integer expected; `NaN`; string-typed digits (`"5"`); max boundary       | a compare against a threshold on an accumulating count, at exactly the threshold value |
-| array/collection | empty `[]`; single element; duplicates; order dependence; very large                                      | a ranked listing with zero rows on day one                    |
-| object/record    | missing key; `null` value vs absent key; extra unexpected keys; wrong nested shape                        | an old row where a later migration's column is `NULL`         |
-| file path        | nonexistent; wrong separator (`/` vs `\`); relative vs absolute; spaces in path; traversal (`..`)         | an export path built from a user-supplied filename            |
-| file upload      | zero-byte; wrong mimetype; mimetype/extension mismatch; oversize; same file twice                         | a malformed or unusual file format posted to an upload intake |
-| date/time        | timezone shift across midnight; DST boundary; epoch 0 / far future; string date not ISO                   | a listing sorted by creation time when two rows share a second |
-| HTTP request     | missing/expired auth; malformed body; wrong content-type; repeated submit (double-tap); method mismatch   | a double-tap on a submit button posting twice                 |
-| SQL/DB row       | no row found; more rows than expected; concurrent write between read and update; migrated NULL in old row | a lookup by a signed token link that was already consumed     |
+| array/collection | empty `[]`; single element; duplicates; order dependence; very large                                      | a ranked listing with zero rows on day one                                             |
+| object/record    | missing key; `null` value vs absent key; extra unexpected keys; wrong nested shape                        | an old row where a later migration's column is `NULL`                                  |
+| file path        | nonexistent; wrong separator (`/` vs `\`); relative vs absolute; spaces in path; traversal (`..`)         | an export path built from a user-supplied filename                                     |
+| file upload      | zero-byte; wrong mimetype; mimetype/extension mismatch; oversize; same file twice                         | a malformed or unusual file format posted to an upload intake                          |
+| date/time        | timezone shift across midnight; DST boundary; epoch 0 / far future; string date not ISO                   | a listing sorted by creation time when two rows share a second                         |
+| HTTP request     | missing/expired auth; malformed body; wrong content-type; repeated submit (double-tap); method mismatch   | a double-tap on a submit button posting twice                                          |
+| SQL/DB row       | no row found; more rows than expected; concurrent write between read and update; migrated NULL in old row | a lookup by a signed token link that was already consumed                              |
 
 Usage:
 
