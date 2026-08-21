@@ -14,19 +14,35 @@ When all checks pass, these things have been confirmed automatically, without an
 request. It checks that this repo's own logic, and any scripts and tooling it ships, produce the
 right results, not just that the code ran without crashing.
 
-**Newly added lines are checked for the no-em-dash writing rule, but only on a pull request.**
-`scripts/check-emdash.js` rejects a pull request or merge-queue run whose added lines contain an
-em dash or an HTML entity spelling of one. It does not run on a plain push to `main`, only on
-`pull_request` and `merge_group` events: that push has no pull request, so there is no
-merge-base diff of added lines for it to judge. It judges only the lines a PR adds against the
-merge-base diff with this repo's default branch (see `repo-profile.json`'s `defaultBranch`
-field), never the existing tree, and it recognizes two escapes: a genuine `git revert`, and a
-line moved rather than newly written. It does not reach commit messages, pull request bodies, or
-GitHub issue bodies. Those stay enforced by discipline, not CI. **It also cannot see into a file
-git treats as binary** (for example a `.md` file saved with UTF-16 encoding): git's own diff
-machinery reports no text lines for a binary-classified file, so an em dash inside one passes
-with nothing to flag. This is a known, inherited limitation of reading `git diff` text, not
-something this repo's port fixed.
+**Newly added lines are checked for the no-em-dash writing rule, but only on a pull request in
+CI; a local run also checks your dirty working tree.** `scripts/check-emdash.js` rejects a pull
+request or merge-queue run whose added lines contain an em dash or an HTML entity spelling of
+one. It does not run in CI on a plain push to `main`, only on `pull_request` and `merge_group`
+events: that push has no pull request, so there is no merge-base diff of added lines for it to
+judge. In CI, on a clean checkout, it judges only the lines a PR adds against the merge-base diff
+with this repo's default branch (see `repo-profile.json`'s `defaultBranch` field), never the
+existing tree. Run locally with `npm run check:emdash`, it additionally scans your uncommitted
+work in three forms: staged changes, unstaged changes, and new untracked files that are not
+gitignored, each read under its real on-disk file name rather than a quoted rendering for a name
+with non-ASCII bytes (so a file name with, say, an accented letter is scanned and reported
+correctly, not silently skipped or misreported). It recognizes two escapes: a genuine `git
+revert`, whose committed-range suppression never reaches the uncommitted-work scan, and a line
+moved rather than newly written. It does not reach commit messages, pull request bodies, or
+GitHub issue bodies. Those stay enforced by discipline, not CI. Three known gaps remain in the
+local scan, all named here rather than left implicit: **it cannot see into a file git treats as
+binary** (for example a `.md` file saved with UTF-16 encoding) in any of the three uncommitted
+forms, not only the committed range -- git's own diff machinery reports no text lines for a
+binary-classified file, so an em dash inside one passes with nothing to flag, a known, inherited
+limitation of reading `git diff` text, not something this repo's port fixed; **the untracked-file
+scan is capped at 2000 files** (`MAX_UNTRACKED_FILES` in `scripts/check-emdash.js`), failing loud
+rather than silently skipping the excess, because each untracked file costs one `git diff
+--no-index` subprocess spawn and an un-gitignored build-output directory could otherwise spawn
+thousands of them in one local run; and **a file name containing a double quote, a backslash, or
+a control character still prints in git's escaped form, with the diff `b/` prefix still attached**
+(the prefix-stripping this check does only matches an unquoted leading `a/` or `b/`), not its
+literal bytes -- git always escapes those three regardless of `core.quotePath` (see that setting's
+own documentation), unlike a non-ASCII byte, which `core.quotePath=false` does un-escape. The
+violation is still counted and still fails the check; only the printed file name is affected.
 
 **A code commit must name a GitHub issue.**
 A cheap local check (`.githooks/commit-msg`) blocks a commit that changes a non-`.md` file and

@@ -395,12 +395,53 @@ carried forward here as already-settled policy rather than re-litigated.
 ## CI gate for added em dashes
 
 `scripts/check-emdash.js` (and its pure core, `scripts/check-emdash-core.js`) rejects any PR
-whose added lines contain a literal em dash or its HTML-entity forms. It diffs the PR's commits
-against `repo-profile.json`'s `defaultBranch` (default `origin/main`, overridable via the
+whose added lines contain a literal em dash or its HTML-entity forms. In CI, it diffs the PR's
+commits against `repo-profile.json`'s `defaultBranch` (default `origin/main`, overridable via the
 `EMDASH_BASE` environment variable), so every line this seed itself adds counts as "added": the
-seed PR is what makes this gate self-consistent from the very first commit. `EXCLUDED_PATHS` is
-`[]` in this repo: no path is exempt from the gate, unlike the wedding-scavenger-hunt repo's own
-copy, which carves out an archival directory this repo does not have. `tests/check-emdash.test.js`
+seed PR is what makes this gate self-consistent from the very first commit. Run locally, it
+additionally scans the working tree and any new untracked, non-gitignored files. The working-tree
+scan is `git diff HEAD` (staged and unstaged changes together, one diff) once a HEAD exists; in a
+repo with no commit yet, HEAD cannot resolve for that call, so two diffs are collected instead:
+`git diff --cached` (empty tree vs the index, i.e. what's staged) and a plain `git diff` with no
+ref (the index vs the on-disk worktree, i.e. unstaged edits on top of whatever is staged) -- `git
+add` makes a file tracked even with nothing to commit it into, so such a file is invisible to the
+untracked-file scan below and needs both diffs to be seen in every uncommitted state. Together
+the two diffs see every uncommitted tracked-file change; unlike `git diff HEAD`, they also catch
+staged content that was since reverted on disk, since the `--cached` half still sees it as newly
+staged even after the worktree copy no longer carries it -- the no-commit-yet path is strictly
+stricter than the HEAD-present path here, which is what acceptance criterion 1 wants. The
+untracked-file scan diffs each file against `/dev/null` with `git diff --no-index`, enumerated
+via `git ls-files --others --exclude-standard -z` and NUL-split rather than newline-split or
+trimmed (`-z` is what makes that enumeration verbatim, with no quoting of any byte), so a path
+with an embedded newline or leading/trailing spaces survives intact. Every git invocation also
+runs with `core.quotePath=false`, so a path with non-ASCII bytes comes back as its real on-disk
+name rather than git's quoted rendering -- the earlier form of this scan trusted that quoted
+rendering as a literal path and handed it straight to `git diff --no-index`, which could not open
+it, and degraded that failure into "no differences found." `core.quotePath` does not reach a
+double quote, a backslash, or a control character in a path, though: git always escapes those
+three regardless of the setting (see the three known gaps below for what still isn't covered).
+Each collected diff is fed to `findEmdashViolations` separately and the results are merged and
+de-duplicated on file-plus-line, never concatenated first: `findEmdashViolations` builds one
+removed-line carry set per call, so concatenating would let a line deleted in the committed range
+wrongly exempt the same line re-added as uncommitted work. That same file-plus-line key is also
+the de-dup boundary across diffs whose line numbers come from different coordinate systems (a
+committed-range line number is relative to HEAD's version of the file; a working-tree line number
+is relative to the file on disk right now), so a genuinely separate working-tree violation
+landing on the same line number as a committed-range one in the same file is under-counted --
+never dropped to a clean exit, since the exit status still reflects that at least one violation
+was found. The revert escape (a commit message carrying git's canonical revert marker) suppresses
+only the committed-range diff; the working-tree and untracked-file diffs are still collected and
+scanned regardless, so a dirty tree on top of a reverted range still fails the check. Three known
+gaps remain in the local scan: it cannot see into a file git treats as binary (see
+`WHAT-IT-CHECKS.md`) in any of the three uncommitted forms; the untracked-file scan is capped at
+`MAX_UNTRACKED_FILES` (2000) files, failing loud with a named remedy rather than silently
+skipping the excess, since each untracked file costs one `git diff --no-index` subprocess spawn;
+and a file name carrying a double quote, backslash, or control character still prints in git's
+escaped form with the diff `b/` prefix still attached, since the prefix stripper only matches an
+unquoted leading `a/` or `b/` (the violation is still counted and still fails the check; only the
+printed name is affected). `EXCLUDED_PATHS`
+is `[]` in this repo: no path is exempt from the gate, unlike the wedding-scavenger-hunt repo's
+own copy, which carves out an archival directory this repo does not have. `tests/check-emdash.test.js`
 proves the exemption is really gone (a behavioral test: an em dash under a `governance/` path is
 now reported, not silently passed) so a future re-widening of `EXCLUDED_PATHS` would fail that
 test rather than merge silently.

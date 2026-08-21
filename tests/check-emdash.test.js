@@ -290,6 +290,16 @@ function makeCliRepo() {
   return { dir, baseSha };
 }
 
+// A repo with no commit at all (an unborn HEAD): EMDASH_BASE is left unset
+// here on purpose, since there is no commit for it to name.
+function makeUnbornRepo() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'emdash-cli-unborn-'));
+  git(dir, ['init', '-q']);
+  git(dir, ['config', 'user.name', 'test']);
+  git(dir, ['config', 'user.email', 'test@example.invalid']);
+  return dir;
+}
+
 function runCli(cwd, env) {
   const r = spawnSync(process.execPath, [CLI_SCRIPT], {
     cwd,
@@ -342,5 +352,135 @@ maybeDescribe('check-emdash.js CLI (real git)', () => {
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('revert');
     expect(r.stdout).not.toContain('src/app.js:1');
+  });
+
+  it('an unstaged tracked-file edit carrying an em dash yields exit 1 and names the file (AC1)', () => {
+    const { dir, baseSha } = makeCliRepo();
+    const emDash = String.fromCharCode(0x2014);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    writeFile(dir, 'README.md', `seed${emDash} edited\n`);
+    // Deliberately not staged: this must be visible to the working-tree scan.
+
+    const r = runCli(dir, { EMDASH_BASE: baseSha });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain('README.md:1');
+  });
+
+  it('a new untracked, non-gitignored file carrying an em dash yields exit 1 and names the file (AC2)', () => {
+    const { dir, baseSha } = makeCliRepo();
+    const emDash = String.fromCharCode(0x2014);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    writeFile(dir, 'src/new-file.js', `const s = 'wait${emDash} really';\n`);
+    // Deliberately not added to the index: this must be visible as untracked.
+
+    const r = runCli(dir, { EMDASH_BASE: baseSha });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain('src/new-file.js:1');
+  });
+
+  it('a single staged em-dash line with no other violation is reported exactly once (AC3)', () => {
+    const { dir, baseSha } = makeCliRepo();
+    const emDash = String.fromCharCode(0x2014);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    writeFile(dir, 'src/app.js', `const s = 'wait${emDash} really';\n`);
+    git(dir, ['add', '-A']);
+
+    const r = runCli(dir, { EMDASH_BASE: baseSha });
+    expect(r.status).toBe(1);
+    const occurrences = r.stdout.split('src/app.js:1').length - 1;
+    expect(occurrences).toBe(1);
+    expect(r.stderr).toContain('check-emdash: 1 added em-dash line(s) found.');
+  });
+
+  it('a dirty working tree with an em-dash violation under a revert-marker commit range still yields exit 1 and names the dirty file (AC4)', () => {
+    const { dir, baseSha } = makeCliRepo();
+    const emDash = String.fromCharCode(0x2014);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    // Committed range: a genuine revert, with no violation of its own.
+    writeFile(dir, 'src/committed.js', 'const clean = 1;\n');
+    git(dir, ['add', '-A']);
+    git(dir, ['commit', '-q', '-m', `Revert "x"\n\nThis reverts commit ${baseSha}.`]);
+    // Uncommitted, dirty working tree: the actual violation under test.
+    writeFile(dir, 'README.md', `seed${emDash} edited\n`);
+
+    const r = runCli(dir, { EMDASH_BASE: baseSha });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain('revert');
+    expect(r.stdout).toContain('README.md:1');
+  });
+
+  it('an untracked file under a gitignored path yields exit 0 and does not name the file (AC6)', () => {
+    const { dir, baseSha } = makeCliRepo();
+    const emDash = String.fromCharCode(0x2014);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    writeFile(dir, '.gitignore', 'ignored/\n');
+    git(dir, ['add', '-A']);
+    git(dir, ['commit', '-q', '-m', 'add gitignore']);
+    const ignoredSha = git(dir, ['rev-parse', 'HEAD']).trim();
+    writeFile(dir, 'ignored/x.md', `archived note ${emDash} kept as-is\n`);
+
+    const r = runCli(dir, { EMDASH_BASE: ignoredSha });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('check-emdash: no added em dashes found.');
+    expect(r.stdout).not.toContain('ignored/x.md');
+  });
+
+  it('an untracked file with a non-ASCII name carrying an em dash yields exit 1 and reports the real file name, not a quoted/escaped form', () => {
+    const { dir, baseSha } = makeCliRepo();
+    const emDash = String.fromCharCode(0x2014);
+    const eAcute = String.fromCharCode(0xe9);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    expect(eAcute.codePointAt(0)).toBe(0xe9);
+    const nonAsciiName = `caf${eAcute}.md`;
+    writeFile(dir, nonAsciiName, `archived note ${emDash} kept${emDash}dash\n`);
+    // Deliberately not added to the index: this is the untracked-scan path,
+    // and core.quotePath defaults true, so git would otherwise hand this
+    // path to the checker in escaped/quoted form ("caf\303\251.md").
+
+    const r = runCli(dir, { EMDASH_BASE: baseSha });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain(`${nonAsciiName}:1`);
+    expect(r.stdout).not.toContain('\\303\\251');
+  });
+
+  it('a tracked file with a non-ASCII name modified to carry an em dash reports the real file name, not a quoted/escaped diff-header form', () => {
+    const { dir } = makeCliRepo();
+    const emDash = String.fromCharCode(0x2014);
+    const eAcute = String.fromCharCode(0xe9);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    expect(eAcute.codePointAt(0)).toBe(0xe9);
+    const nonAsciiName = `caf${eAcute}.md`;
+    writeFile(dir, nonAsciiName, 'seed\n');
+    git(dir, ['add', '-A']);
+    git(dir, ['commit', '-q', '-m', 'add non-ascii file']);
+    const trackedBaseSha = git(dir, ['rev-parse', 'HEAD']).trim();
+    // Unstaged edit: this is the working-tree diff-header path, and git's
+    // default core.quotePath=true would otherwise render this file's "+++"
+    // header as a quoted, octal-escaped path that stripDiffPrefix's a/,b/
+    // stripping cannot turn back into the real name.
+    writeFile(dir, nonAsciiName, `seed${emDash} edited\n`);
+
+    const r = runCli(dir, { EMDASH_BASE: trackedBaseSha });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain(`${nonAsciiName}:1`);
+    expect(r.stdout).not.toContain('\\303\\251');
+  });
+
+  it('an unborn-HEAD repo with a file staged (git add, no commit) then edited on disk yields exit 1 and names the file', () => {
+    const dir = makeUnbornRepo();
+    const emDash = String.fromCharCode(0x2014);
+    expect(emDash.codePointAt(0)).toBe(0x2014);
+    writeFile(dir, 'a.txt', 'clean line\n');
+    git(dir, ['add', 'a.txt']);
+    // Edited on disk after staging, still with no commit ever made: `git
+    // add` already made this file tracked, so it is invisible to the
+    // untracked-file scan (`git ls-files --others --exclude-standard`
+    // reports nothing for it) and must be caught by the unborn-HEAD
+    // branch's own worktree-vs-index diff instead.
+    writeFile(dir, 'a.txt', `edited${emDash}line\n`);
+
+    const r = runCli(dir, {});
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain('a.txt:1');
   });
 });
