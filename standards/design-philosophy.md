@@ -109,8 +109,10 @@ is already legible from an existing representation, is still the flag.
 **Scope.** This flag applies to representations the diff under review adds or modifies on a
 rendered user-facing surface: views, public assets, and user-facing copy composed in code. It does
 not require sweeping pre-existing representations on a surface the diff merely touches; a
-pre-existing instance is a separate issue, not a finding on this diff. It does not apply to docs
-or comments, which legitimately restate what code does for a reader who is not looking at the
-rendered surface.
+pre-existing instance on such a surface is out of scope for this diff, is not a finding against
+this diff, and is not filed as a new issue on the reviewer's own initiative. The reviewer returns
+it in its `Report notes:` block instead (`agents/reviewer-design-philosophy.md` § "Input / output contract"), and
+the orchestrator carries it to the end-of-run report. It does not apply to docs or comments, which
+legitimately restate what code does for a reader who is not looking at the rendered surface.
 
 One worked Flag/Clean example pair per red flag, each with an over-flag guard (`Not a finding:`), lives in `standards/design-philosophy-examples.md`; consult it before classifying any red-flag finding.

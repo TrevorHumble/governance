@@ -44,6 +44,9 @@ and do not skip steps.
    the default branch and watches CI to green there. No file asserts which mode any particular
    repo runs. `.githooks/commit-msg` (a code commit must name a GitHub issue) is the only local
    hook; CI is the rest of the gate. This repo's own profile declares `"shipMode": "pr"`.
+6. **Report**: every session ends with a short priced report to the owner, notes only, never a new
+   board row filed on the session's own initiative. Full shape: `agents/orchestrator.md` § "No
+   agent files its own issue".
 
 **Pre-review step.** A repo may declare its own pre-review process in its `repo-profile.json`'s
 `preReview` field (for example a live visual-approval loop, or `"none"`). When declared, it runs

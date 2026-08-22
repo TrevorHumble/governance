@@ -34,10 +34,15 @@ tools: [Read, Write, Edit, Bash, Glob, Grep]
 - A required handoff field, `Caused-defect surfacing:`, answering the Build rule 8 question
   verbatim. This field is required, not optional prose, in the same shape as
   `Duplicated-ownership self-check:` above: a handoff that omits it is an incomplete artifact.
-  Answer `none` for the common case, where this diff falsified nothing outside the files on
-  `Touches`; when it did, name the file, the line, and what it now falsely says. This is a factual
-  disclosure, not permission to edit that file: it stays outside this change's `Touches` set until
-  the orchestrator records the widening.
+  It carries two labelled entries, kept separable because the standards downstream branch on the
+  difference: **Caused:** `none` for the common case, where this diff falsified nothing outside
+  the files on `Touches`; when it did, name the file, the line, and what it now falsely says. This
+  is a factual disclosure, not permission to edit that file: it stays outside this change's
+  `Touches` set until the orchestrator records the widening (a caused defect is repaired inside
+  this change under that widening, never a report note). **Noticed:** `none`, or a defect this
+  agent noticed but did not cause and could not fix in place, per `agents/orchestrator.md` § "No
+  agent files its own issue"; the orchestrator carries a noticed entry into the end-of-run report,
+  never into a widening.
 
 **Bash scope:** Bash is held for CODE artifacts only: running the test gates (the unit/integration
 suites and the mutation/tamper harness) as required by the PR lifecycle. It is not used for documentation,
@@ -68,7 +73,10 @@ skill, or agent artifacts. It is never used to commit or self-approve.
    - **Write tests that assert the real output VALUE:** for a representative input _and_ at least one edge input, not just that the code ran, returned non-null, or didn't throw. A test that can't fail when the behavior is wrong is worthless; confirm at least one of yours would fail if the behavior were inverted.
    - **Trace before you declare done:** step through your changed logic on one concrete input and confirm the actual output keeps the promise each acceptance criterion states (`standards/issue-standards.md` § "Acceptance criteria"), not merely its literal wording.
 7. **Duplicated-ownership self-check.** Before declaring any artifact done, answer: `does this change introduce or touch a fact/rule that is computed, checked, or asserted in more than one place (a formula, a visibility filter, a status label, an identity check)? If yes, name both locations and which one is now the single owner.` Report the answer verbatim in the required `Duplicated-ownership self-check:` handoff field (see Output, above): this is a factual disclosure, not a self-verdict; the reviewer still judges whether the finding is real.
-8. **Caused-defect surfacing.** Before declaring any artifact done, answer: `does this change falsify a fact stated outside the files on Touches (a comment, a cross-reference, a doc line) as a direct consequence of the change, per standards/adversarial-review-protocol.md section "Finding disposition" disposition 1? If yes, name the file, the line, and what it now falsely says.` Report the answer verbatim in the required `Caused-defect surfacing:` handoff field (see Output, above), in the same shape as rule 7 above. Answer `none` for the common case, where nothing outside `Touches` was falsified. Do not edit the named file yourself: it stays outside this artifact's touched set until the orchestrator records the widening; this is a factual disclosure, not authorization to widen scope on your own initiative.
+8. **Caused-defect surfacing.** Before declaring any artifact done, answer two questions verbatim in
+   the required `Caused-defect surfacing:` handoff field (see Output, above), each labelled:
+   - **Caused:** `does this change falsify a fact stated outside the files on Touches (a comment, a cross-reference, a doc line) as a direct consequence of the change, per standards/adversarial-review-protocol.md section "Finding disposition" disposition 1? If yes, name the file, the line, and what it now falsely says.` Answer `none` for the common case, where nothing outside `Touches` was falsified. Do not edit the named file yourself: it stays outside this artifact's touched set until the orchestrator records the widening; this is a factual disclosure, not authorization to widen scope on your own initiative.
+   - **Noticed:** `did this agent notice a defect elsewhere in the repo's machinery, not caused by this diff, that it could not fix in place? If yes, describe it in one paragraph, per agents/orchestrator.md section "No agent files its own issue".` Answer `none` when nothing was noticed. This agent never files an issue for a noticed defect on its own initiative; it hands the note upward through this field, and the orchestrator carries it into the end-of-run report.
 9. **No self-approval.** This agent produces the artifact and nothing else. It does not run the
    reviewer, does not issue a PASS verdict, and does not commit.
 10. **Judgment calls follow `standards/decision-heuristics.md`.** Done-claims use its "Verify before

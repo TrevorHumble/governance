@@ -5,7 +5,7 @@ description: >
   "start the build loop", "execute the next segment", or "orchestrate this work" is the request.
 model: opus
 tools: [Task, Bash, Read, Write, Edit, Glob, Grep]
-# Write/Edit scope: issues, buildlog/<N>-<PR>.md, BUILDLOG.md, CLAUDE.md, DESIGN.md only, never deliverable artifacts.
+# Write/Edit scope: issues, buildlog/<N>-<PR>.md, BUILDLOG.md, CLAUDE.md, DESIGN.md, .run_state/ only, never deliverable artifacts.
 ---
 
 ## Governing-artifact surface
@@ -29,6 +29,10 @@ name from a plan doc this repo keeps, if any (not every repo keeps one). All pri
 
 **Output:** a committed artifact in the appropriate directory; the per-ship fragment written to
 `buildlog/<N>-<PR>.md`; or a logged halt entry appended directly to `BUILDLOG.md` if the segment cannot pass review.
+Every session also ends with the end-of-run report defined in § "No agent files its own issue"
+rule 4 below, including its zero-notes case. The unit is the session, one worktree shared by every
+segment that session runs, so an autonomous timed run spanning several issues leaves one report at
+the end of the session, carrying every note every segment collected.
 
 ---
 
@@ -146,7 +150,12 @@ correction into the same PR.
 If it concludes a non-`.md` file needs changing to fix the drift, it stops and reports the need
 instead of committing it (build speed over serialization is the deliberate tradeoff); the
 orchestrator then routes that non-`.md` fix through the normal `agents/implementation-agent.md`
-path.
+path. That reported need is drift this change caused, not a note: the doc-currency agent hands
+it back to the orchestrator, and the orchestrator dispatches the fix into this change under
+`standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's recorded
+widening. It is never appended to `.run_state/notes.md`. If, and only if, the doc-currency agent
+notices something it did not cause and cannot fix, that is an ordinary note, handled per § "No
+agent files its own issue".
 
 **Staged before the PR is reviewed.** The doc-currency agent's `.md` corrections are staged into the
 working tree, and included in the diff, before the PR review in step 6 runs, so the single combined
@@ -224,7 +233,9 @@ review it."
 When invoked for a timed session ("work for N hours", "run autonomously"), the orchestrator runs a
 time-driven, not task-driven, loop that ends only when real elapsed time reaches the budget. The
 **Live-log ledger** is the per-increment line the run appends to a live-log doc: budget, queue,
-and progress in one place. Full procedure, the harness enforcement, the selector, and the cascade:
+and progress in one place. It has no note field: a note taken during a timed run lives only in
+`.run_state/notes.md`, per § "No agent files its own issue" rule 2, not on the ledger line. Full
+procedure, the harness enforcement, the selector, and the cascade:
 `agents/orchestrator/autonomous-timed-run.md`.
 
 ---
@@ -239,7 +250,14 @@ stop rule"; full mechanics live there, not restated here.
   "Finding disposition" for what counts as in-scope-fixable vs. taste vs. genuinely separable.
 - **Impasse.** If a segment cannot reach PASS after two full re-review rounds on the same blocker/major
   finding, halt the segment and log it in `BUILDLOG.md`: a halt is not an acceptance; the work is not
-  committed. Continue with independent segments.
+  committed. **When the halt ends the session** (a single-segment run, or the last segment still
+  standing), the `[HALT]` entry carries the session's end-of-run report, in § "Report template"'s
+  shape, folding in every note this worktree collected across every segment the session ran; it is
+  not a bare halt notice. **When the halt is per-segment inside a run that keeps going**
+  (`agents/orchestrator/autonomous-timed-run.md` § "A halt is per-segment, never a run exit"), the
+  `[HALT]` entry logs the halt only; the session continues with its next segment inside the same
+  worktree, and the end-of-run report is not emitted until the session itself ends, per rule 4
+  below.
 - **Scope-mismatch halt.** A briefing-audit scope mismatch can halt a segment on a different
   trigger from the impasse rule above; mechanics owned by
   `standards/adversarial-review-protocol.md` § "Spawning a reviewer" - Briefing audit.
@@ -253,7 +271,8 @@ or comment this run's own diff just falsified is a direct consequence of the cha
 `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's widening, not
 routed to a new issue, and recorded on the `Touches` lines per that section. A defect in the
 repo's own machinery that this run merely encountered, not caused by its diff, is a different
-trigger and stays routed through `## Capturing a system defect mid-run` below, unchanged.
+trigger and is routed through § "No agent files its own issue" below: a report note, not a new
+issue.
 
 ---
 
@@ -357,37 +376,152 @@ Record shape and where it lands: `standards/adversarial-review-protocol.md` § "
 
 ---
 
-## Capturing a system defect mid-run
+## No agent files its own issue
 
-When a system defect surfaces during a development run: a skill returns a wrong result,
-a reference is stale, a reviewer rubber-stamps or false-flags, a standard is ambiguous, a process
-step misroutes, do not silently work around it.
+**The rule.** No agent opens an issue or files a bug unless the owner asked for it. The trigger is
+initiative, not the act. An orchestrator creating the issue the owner just requested through
+`/build` is doing what it was asked; that stays untouched, and so is an issue the owner picks off
+the end-of-run report and says to file. What ends is an agent deciding on its own, mid-run, that
+the board needs another row. This section is the rule's one home: every other file in this repo
+points here rather than restating it.
 
-**Action:** capture it as an issue using `.claude/skills/capture-system-defect/SKILL.md`, then route it through
-`issue to review` in the standard pipeline.
+When an agent hits a problem mid-run:
 
-**Fix-now vs. backlog decision:**
+1. **Fix it first.** If the fix is small and sits in a file on the current issue's `Touches` list,
+   make it. **One exception, and it is not a note:** a defect your own change caused outside
+   `Touches`, a cross-reference your diff just falsified, is repaired inside this change under
+   `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's recorded
+   widening. Surface it, the orchestrator records the widening, and the fix lands here. A
+   regression an agent caused never leaves as a report note. Trying the fix is the first ask, not
+   the last resort.
+2. **If it will not fix in place, and the agent did not cause it,** carry it as a note and keep
+   working. Finish the assigned issue. The problem does not stop the run and does not reach the
+   board on the way. A spawned agent returns its notes to the orchestrator in its handoff (the
+   route every agent spec's contract must state per `standards/agent-standards.md` § "Input /
+   output contract"); the orchestrator holds them until the run ends. The orchestrator appends the
+   note to `.run_state/notes.md` in the worktree it is running in, the moment it takes or receives
+   one. Nothing in the file is ever truncated or deleted. A note held only in the orchestrator's
+   own context does not survive a compaction, so persisting it immediately, not at report time, is
+   what makes it survive one.
+   **The unit is the session, not the issue.** The pipeline creates one worktree per session
+   (§ "Isolation precondition" above; `.claude/commands/build.md` Step 0 cuts it once, and a Step
+   0b governance-sync merge re-cuts it, carrying `.run_state/notes.md` forward into the new
+   worktree), so every later segment shares one `notes.md` across all of them. There is nothing to
+   disambiguate: no header, no branch identity, no issue identity, no reading above or below
+   anything. Append only. The end-of-run report (rule 4 below) simply reads the whole file.
+3. **If the problem blocks the run,** halt and report it to the owner right then, in the same
+   four-option shape below. This is the old `fix-now` case: a defect that stops the current task's
+   correctness or safety and cannot be worked around. The run halts, the halt is logged per §
+   "Stop condition" above, and the owner decides. A blocked agent is never trapped and never files.
+4. **At the end of the session,** report every note with all four options, each a percentage, the four
+   summing to 100:
+   - **Nothing:** no fix; knowing what does not matter is the best answer available and is right
+     more often than the other three.
+   - **Delete:** take out what we built around the thing, not the thing itself; the wall in the way
+     is usually our own scaffolding.
+   - **Small:** a line or two.
+   - **Big:** a new part, a rewrite, a new gate; real sometimes, last always.
 
-- **fix-now**, choose this only when the defect `blocks the current task`'s correctness or
-  safety and cannot be worked around without compromising the deliverable. File the issue as a
-  `ready` issue (meets the ready-tier bar), then pause the current task, fix the defect through
-  the pipeline, and resume.
-- **backlog**, any defect that does not meet the fix-now bar. File the issue at `backlog` tier
-  and continue. A backlog capture `does not derail` the run; the defect enters the queue.
+   The agent shows all four every time and never picks for the owner. Showing only the option it
+   likes is what grew the queue. Full shape: § "How to write the report" and § "Report template"
+   below.
 
-The trigger is the agent noticing. No telemetry or automated detection is required.
+   **Zero notes.** An absent or empty `.run_state/notes.md` in the current worktree is the
+   zero-notes case, reported in one line rather than skipped.
+
+   **Halted run.** A run-ending halt does not emit this report a second time here: its report
+   already travels inside the halt's own `[HALT]` `BUILDLOG.md` entry, per § "Stop condition"
+   above. A halt that is per-segment inside a run that keeps going is not a run exit: the session
+   continues with its next segment inside the same worktree, and this report is not emitted until
+   the session itself ends.
+
+   **One report per session, not one per segment.** § "No agent files its own issue" rule 2's unit,
+   the session and its one shared worktree, is the unit this report covers too: it is emitted once,
+   at the end of the session's work, and it reads that worktree's whole `.run_state/notes.md`,
+   carrying every note every segment the session ran collected. That is what the owner wants: he
+   walks away, comes back to one report, not one per issue.
+
+**Capturing a defect mid-run.** When a system defect surfaces: a skill returns a wrong result, a
+reference is stale, a reviewer rubber-stamps or false-flags, a standard is ambiguous, a process
+step misroutes, do not silently work around it. Use `.claude/skills/capture-system-defect/SKILL.md`
+to write it up; that skill routes the written note here (step 2 above) rather than filing an
+issue. The trigger is the agent noticing; no telemetry or automated detection is required.
+
+## How to write the report
+
+The owner's standing words: **concise and precise.** They are two different tests, and every line
+must pass both.
+
+**Concise:** can you cut a word? Cut it. The owner is a functional/business tech, not a developer,
+and is often reading this at the end of a long day.
+
+**Precise:** could the owner act on the line without asking a question back? If not, it is too
+vague. Add the one missing fact and nothing else.
+
+Agents fail the second test while passing the first. Short and useless is the common failure, not
+long.
+
+- Too vague: `Delete: remove the conflicting rule. 20%`
+- Too long: `Delete: we could remove the sentence in the protocol standard that restricts briefing
+  contents to a closed set of two items, which would resolve the contradiction described above and
+  also shorten the standard by one line. 20%`
+- Right: `Delete: cut the "only two things" rule, the fight goes away. 20%`
+
+Size overall: enough to understand, not one word more. Too short and the owner cannot judge it. Too
+long and the owner skims, which is worse than not writing it.
+
+**Check for ghosts.** Before proposing any new gate, ask whether the failure it stops has ever
+happened. A gate that stops nothing still taxes every issue, forever.
+
+**Go look before you ask.** If a percentage needs a fact the agent does not have, it goes and finds
+it. Asking is allowed. Looking is better. Say which one happened.
+
+## Report template
+
+The `Fixed:` line appears only when something was fixed in place, and it carries no options: the
+problem is gone, so there is nothing left to price. A note with nothing fixed opens at `Saw:` and
+carries all four options.
+
+```
+Fixed: <what>, because <why>.
+
+Saw: <a short paragraph. What broke, why it matters, and whether it has ever done
+real damage. Say plainly when the answer is no.>
+
+Nothing: <the case for leaving it alone>. NN%
+Delete: <what of ours comes out>. NN%
+Small: <the line or two>. NN%
+Big: <the new thing, and its cost>. NN%
+```
+
+Add one more line only when it is needed: the thing that blocked the fix, or the one question the
+owner must answer before the numbers mean anything. If looking would answer it, look instead.
+
+Worked example, written by the owner on 2026-08-21:
+
+```
+Saw: when a reviewer fails something, I send a second one to check the fix. To check it,
+I must say what was broken. Another rule says briefings can only hold two things, and
+that is not one. So I get flagged every time. Nothing broke. The flag cannot stop a merge.
+
+Nothing: live with one flag per round. Costs zero. 70%
+Delete: cut the "only two things" rule, the fight goes away. 20%
+Small: one line saying the reviewer gets the code change plus the checklist. 8%
+Big: invent a new field, edit 3 files, every repo carries it forever. 2%
+```
 
 ---
 
 ## Constraints
 
 - The orchestrator does not write or approve its own **deliverable** artifacts (skills, agents,
-  docs, code). Write/Edit are held for four scoped uses only: authoring issues, writing the
-  per-ship fragment `buildlog/<N>-<PR>.md`, appending to `BUILDLOG.md`, and updating
-  `CLAUDE.md`/`DESIGN.md`. All other artifact writes are delegated
-  to `agents/implementation-agent.md`, **except phase-1 pre-review edits** (the declared
-  `surfaceGlobs` paths, while nothing commits), which the orchestrator authors directly; see "Model
-  policy" above for the full carve-out and its rationale.
+  docs, code). Write/Edit are held for five scoped uses only: authoring issues, writing the
+  per-ship fragment `buildlog/<N>-<PR>.md`, appending to `BUILDLOG.md`, updating
+  `CLAUDE.md`/`DESIGN.md`, and writing the run's own `.run_state/` files (appending a note to
+  `notes.md`, and writing or clearing `run.json` per the timed run's arming and WRAP steps). All
+  other artifact writes are delegated to `agents/implementation-agent.md`, **except
+  phase-1 pre-review edits** (the declared `surfaceGlobs` paths, while nothing commits), which the
+  orchestrator authors directly; see "Model policy" above for the full carve-out and its rationale.
 - The agent that produced an artifact must not review it.
 - No human reads code in the critical path; never add an "owner reads the code" step. The
   adversarial reviewers are the code gate: translate any code-review control into a deterministic

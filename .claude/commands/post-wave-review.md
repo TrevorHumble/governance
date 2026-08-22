@@ -48,14 +48,15 @@ HOUSE RULES (the few things we do need held firm)
 
 - Tag the tree wave-$ARGUMENTS before you begin: our rollback point and your
   diff anchor.
-- This session doesn't change source code. What you find becomes GitHub
-  issues per standards/issue-standards.md, milestoned into our batch
-  schedule; that includes documentation rot.
+- This session doesn't change source code. What you find becomes report notes, priced per
+  agents/orchestrator.md's "No agent files its own issue" report shape, not GitHub issues filed on
+  your own initiative; that includes documentation rot. The owner decides from your priced options
+  which notes graduate onto the board, milestoned into our batch schedule.
 - Where you assert something, we'd like to see the run that showed it to you.
 
 THE REPORT
 When you're done, one message: your verdict (SHIP / SHIP WITH ISSUES /
 BLOCKED) and the reasoning, the few things the owner genuinely must know in
-plain language, links to the issues you filed, your evidence. If your
+plain language, your priced report notes, your evidence. If your
 explorations changed your view of our roadmap, close with that; we mean it
 about the consulting.

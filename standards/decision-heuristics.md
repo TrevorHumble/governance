@@ -14,7 +14,14 @@ When a decision surfaces mid-task, run this procedure before considering asking 
 2. **Find the governing constraint.** Check, in order: the issue's acceptance criteria, `CLAUDE.md`, this repo's own goals doc (the path declared in `repo-profile.json`'s `goalsDoc` field), and the relevant standard. One of them usually settles it outright.
 3. **If settled, act.** Record nothing beyond the normal trail. A question answerable by re-reading the goals is not a question for the owner.
 4. **If it is a pure tradeoff** (both options satisfy the constraints), pick the option that is cheaper to reverse; if equally reversible, pick the one touching fewer files. State the choice and the reason in one line where the work is recorded (PR body or issue comment) and move on.
-5. **Surface to the owner ONLY when all three hold:** the action is irreversible, it is owner-exclusive (spends money, publishes outward, deletes owner data, changes owner-recorded intent), AND steps 2 to 4 did not settle it. Surface as a one-line non-blocking note; keep working on independent items.
+5. **Surface to the owner when the action is irreversible, owner-exclusive** (spends money,
+   publishes outward, deletes owner data, changes owner-recorded intent), **and steps 2 to 4 did
+   not settle it.** Surface as a one-line non-blocking note; keep working on independent items.
+   A separate surface exists, on its own trigger, for a defect that blocks the run:
+   `agents/orchestrator.md` § "No agent files its own issue" rule 3. No agent opens an issue or
+   files a bug to do this surfacing on its own initiative: the home for that rule, its four-option
+   report shape, and the one channel a noticed problem travels through is `agents/orchestrator.md`
+   § "No agent files its own issue".
 
 > **Example (settled by constraint, act):** an implementer must choose between storing a new setting in a flag whose value is already pinned by an existing config file, or inventing a new top-level location for it. The project's own operating rules say runtime state lives in a gitignored data directory and paths come from the central config module. Settled: check the config, don't debate it, no question asked.
 
@@ -63,13 +70,13 @@ Destructive commands with no in-loop undo (deleting owner data, force-push over 
 
 The issue's `Touches` list is the contract. Work stays inside it.
 
-1. Touch only the files the issue names, a file the plan forgot but the acceptance criteria require, or a file a widening has already recorded on the `Touches` line per item 2 below; anything else is not in scope.
+1. Touch only the files the issue's `Touches` list names, a file the plan forgot but the acceptance criteria require, or a file a widening has already recorded on the `Touches` line per item 2 below; anything else is not in scope. A small fix that sits inside that list is made in place, not deferred: `agents/orchestrator.md` § "No agent files its own issue" rule 1 states the licence.
 2. A defect you notice outside scope splits by cause, not by severity:
-   - **Merely noticed, not caused**: a stale doc, a misnamed variable, a broken reference your diff did not create, is captured through `.claude/skills/capture-system-defect/SKILL.md` and left unfixed in this change.
+   - **Merely noticed, not caused**: a stale doc, a misnamed variable, a broken reference your diff did not create, is captured through `.claude/skills/capture-system-defect/SKILL.md`, which writes a report note (not a filed issue) and leaves it unfixed in this change.
    - **Caused by your own diff**: a comment or cross-reference your change's own edits just made false, a direct consequence per `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1, is not a capture-skill matter and not yours to edit on your own initiative. Disclose it in the required handoff field `agents/implementation-agent.md` defines. The orchestrator records the widening on the `Touches` lines per that section and dispatches the fix into the current change.
-3. Never widen an issue mid-implementation on your own initiative because more improvement "would be easy here": that stays forbidden, and adjacent improvement is still a new issue. What this does not forbid is executing a widening fix the orchestrator has already recorded and dispatched under disposition 1, since that fix was not chosen by you, so running it is not you widening anything.
+3. Never widen an issue mid-implementation on your own initiative because more improvement "would be easy here": that stays forbidden, and adjacent improvement is still a report note, not work done here. What this does not forbid is executing a widening fix the orchestrator has already recorded and dispatched under disposition 1, since that fix was not chosen by you, so running it is not you widening anything.
 
-> **Example (merely noticed):** while editing `agents/reviewer-pr.md` for issue N, you notice `agents/reviewer-agent.md` has the same stale sentence, in an unrelated file, not a consequence of your diff. Editing it feels free, but it is outside `Touches`, invisible to N's reviewers, and widens the diff others must reason about. File the capture, fix only the named file.
+> **Example (merely noticed):** while editing `agents/reviewer-pr.md` for issue N, you notice `agents/reviewer-agent.md` has the same stale sentence, in an unrelated file, not a consequence of your diff. Editing it feels free, but it is outside `Touches`, invisible to N's reviewers, and widens the diff others must reason about. Note the capture, fix only the named file.
 
 > **Example (caused):** issue N moves a function from one module to another. A comment two lines above the new call site, in a file N's `Touches` list does not name, still points readers at the function's old location for a config detail: your own move just made that comment false. You do not edit the untouched file yourself, you name it, the line, and what it now falsely says in the handoff's `Caused-defect surfacing:` field, and the orchestrator takes it from there.
 

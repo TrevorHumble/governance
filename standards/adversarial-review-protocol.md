@@ -274,7 +274,15 @@ section already reserves for human judgment, made into an explicit step. A secon
 owner-decision point exists for a governance-sync PR: `standards/governance-sync.md`'s "multiple
 ways to fix: stop and ask the owner" escalation is cross-repo legislation, an upstream owner
 control outside this section's findings-resolution rule, for the same reason the Pre-review step
-above is not one. Separately, that same PR type (a machine-generated pull of content already
+above is not one. A third sanctioned owner-decision point is the end-of-run report defined in
+`agents/orchestrator.md` § "No agent files its own issue". It decides, for example, whether an
+already-disposed, genuinely separable item under disposition 3 graduates from a report note to a
+new board row, and, for a held dependency PR under
+`agents/orchestrator/dependabot-pr-path.md`'s `review` classification, whether it merges. It never
+resolves a finding's severity or verdict, and it does not touch disposition 1 or disposition 2
+above.
+
+Separately, that same PR type (a machine-generated pull of content already
 reviewed in the governance home, identified by its `syncIssue` reference) takes the
 contradiction review `standards/governance-sync.md` defines in place of this protocol's
 reviewer-count and review-size rules below.
@@ -476,9 +484,12 @@ A finding may be deferred only if fixing it requires genuinely separable new sco
   set, is a known failure mode; disposition 1's widening, below, is where a caused defect goes
   instead.
 
-**A deferred finding is filed as its own new GitHub issue** via
-`.claude/skills/capture-system-defect/SKILL.md` (machinery/process defect) or
-`standards/issue-standards.md` (product defect).
+**A deferred finding becomes a report note**, by whatever route the noticing agent's own spec
+defines for handing a note upward (for example `.claude/skills/capture-system-defect/SKILL.md`
+for a machinery/process defect, or a reviewer's own noticed-defect finding for a product
+defect), carried into the end-of-run report per `agents/orchestrator.md` § "No agent files its
+own issue" rather than filed as a new issue on initiative; the owner decides from the report's
+priced options whether it graduates to one.
 "I do not want another round" is excluded as a reason here exactly as in
 disposition 1 above: deferral is earned by the scope being genuinely separable, never by
 review fatigue.
@@ -530,7 +541,8 @@ above: a trivial, in-diff fix routed around the review instead of made in it.
 computes tie-breaks with a comparator that silently mis-ranks entries sharing a timestamp,
 unrelated to the change under review." The defect lives in code this change never
 touches, and fixing it is a separate correctness fix to a different subsystem with its own test
-surface. Disposition: defer, as a new GitHub issue.
+surface. Disposition: defer, as a report note; the owner decides from its priced options whether
+it graduates into a new issue.
 
 **Severity labels.** `severity:major` is restored to its narrow definition: crash, data-loss, or
 security defects only. A feature gap, a missing edge case, or a process nit is `severity:minor` or
