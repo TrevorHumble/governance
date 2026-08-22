@@ -15,8 +15,8 @@ try {
   $hookFile = Join-Path $top '.githooks/commit-msg'
   $hp = "$(& git -C $top config --get core.hooksPath)".Trim()
   if ($hp -ne '.githooks' -and (Test-Path $hookFile)) {
-    & git -C $top config core.hooksPath .githooks 2>$null
-    $hp = '.githooks'
+    . (Join-Path $top 'tools/setup-hooks.ps1')
+    if (Set-HooksPath -RepoRoot $top) { $hp = '.githooks' }
   }
   $hookOn = ($hp -eq '.githooks' -and (Test-Path $hookFile))
 
@@ -26,8 +26,10 @@ try {
 
   if ($hookOn) {
     $msg = "Gates armed: the issue-reference commit-msg hook is active, goal gate + loop gate loaded. You're protected -- direct away.$idNote"
-  } else {
+  } elseif (-not (Test-Path $hookFile)) {
     $msg = "Goal gate + loop gate loaded, but the commit-msg hook file is missing -- check .githooks/commit-msg, or run: powershell -ExecutionPolicy Bypass -File tools/setup-hooks.ps1"
+  } else {
+    $msg = "Goal gate + loop gate loaded, but git config core.hooksPath could not be set -- run: powershell -ExecutionPolicy Bypass -File tools/setup-hooks.ps1 to see the error"
   }
   Write-Output (@{ systemMessage = $msg } | ConvertTo-Json -Compress)
 } catch {

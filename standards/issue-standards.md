@@ -176,7 +176,7 @@ A `spawned-in-run` issue missing the block, or with any of the four fields empty
 
 ## In-license check (all tiers)
 
-An issue that requires an `external/paid API`, a `non-Anthropic model key`, or a `hosted third-party service` is `out of license`: return `FAIL`.
+Free local tooling is in scope. An issue that requires an `external/paid API`, a `non-Anthropic model key`, or a `hosted third-party service` is `out of license`: return `FAIL`.
 
 ---
 

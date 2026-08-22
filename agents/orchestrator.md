@@ -338,7 +338,7 @@ nothing adaptable, proceed with authoring per `standards/agent-standards.md` (ag
 
 These gates are additive to the existing `reviewer-issue` / `reviewer-pr` pipeline. They do not replace any existing step.
 
-**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 6 (Artifact review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard) or makes a significant structural change, no owner request required. Full cadence, the one-round stop rule for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
+**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 6 (Artifact review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the one-round stop rule for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
 
 **Design-philosophy gate (PR-review time):** Spawn `agents/reviewer-design-philosophy.md` (Opus) for every implementation artifact at PR-review time. What counts as an implementation artifact, and the cadence for a FAIL: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact" and § "One-round stop rule".
 

@@ -46,5 +46,5 @@ One token verdict followed by the numbered defect list. A PASS with any open blo
 - [ ] `description` field contains at least two strings enclosed in double-quotes or backticks.
 - [ ] SKILL.md body is under 500 lines; any section over 100 lines has a corresponding `references/` file.
 - [ ] Every file path asserted in SKILL.md resolves (flag any path that cannot be confirmed as: "the skill asserts a reference path that does not resolve").
-- [ ] No banned slop words appear: `elegantly`, `robustly`, `seamlessly`, `comprehensively`, `holistically`, `notably`, `importantly`, `leverages`, `cutting-edge`, `game-changing`, `powerful`, `innovative`.
+- [ ] No banned slop words appear in the file, per the sole list owned by `standards/documentation-standards.md` § "Anti-AI-slop".
 - [ ] No FINAL, LAST, or TRULY_FINAL in filenames or section headers referenced by this skill.

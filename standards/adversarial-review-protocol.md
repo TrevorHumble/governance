@@ -126,7 +126,7 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
   below.
 - **Architecture lens** (`agents/reviewer-architecture.md`) -> runs alongside the code,
   round-1 reviewers (above) at PR-review time whenever the change adds a new component
-  (new service, route, agent, skill, standard) or makes a significant structural change,
+  (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change,
   no owner request needed. A blocker/major finding from it takes the standard one-round
   stop rule, the same cadence as the design-philosophy gate. This promotion to gating is an
   owner decision, recorded in `DESIGN.md`, per § "Advisory-lens lifecycle" below: the owner
