@@ -46,6 +46,6 @@ One token verdict followed by the numbered defect list. A PASS with any open blo
 - [ ] All acceptance criteria referenced by this doc are answerable yes/no by a competent reviewer, per `standards/issue-standards.md` § "Acceptance criteria" (no "an agent can understand X" criteria).
 - [ ] User story names a consumer and follows `As a [consumer], I need…` form.
 - [ ] No preamble sentences, restatements of section headers, or padding are present (quote any bloat candidate as evidence).
-- [ ] No banned slop words: `elegantly`, `robustly`, `seamlessly`, `comprehensively`, `holistically`, `notably`, `importantly`, `leverages`, `cutting-edge`, `game-changing`, `powerful`, `innovative`.
+- [ ] No banned slop words appear in the file, per the sole list owned by `standards/documentation-standards.md` § "Anti-AI-slop".
 - [ ] File is placed in the correct split (`DESIGN.md`, `CLAUDE.md`, or `README.md`) per the documentation split table; mixed content is a finding.
 - [ ] No FINAL, LAST, or TRULY_FINAL in the filename or section headers.

@@ -22,7 +22,7 @@ This agent performs read-only inspection only. Read-only commands (`git show`, `
 
 ## When to invoke
 
-- **Automatic, PR-review time (step 6).** The orchestrator spawns this lens alongside the PR reviewer and the design-philosophy reviewer whenever the change under review adds a new component (new service, route, agent, skill, standard) or makes a significant structural change. No owner request is required (`## Reviewer count by artifact` in `standards/adversarial-review-protocol.md`).
+- **Automatic, PR-review time (step 6).** The orchestrator spawns this lens alongside the PR reviewer and the design-philosophy reviewer whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change. No owner request is required (`## Reviewer count by artifact` in `standards/adversarial-review-protocol.md`).
 - **On request: an additional entry point.** The orchestrator or the owner may also ask for an architecture opinion at any other point (for example, on an issue before implementation, or on a change that does not meet the automatic trigger above). This does not replace the automatic dispatch; it exists alongside it.
 - A previously reviewed change (automatic or on-request) found problems and the revised artifact needs a fresh look.
 
@@ -33,7 +33,7 @@ Follow `standards/adversarial-review-protocol.md` exactly: assume total failure,
 Read `DESIGN.md` before reading the artifact under review. Verify each of the following:
 
 1. The proposed change does not contradict any decision or constraint stated in `DESIGN.md`.
-2. The proposed change does not duplicate an existing component. Check the `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), and `standards/` directory listings, the actual current inventory, and read `DESIGN.md` for how each existing component fits together.
+2. The proposed change does not duplicate an existing component. Check the `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `standards/`, `.claude/commands/`, and `tools/` directory listings, the actual current inventory, and read `DESIGN.md` for how each existing component fits together.
 3. The proposed change fits within the documented architecture: a new component belongs to an existing layer; a new agent has a clear single responsibility distinct from existing agents.
 4. Any deferral or scope change the artifact proposes is consistent with `standards/adversarial-review-protocol.md` § "Finding disposition" (disposition 3, "genuinely separable scope"), not an undocumented overreach.
 
@@ -48,7 +48,7 @@ If the spawning prompt violates the de-bias rules owned by `standards/adversaria
 - **Automatic PR-review dispatch:** the working-tree diff / PR under review. Read every changed file in it.
 - **On request:** the absolute path to the issue or change descriptor under review. Read that file.
 
-Either way, also read `DESIGN.md` and `standards/adversarial-review-protocol.md`. To confirm no duplication of an existing component, also read the directory listings of `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), and `standards/` (Read-only); those directory listings are the actual current inventory, and DESIGN.md is read for how each component fits together, not as a substitute inventory. Beyond that, read only files in this repository needed to test a claim the artifact makes: a file already serving a responsibility the artifact proposes to add, or a file the artifact's claims may contradict, whether or not the artifact names it.
+Either way, also read `DESIGN.md` and `standards/adversarial-review-protocol.md`. To confirm no duplication of an existing component, also read the directory listings of `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `standards/`, `.claude/commands/`, and `tools/` (Read-only); those directory listings are the actual current inventory, and DESIGN.md is read for how each component fits together, not as a substitute inventory. Beyond that, read only files in this repository needed to test a claim the artifact makes: a file already serving a responsibility the artifact proposes to add, or a file the artifact's claims may contradict, whether or not the artifact names it.
 
 **Output:**
 
@@ -64,7 +64,7 @@ One token verdict followed by the numbered defect list. Every check above must h
 ## Checklist
 
 - [ ] No contradiction of any constraint or decision in `DESIGN.md`.
-- [ ] No duplicate: the proposed component does not already exist among the `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), and `standards/` directory listings.
+- [ ] No duplicate: the proposed component does not already exist among the `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `standards/`, `.claude/commands/`, and `tools/` directory listings.
 - [ ] New component has a single responsibility distinct from all existing components.
 - [ ] Any deferral proposed is consistent with `standards/adversarial-review-protocol.md` § "Finding disposition" (disposition 3, "genuinely separable scope").
 - [ ] No FINAL, LAST, or TRULY_FINAL in any filename or section header referenced by the artifact.

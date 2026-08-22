@@ -41,5 +41,5 @@ discovers project skills at, so a skill file placed anywhere else does not fire.
 - [ ] PASS/FAIL: `description` field contains at least two strings enclosed in double-quotes or backticks.
 - [ ] PASS/FAIL: SKILL.md body is under 500 lines; any section over 100 lines has a corresponding `references/` file.
 - [ ] PASS/FAIL: Every file referenced in SKILL.md (scripts, references, assets) exists on disk.
-- [ ] PASS/FAIL: No banned slop words (`elegantly`, `robustly`, `seamlessly`, `comprehensively`, `holistically`, `notably`, `importantly`, `leverages`, `cutting-edge`, `game-changing`, `powerful`, `innovative`) appear in the file.
+- [ ] PASS/FAIL: No banned slop words appear in the file, per the sole list owned by `standards/documentation-standards.md` § "Anti-AI-slop".
 - [ ] PASS/FAIL: No FINAL, LAST, or TRULY_FINAL in filenames or section headers referenced by this skill.
