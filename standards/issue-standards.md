@@ -32,7 +32,7 @@ No criterion of the form "an agent can understand X": that is unfalsifiable and 
 
 An issue's acceptance criteria are not frozen the instant the issue passes review. They may be amended mid-flight, but only under two conditions together: **owner approval plus one reviewer** sign off on the amended text before the implementer treats it as the new contract. Neither alone is sufficient: owner approval without a reviewer skips the adversarial check this whole standard exists to force; a reviewer alone cannot authorize spending the owner's scope without the owner's own approval.
 
-The amendment is bounded to the issue's existing footprint: it may only add work **inside files already on the issue's `Touches` list**. Put plainly, an amendment never adds a file. The `Touches` list is a hard line set at issue-review time (it is what makes concurrent waves safe, since two agents must never share a file). An amendment that needs a file outside that list is not an amendment, it is a new issue, filed and reviewed on its own.
+The amendment is bounded to the issue's existing footprint: it may only add work **inside files already on the issue's `Touches` list**. Put plainly, an amendment never adds a file. The `Touches` list is a hard line set at issue-review time (it is what makes concurrent waves safe, since two agents must never share a file). An amendment that needs a file outside that list is not an amendment, it is a new issue: the owner directs it off the end-of-run report, filed and reviewed on its own.
 
 **A widening is not an amendment.** `standards/adversarial-review-protocol.md` § "Finding
 disposition" disposition 1's widening adds a file outside `Touches` to repair a defect the change
@@ -103,13 +103,17 @@ A backlog-issue captures intent before implementation is possible. It requires:
 
 - **user story**: same form as the ready tier.
 - **Acceptance criteria**: at least one criterion, answerable yes/no by a competent reviewer, per § "Acceptance criteria" above.
-- **`Graduate after:`** field: a **deterministic** condition the orchestrator can evaluate without human judgment (e.g., "after issue #NNNN merges"). A `Graduate after` condition that requires human approval is a FAIL.
+- **`Graduate after:`** field: a **deterministic** condition the orchestrator can evaluate without human judgment (e.g., "after issue #NNNN merges"). A `Graduate after` condition that requires human approval is a FAIL. Deterministic here decides only what reaches the end-of-run report, not what reaches the board: the owner still directs the actual graduation, per § "Graduation" below.
 
 A backlog tier omits `Blocks`/`Touches` and omits a full implementation plan. The reviewer does not fail a backlog issue for missing those fields.
 
 ### Graduation
 
-A backlog issue is never implemented in place. When its `Graduate after` condition is met, the orchestrator opens a new numbered ready-issue. The backlog issue is then closed.
+A backlog issue is never implemented in place. When its `Graduate after` condition is met, the
+orchestrator does not open the new ready-issue itself: per `agents/orchestrator.md` § "No agent
+files its own issue", it carries the met condition into the end-of-run report instead. Only once
+the owner directs the graduation, off that report, does the orchestrator open the new numbered
+ready-issue and close the backlog issue.
 
 ---
 
@@ -129,7 +133,13 @@ Any borderline case, a gate the reviewer cannot confidently confirm, is a `DENY`
 
 ## Spawn justification
 
-Any issue an agent creates **during a run** (as opposed to an issue the owner files directly) carries the `spawned-in-run` label and must contain a `## Spawn justification` section in its body. The label is the machine signal that this block is required; an issue without the label is not subject to it.
+No agent creates an issue during a run on its own initiative (`agents/orchestrator.md` § "No agent
+files its own issue"): a candidate surfaces first as a report note. The `spawned-in-run` label and
+this section apply to the issue that results when the **owner** directs an agent, off the
+end-of-run report, to file one of its notes. Such an issue carries the `spawned-in-run` label and
+must contain a `## Spawn justification` section in its body, with the four fields below keeping
+their present meanings; the label is the machine signal that this block is required, and an issue
+without the label is not subject to it.
 
 The block has four required fields, each non-empty:
 

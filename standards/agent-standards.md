@@ -20,6 +20,24 @@ An agent gets only the tools it needs for its defined job. Specify the `tools` a
 
 Every agent must have a defined input/output contract: what it receives (file paths, strings, structured data) and what it produces (file paths, structured data, PASS/FAIL verdicts). State both in the agent's system prompt. An agent without a contract cannot be tested or replaced.
 
+**Route home for a noticed defect.** Every agent spec's output contract must state where a defect
+the agent noticed but could not fix goes: back to the orchestrator in the agent's own handoff, as a
+note, per `agents/orchestrator.md` § "No agent files its own issue". No agent invents its own route
+and no agent files an issue on its own initiative; the agent's job is only to hand the note
+upward, never to open it as an issue. **Reviewer carve-out:** a reviewer agent needs no separate
+slot for this, since a reviewer is read-only and never edits a file: its noticed defect is already
+a finding in its numbered defect list, and the orchestrator disposes of that finding per
+`standards/adversarial-review-protocol.md` § "Finding disposition" like any other. When the
+noticed defect is instead a pre-existing instance a standard scopes out of the current diff's
+findings, the design-philosophy reviewer's route home is its own `Report notes:` block, per
+`agents/reviewer-design-philosophy.md` § "Input / output contract". Every other reviewer has no such block and
+returns the same kind of observation as an ordinary numbered finding instead.
+
+**Orchestrator carve-out:** the orchestrator itself has no handoff to return a note through, since
+it is not spawned. When the orchestrator notices a defect it did not cause and cannot fix in
+place, it appends its own note directly to `.run_state/notes.md`, per `agents/orchestrator.md` §
+"No agent files its own issue" rule 2.
+
 ---
 
 ## Model tier and reviewer bias

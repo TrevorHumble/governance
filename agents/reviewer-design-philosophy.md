@@ -41,7 +41,7 @@ If the spawn supplies no diff and no changed-comment list, halt immediately and 
 
 ## Input / output contract
 
-**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, and `standards/adversarial-review-protocol.md`. Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
+**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, `standards/adversarial-review-protocol.md`, and `standards/agent-standards.md` § "Input / output contract". Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
 
 **Output:**
 
@@ -50,9 +50,11 @@ PASS  (or)  FAIL
 
 1. [blocker|major|minor|nit] <finding>, evidence: <file:line or principle name>
 2. …
+
+Report notes: <optional; one line per pre-existing problem noticed and scoped out of this diff>
 ```
 
-One token verdict followed by the numbered defect list. Every principle in `standards/design-philosophy.md` must have an explicit finding (passed or failed). A PASS with any open blocker or major is not a PASS. If no defects are found, state "0 defects found" and the evidence that each principle check passed.
+One token verdict followed by the numbered defect list. Every principle in `standards/design-philosophy.md` must have an explicit finding (passed or failed). A PASS with any open blocker or major is not a PASS. If no defects are found, state "0 defects found" and the evidence that each principle check passed. After the numbered list, add a `Report notes:` block, one line per pre-existing problem noticed that `standards/design-philosophy.md` scopes out of this diff's findings; the block carries no severity and does not affect the PASS or FAIL verdict, and is omitted when there are none.
 
 ## Checklist
 

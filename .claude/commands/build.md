@@ -23,7 +23,7 @@ Execute the steps below in order. Do not skip or reorder.
 
 Either way, once inside the worktree, run `powershell -File tools/check-freshness.ps1` **against this worktree** before proceeding to step 0b. Expect `0 commits behind` the remote default branch for a freshly-cut one. **This bypasses the primary checkout's own behind-count entirely: the primary checkout being stale never aborts the build**, because the worktree was cut straight from the remote default branch, not from the primary checkout's local copy. If the check instead reports drift (its output names the count with the literal phrase `commits behind`), resync per its instructions before continuing.
 
-**0b: Governance sync.** Run `powershell -File tools/governance-sync.ps1`. The merge decision defers to `standards/governance-sync.md`, not restated here. Branch on the outcome: when it reports the governance home, `not declared`, or `in sync`, continue to step 1. When it reports a sync PR opened or already open, run the contradiction review per `standards/governance-sync.md` and act per its outcomes, then, after a merge, re-cut this worktree from the updated default branch before continuing. When it exits non-zero, report the failure in the session and continue the build on the governance already in the tree: a sync outage never bricks a build, and the next successful sync closes the gap.
+**0b: Governance sync.** Run `powershell -File tools/governance-sync.ps1`. The merge decision defers to `standards/governance-sync.md`, not restated here. Branch on the outcome: when it reports the governance home, `not declared`, or `in sync`, continue to step 1. When it reports a sync PR opened or already open, run the contradiction review per `standards/governance-sync.md` and act per its outcomes, then, after a merge, re-cut this worktree from the updated default branch before continuing. Carry `.run_state/notes.md` across to the new worktree before continuing: it is gitignored, so the re-cut would otherwise drop every note this session has taken, per `agents/orchestrator.md` § "No agent files its own issue" rule 2. A missing file is the normal case, no notes taken yet, and needs no action; a copy that is attempted and fails is reported in the session rather than passed over silently. When it exits non-zero, report the failure in the session and continue the build on the governance already in the tree: a sync outage never bricks a build, and the next successful sync closes the gap.
 
 **1: Research.** Before drafting anything, check local prior art: the codebase itself, `standards/`, `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `docs/`, `DESIGN.md`. For questions about the project's own stack and dependencies, consult the installed package docs and existing tests in `tests/`. Web search is a last resort when local sources do not answer the question: delegate through `agents/researcher.md`.
 
@@ -77,6 +77,13 @@ The default branch is never knowingly left red. If CI goes red, fix the cause or
 commit before proceeding. Then close the GitHub issue referencing the commit. `BUILDLOG.md`
 itself is not written here; the fragment written above carries this ship's record until
 `/buildlog` folds it in.
+
+**9: Report.** Once the session's work ends, wrap, ship, or halt, emit the end-of-run report, once
+and only once per session, per `agents/orchestrator.md` § "No agent files its own issue", § "How
+to write the report", and § "Report template". A session-ending halt's report already travels in
+its `[HALT]` entry, so this step adds nothing there. The session's work ends when it stops working
+in that worktree, not when one issue in it ships; a report already emitted is re-emitted, not
+skipped, for any note taken afterward.
 
 ## Stop condition
 

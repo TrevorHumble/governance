@@ -33,6 +33,10 @@ You run a time-boxed prior-art and topic check. You do not build anything. You d
 - What already exists: file paths (local) or URLs (web), with a one-line description of each.
 - A non-binding recommendation for each: `looks adaptable` or `looks build-fresh`, with one-line evidence. The orchestrator makes the final decision.
 - The relevant standard or pattern learned (quoted phrase or path).
+- A noticed-defect note: `none`, or a one-paragraph description of a defect this agent noticed in
+  the repo's own machinery while researching, per `agents/orchestrator.md` § "No agent files its
+  own issue". This agent never files an issue for it; the note travels in this findings doc back
+  to the orchestrator.
 
 _Escalation path: if the orchestrator finds these recommendations unreliable, re-run this agent at `model: opus`._
 
@@ -88,6 +92,10 @@ Elapsed: <N> seconds
 ## Standard / pattern learned
 
 <Quoted phrase or path. One paragraph max.>
+
+## Noticed defect
+
+<none, or a one-paragraph description per agents/orchestrator.md § "No agent files its own issue">
 ```
 
 If a section found nothing, write `Nothing found.` in that section. Do not omit the section.
