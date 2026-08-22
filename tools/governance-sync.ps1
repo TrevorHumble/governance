@@ -160,7 +160,7 @@ try {
   # Step h: resolve gh before any mutation -- nothing exists yet to orphan if
   # this fails.
   $gh = Resolve-GhPath -ProfileGhPath $profileGhPath
-  $branchName = "issue-$syncIssue-governance-sync-$shortSha"
+  $branchName = New-SyncBranchName -SyncIssue $syncIssue -ShortSha $shortSha
 
   & git -C $ChildRoot show-ref --verify --quiet "refs/heads/$branchName"
   $localBranchExists = ($LASTEXITCODE -eq 0)
@@ -214,9 +214,35 @@ try {
   # gitignores a shared path would silently never receive it while the run
   # still exits 0 and the PR body still lists it as delivered. -f overrides
   # that: the manifest, not a child's ignore file, decides what ships.
+  #
+  # The .githooks/ slice is staged separately, with --chmod=+x, and it is
+  # built from the WHOLE .githooks/ set now present in the sync worktree,
+  # not just this run's Adds/Updates: rationale, tradeoff, and its one
+  # remaining limitation are in the governance repo's DESIGN.md §
+  # "Governance sync" ("The .githooks/ executable-bit repair").
   $stageAddUpdate = @($plan.Adds) + @($plan.Updates)
-  if ($stageAddUpdate.Count -gt 0) {
-    & git -C $syncWorktreeDir add -f -- $stageAddUpdate | Out-Null
+  $otherAddUpdate = @($stageAddUpdate | Where-Object { -not (Test-MatchesManifestEntry -Path $_ -Entry '.githooks/**') })
+  # Resolved once and reused as both the hook-directory base and the
+  # repo-relative root: ConvertTo-RepoRelativeSlash slices by string length,
+  # so an unresolved root (e.g. a short 8.3 TEMP path) paired with
+  # Get-ChildItem's fully expanded FullName would slice at the wrong offset.
+  $syncWorktreeFull = (Resolve-Path -LiteralPath $syncWorktreeDir).ProviderPath
+  $hookDir = Join-Path $syncWorktreeFull '.githooks'
+  $hookFilesAll = @()
+  if (Test-Path -LiteralPath $hookDir -PathType Container) {
+    $hookFilesAll = @(Get-ChildItem -LiteralPath $hookDir -Recurse -File -Force | ForEach-Object {
+      ConvertTo-RepoRelativeSlash -FullPath $_.FullName -RootFull $syncWorktreeFull
+    })
+  }
+  if ($hookFilesAll.Count -gt 0) {
+    & git -C $syncWorktreeDir add -f --chmod=+x -- $hookFilesAll | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      [Console]::Error.WriteLine("governance-sync: git add -f --chmod=+x failed in the sync worktree (exit $LASTEXITCODE)")
+      exit 2
+    }
+  }
+  if ($otherAddUpdate.Count -gt 0) {
+    & git -C $syncWorktreeDir add -f -- $otherAddUpdate | Out-Null
     if ($LASTEXITCODE -ne 0) {
       [Console]::Error.WriteLine("governance-sync: git add -f failed in the sync worktree (exit $LASTEXITCODE)")
       exit 2

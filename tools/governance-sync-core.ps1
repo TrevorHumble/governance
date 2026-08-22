@@ -43,6 +43,73 @@ function ConvertTo-RepoRelativeSlash {
   return ($rel -replace '\\', '/')
 }
 
+# Get-ManifestEntryPrefix -- decodes one manifest entry's "/**" suffix: the
+# prefix when $Entry ends "/**", $null otherwise. The one place that decode
+# lives, so Test-MatchesManifestEntry and Resolve-SharedSet share it instead
+# of each carrying its own copy of the same Substring/EndsWith pair.
+function Get-ManifestEntryPrefix {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Entry
+  )
+  if ($Entry.EndsWith('/**')) {
+    return $Entry.Substring(0, $Entry.Length - 3)
+  }
+  return $null
+}
+
+# Test-MatchesManifestEntry -- true when $Path is matched by one manifest
+# path entry: a "prefix/**" entry matches the prefix itself or anything
+# nested below it; any other entry matches only by exact equality. The same
+# rule tests/governance-manifest.test.js's matchesManifestEntry implements in
+# JS, kept in this one PowerShell home so tools/ownership-core.ps1 has a real
+# function to dot-source instead of a third hand-copy of the rule.
+function Test-MatchesManifestEntry {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+    [Parameter(Mandatory = $true)]
+    [string]$Entry
+  )
+  $prefix = Get-ManifestEntryPrefix -Entry $Entry
+  if ($null -ne $prefix) {
+    return (($Path -eq $prefix) -or $Path.StartsWith("$prefix/"))
+  }
+  return ($Path -eq $Entry)
+}
+
+# New-SyncBranchName / Test-IsSyncBranch -- the sync branch name
+# template (issue-<N>-governance-sync-<shortSha>) and its recognizer, kept
+# in this one home so tools/governance-sync.ps1 (the builder) and
+# tools/ownership-core.ps1 (the recognizer, via Test-IsSyncBranch below)
+# cannot drift apart: a rename in only one place would either break the
+# sync PR's own commit against the wall the exemption exists for, or open a
+# hole the wall never closes.
+function New-SyncBranchName {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$SyncIssue,
+    [Parameter(Mandatory = $true)]
+    [string]$ShortSha
+  )
+  return "issue-$SyncIssue-governance-sync-$ShortSha"
+}
+
+# Test-IsSyncBranch -- true when $Branch matches the shape New-SyncBranchName
+# builds. Case-sensitive (-cmatch): the builder emits lowercase only, and git
+# branch names are case-sensitive, so a case-insensitive match would exempt a
+# mixed-case branch the sync itself can never produce. The caller resolves
+# the branch name itself (e.g. via git symbolic-ref --short HEAD) and passes
+# it in, so a detached HEAD yields an empty string here and falls through to
+# $false rather than being treated as exempt from the wall.
+function Test-IsSyncBranch {
+  param(
+    [string]$Branch
+  )
+  if (-not $Branch) { return $false }
+  return ($Branch -cmatch '^issue-\d+-governance-sync-')
+}
+
 # Resolve-SharedSet -- expands $Manifest.sharedPaths into the concrete list of
 # repo-relative, forward-slashed file paths that actually exist under
 # $TreeRoot. A "dir/**" entry resolves to every file at or below dir that
@@ -63,8 +130,8 @@ function Resolve-SharedSet {
   $rootFull = (Resolve-Path -LiteralPath $TreeRoot).ProviderPath
   $result = New-Object System.Collections.Generic.List[string]
   foreach ($entry in @($Manifest.sharedPaths)) {
-    if ($entry.EndsWith('/**')) {
-      $prefix = $entry.Substring(0, $entry.Length - 3)
+    $prefix = Get-ManifestEntryPrefix -Entry $entry
+    if ($null -ne $prefix) {
       $dirPath = Join-Path $rootFull ($prefix -replace '/', [IO.Path]::DirectorySeparatorChar)
       if (Test-Path -LiteralPath $dirPath -PathType Container) {
         $files = Get-ChildItem -LiteralPath $dirPath -Recurse -File -Force

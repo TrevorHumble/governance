@@ -956,3 +956,55 @@ describe('classes values and classesDefault hold only their allowed literals (AC
     expect(invalidClassesDefault('content')).toEqual(['content']);
   });
 });
+
+// AC8, parent half: every .githooks/ entry in this repo's own index must be
+// mode 100755, or core.fileMode being false here lets a hook authored on
+// Windows ship non-executable and git skip it in silence on a POSIX clone.
+describe(".githooks/ files are all mode 100755 in this repo's index (AC8)", () => {
+  /** Parses one `git ls-files -s` line into { mode, path }; ignores blank lines. */
+  function parseLsFilesStage(raw) {
+    return raw
+      .split('\n')
+      .filter((l) => l.trim().length > 0)
+      .map((line) => {
+        const tab = line.indexOf('\t');
+        const fields = line.slice(0, tab).split(' ');
+        return { mode: fields[0], path: line.slice(tab + 1) };
+      });
+  }
+
+  /** Entries whose mode is not 100755, as "path: mode" strings. */
+  function nonExecutableEntries(entries) {
+    return entries.filter((e) => e.mode !== '100755').map((e) => `${e.path}: ${e.mode}`);
+  }
+
+  it('every .githooks/ entry is mode 100755, in the live index', () => {
+    const raw = execFileSync('git', ['ls-files', '-s', '.githooks/'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    });
+    const entries = parseLsFilesStage(raw);
+    expect(entries.map((e) => e.path).sort()).toEqual([
+      '.githooks/commit-msg',
+      '.githooks/pre-commit',
+    ]);
+    expect(nonExecutableEntries(entries)).toEqual([]);
+  });
+
+  // Mutation-coverage: a fixture `git ls-files -s` line carrying a 100644
+  // .githooks/ entry must be caught, and named.
+  it('rejects a fixture ls-files line naming a non-executable .githooks/ entry', () => {
+    const raw = '100644 db207f36846b8cdc2e7a84908ee79397820cc320 0\t.githooks/commit-msg\n';
+    const entries = parseLsFilesStage(raw);
+    expect(nonExecutableEntries(entries)).toEqual(['.githooks/commit-msg: 100644']);
+  });
+
+  // Mutation-coverage on the parser itself: a well-formed 100755 line must
+  // parse to zero violations, proving the check isn't vacuously true.
+  it('parseLsFilesStage/nonExecutableEntries accept a well-formed 100755 line', () => {
+    const raw = '100755 406066a61d5b22aba39c83ee0a31d60b1b5d61d1 0\t.githooks/pre-commit\n';
+    const entries = parseLsFilesStage(raw);
+    expect(entries).toEqual([{ mode: '100755', path: '.githooks/pre-commit' }]);
+    expect(nonExecutableEntries(entries)).toEqual([]);
+  });
+});

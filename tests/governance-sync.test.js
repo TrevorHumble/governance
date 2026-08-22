@@ -336,11 +336,17 @@ function makeGhStub(dir) {
 
 const PRISTINE_LEGACY = 'pristine legacy content\n';
 const LEGACY_SHA = sha256hex(PRISTINE_LEGACY);
+const HOOK_REL_PATH = '.githooks/example-hook';
 
 function baseManifest() {
   return {
     retired: [{ path: 'legacy/old.txt', sha256: LEGACY_SHA }],
-    sharedPaths: ['shared/**'],
+    // '.githooks/**' resolves to zero files for every existing case below
+    // (none of them puts a file under parentDir/.githooks), per
+    // Resolve-SharedSet's "directory absent: zero files, not an error"
+    // contract; it exists here only so the AC8 mode-preservation case can
+    // add a file under it and exercise a real end-to-end run.
+    sharedPaths: ['shared/**', '.githooks/**'],
     excludedPaths: ['repo-profile.json', 'CLAUDE.md'],
   };
 }
@@ -352,7 +358,10 @@ function baseManifest() {
 // checkout the wrapper operates against. `opts.parentHello` and
 // `opts.childLegacy` let a case diverge parent/child content before the
 // fixture is built; `opts.syncIssue` overrides the default issue number;
-// `opts.childGitignore` seeds the child's own `.gitignore` content.
+// `opts.childGitignore` seeds the child's own `.gitignore` content;
+// `opts.childHook` seeds HOOK_REL_PATH in the child's initial commit (mode
+// 100644, since writing the file sets no exec bit), for a case that then
+// gives the parent the same content under the same path.
 function makeE2EFixture(opts) {
   opts = opts || {};
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-e2e-'));
@@ -408,6 +417,9 @@ function makeE2EFixture(opts) {
   }
   if (opts.childGitignore !== undefined) {
     writeFile(seedChildDir, '.gitignore', opts.childGitignore);
+  }
+  if (opts.childHook !== undefined) {
+    writeFile(seedChildDir, HOOK_REL_PATH, opts.childHook);
   }
   git(seedChildDir, ['add', '-A']);
   git(seedChildDir, ['commit', '-q', '-m', 'seed child']);
@@ -594,6 +606,47 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
     );
     const pushedContent = git(fx.originDir, ['show', `${branchName}:shared/hello.txt`]);
     expect(pushedContent).toBe('v2\n');
+  });
+
+  it('a .githooks/ file delivered by a real sync run lands on the pushed sync branch at mode 100755 (AC8)', () => {
+    const fx = makeE2EFixture({});
+    writeFile(fx.parentDir, HOOK_REL_PATH, '#!/bin/sh\nexit 0\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'add a githooks file to sync']);
+    const parentSha = git(fx.parentDir, ['rev-parse', 'HEAD']).trim();
+    const shortSha = parentSha.substring(0, 8);
+    const branchName = `issue-${fx.syncIssue}-governance-sync-${shortSha}`;
+
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+
+    // Read from the pushed origin branch tree, a faithful readout of the sync
+    // worktree's index: the sync never touches the child directory's own index.
+    const lsTreeOut = git(fx.originDir, ['ls-tree', branchName, '--', HOOK_REL_PATH]).trim();
+    expect(lsTreeOut).toMatch(/^100755 blob /);
+  });
+
+  it('a .githooks/ file the child already holds at mode 100644 with content identical to the parent is restaged to 100755 (AC8 mode-only repair)', () => {
+    const hookContent = '#!/bin/sh\nexit 0\n';
+    const fx = makeE2EFixture({ childHook: hookContent });
+    // Identical bytes to the child's copy: content-hash plan puts it in neither Adds nor Updates.
+    // The shared/hello.txt change keeps the plan non-empty so the run
+    // actually proceeds (an empty plan exits before any restaging).
+    writeFile(fx.parentDir, HOOK_REL_PATH, hookContent);
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'add identical githooks content and update hello']);
+    const parentSha = git(fx.parentDir, ['rev-parse', 'HEAD']).trim();
+    const shortSha = parentSha.substring(0, 8);
+    const branchName = `issue-${fx.syncIssue}-governance-sync-${shortSha}`;
+
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+
+    const lsTreeOut = git(fx.originDir, ['ls-tree', branchName, '--', HOOK_REL_PATH]).trim();
+    expect(lsTreeOut).toMatch(/^100755 blob /);
   });
 
   it('-DryRun: exits 0, prints the pending change, leaves the child branch list and status unchanged', () => {

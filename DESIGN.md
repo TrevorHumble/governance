@@ -313,8 +313,8 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
    adds: it dot-sources `tools/ownership-core.ps1` (itself dot-sourcing
    `tools/governance-sync-core.ps1`) and fails closed the same way when no launcher is found. A
    future issue on the sync backlog can address a cross-platform commit-msg/pre-commit gate if
-   that becomes load-bearing. This entry matches the tree for `commit-msg`; `pre-commit` itself
-   lands in a later commit of the same change.
+   that becomes load-bearing. This entry matches the tree for both `commit-msg` and `pre-commit`
+   as of this change.
 8. **`reviewer-architecture.md` naming `.agents/skills/` as an externally-managed excluded
    directory a repo without it would carry as a dangling exclusion** (the source hazard also named
    a periodic-audit section in `orchestrator.md`; that section WAS ported, at
@@ -579,6 +579,20 @@ consumer (the Step 3 rule-checker, governance #14) can read `classes` and `arriv
 without the parent hand-copying the map into every child separately. Unlike the
 `WHAT-IT-CHECKS.md` relocation above, this file states no fact specific to any one repo's own
 build, so an unconditional sync overwrite carries no risk of clobbering a child's own true copy.
+
+**The `.githooks/` executable-bit repair.** `tools/governance-sync.ps1` restages the whole
+`.githooks/` set found in the sync worktree with `--chmod=+x` on every run that has anything else
+to sync, not just the files that classified as an Add or an Update by content. `core.fileMode` is
+`false` on the Windows machine that authors this repo, so a hook file whose content already
+matches the parent can still be tracked at `100644` in a child that synced before this repair
+shipped, since a plain `Copy-Item` never carried the mode across; content-based classification is
+blind to mode entirely, so such a file is neither an Add nor an Update on any later run and would
+otherwise never be restaged, leaving the hook silently skipped by git forever. The tradeoff: every
+run that has something else to sync now re-adds every `.githooks/` file's mode, including files
+whose content is untouched, rather than touching only what the plan actually changed. The
+remaining limitation: a run with nothing else to sync is still suppressed as empty (the sync
+wrapper's own `isEmpty` check), so a mode-only repair is not itself grounds to open a sync PR; it
+rides the next sync that carries any other change.
 
 **The child `CLAUDE.md` governing-artifact-surface warning.** `CLAUDE.md` itself stays out of
 `sharedPaths` (an unconditional overwrite would clobber a child's local rules), but every child
