@@ -28,6 +28,8 @@
     "package-lock.json",
     "vitest.config.mjs",
     ".prettierrc.json",
+    "eslint.config.js",
+    ".prettierignore",
     ".gitignore",
     ".github/**",
     "tests/**",

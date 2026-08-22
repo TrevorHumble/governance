@@ -1,0 +1,6 @@
+# node_modules/, data/, .review_state/, and .run_state/ are already covered
+# by .gitignore, which prettier reads by default (--ignore-path defaults to
+# [.gitignore, .prettierignore]); not restated here.
+
+*.ps1
+.githooks/

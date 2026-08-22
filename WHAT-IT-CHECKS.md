@@ -50,16 +50,21 @@ names no GitHub issue: `(#N)` in the message, a GitHub closing keyword (`Closes 
 `Resolves #N`), or a branch named `feat/issue-N`. This proves the change is tied to a tracked
 piece of work. It does not prove that work was reviewed; see the honest limit below.
 
+**A PR containing a lint or formatting violation cannot merge.** `npm run lint` (`eslint . --max-warnings=0`)
+and `npm run format:check` (`prettier --check .`) both run in CI on every push to `main` and every
+pull request, in the same required `build` job as the test suite. This exists so the parent never
+ships a shared file its children's own required lint/format checks would bounce; see `DESIGN.md`
+for the fuller rationale. `prettier` also has a second, older use: the buildlog test suite calls it
+directly as a library, to assert a folded `BUILDLOG.md` stays formatting-clean; that use predates
+and is separate from the CI step.
+
 **Checks this repo does not currently have.** A prior repo this checklist is ported from also ran
-a linter, a standalone formatter gate, a mutation-testing report, a smoke test against a running
-instance, a coverage threshold, a container-build check, and GitHub-native CodeQL and Dependabot
-scanning. None of those run in this repo as of this writing: there is no `eslint`, no standalone
-`format:check` step, no mutation job, no smoke job, no coverage gate on the test run, no Docker
-build step, and no CodeQL or Dependabot workflow configured. One partial exception: `prettier` is
-a devDependency here too, but only as a library the buildlog test suite calls directly (to assert
-a folded `BUILDLOG.md` stays formatting-clean); it is not run as its own CI job or `npm run`
-script. If any of these get added later, this file should be updated to describe them rather than
-left describing checks that do not run.
+a mutation-testing report, a smoke test against a running instance, a coverage threshold, a
+container-build check, and GitHub-native CodeQL and Dependabot scanning. None of those run in this
+repo as of this writing: there is no mutation job, no smoke job, no coverage gate on the test run,
+no Docker build step, and no CodeQL or Dependabot workflow configured. If any of these get added
+later, this file should be updated to describe them rather than left describing checks that do not
+run.
 
 ---
 
@@ -102,5 +107,6 @@ repo currently declares none (`preReview: "none"`); if that changes, this file a
 `standards/governance-sync.md` § "What the tool mechanizes and what it cannot force" for the one
 statement of this; it is not restated here.
 
-**Green means the test suite passes and newly added lines carry no em dash. For anything whose
-correctness depends on how it looks or reads to a person, that judgment is still yours.**
+**Green means the test suite passes, `eslint` and `prettier --check` both exit 0, and newly added
+lines carry no em dash. For anything whose correctness depends on how it looks or reads to a
+person, that judgment is still yours.**

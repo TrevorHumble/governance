@@ -24,7 +24,7 @@ function listFilesUnder(dir) {
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch (e) {
+  } catch {
     return out;
   }
   for (const entry of entries) {
@@ -338,7 +338,9 @@ describe('retired entry schema (AC 3)', () => {
   });
 
   it('accepts a well-formed retired entry', () => {
-    expect(isValidRetiredEntry({ path: 'tools/old-script.ps1', sha256: 'a'.repeat(64) })).toBe(true);
+    expect(isValidRetiredEntry({ path: 'tools/old-script.ps1', sha256: 'a'.repeat(64) })).toBe(
+      true
+    );
   });
 });
 
@@ -400,7 +402,7 @@ describe('citation prefix guard (AC 3)', () => {
   });
 
   it('accepts a properly prefixed citation line', () => {
-    const line = "See the governance repo's `DESIGN.md` § \"Some Section\" for more.";
+    const line = 'See the governance repo\'s `DESIGN.md` § "Some Section" for more.';
     const dewrapped = dewrapText(line);
     const citations = extractDesignCitations(dewrapped);
     expect(citations).toHaveLength(1);

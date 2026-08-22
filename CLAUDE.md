@@ -111,7 +111,7 @@ This repo is the global source of truth for governance. The rules, settled by th
   repo: `needs-issue-review`, `ready`, `backlog`, `spawned-in-run`, `sonnet-only`,
   `severity:blocker`, `severity:major`, `severity:minor`. `gh label create` provisions any that
   are missing before the pipeline's first `gh issue create --label` or `gh issue edit
-  --add-label` call needs them.
+--add-label` call needs them.
 - **Local governance convention.** Every child repo (and this repo itself, on any given machine)
   keeps its own gitignored `CLAUDE.local.md` for per-machine notes only (a local gh path, other
   machine-specific values); it is never a governance-override home. For the tracked override

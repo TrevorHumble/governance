@@ -410,7 +410,7 @@ maybeDescribe('check-emdash.js CLI (real git)', () => {
   });
 
   it('an untracked file under a gitignored path yields exit 0 and does not name the file (AC6)', () => {
-    const { dir, baseSha } = makeCliRepo();
+    const { dir } = makeCliRepo();
     const emDash = String.fromCharCode(0x2014);
     expect(emDash.codePointAt(0)).toBe(0x2014);
     writeFile(dir, '.gitignore', 'ignored/\n');

@@ -463,8 +463,8 @@ long.
 
 - Too vague: `Delete: remove the conflicting rule. 20%`
 - Too long: `Delete: we could remove the sentence in the protocol standard that restricts briefing
-  contents to a closed set of two items, which would resolve the contradiction described above and
-  also shorten the standard by one line. 20%`
+contents to a closed set of two items, which would resolve the contradiction described above and
+also shorten the standard by one line. 20%`
 - Right: `Delete: cut the "only two things" rule, the fight goes away. 20%`
 
 Size overall: enough to understand, not one word more. Too short and the owner cannot judge it. Too

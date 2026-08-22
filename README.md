@@ -35,8 +35,12 @@ classification that produced this tree, and `DESIGN.md` for the full rationale.
 ```
 npm install
 npm test
-node scripts/check-emdash.js
+npm run lint
+npm run format:check
+npm run check:emdash
 ```
+
+If `format:check` fails, `npm run format` rewrites the flagged files in place.
 
 `tools/setup-hooks.ps1` wires the local `.githooks/commit-msg` gate into a fresh clone.
 

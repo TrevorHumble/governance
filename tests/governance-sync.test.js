@@ -75,7 +75,6 @@ function parsePlan(raw) {
   };
 }
 
-
 maybeDescribe('Get-SyncPlan classification (AC 1)', () => {
   it('partitions shared files into Adds, Updates, and identical-neither by content, not count', () => {
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-parent-'));
@@ -184,7 +183,9 @@ function runResolveGhPath(profileGhPath, opts) {
   // value an ordinary child_process.env override can suppress). Clearing it
   // from WITHIN the running script, rather than at spawn time, is what
   // actually neutralizes branch (c)'s guard for this one test.
-  const clearProgramFiles = opts.clearProgramFiles ? '$env:ProgramFiles = $null; Remove-Item Env:\\PROGRAMFILES -ErrorAction SilentlyContinue; ' : '';
+  const clearProgramFiles = opts.clearProgramFiles
+    ? '$env:ProgramFiles = $null; Remove-Item Env:\\PROGRAMFILES -ErrorAction SilentlyContinue; '
+    : '';
   const cmd =
     `${clearProgramFiles}. '${CORE_SCRIPT}'; try { $r = Resolve-GhPath -ProfileGhPath '${profileArg}'; Write-Output $r } ` +
     `catch { [Console]::Error.WriteLine($_.Exception.Message); exit 9 }`;
@@ -192,7 +193,11 @@ function runResolveGhPath(profileGhPath, opts) {
     encoding: 'utf8',
     env,
   });
-  return { status: r.status === null ? 1 : r.status, stdout: r.stdout || '', stderr: r.stderr || '' };
+  return {
+    status: r.status === null ? 1 : r.status,
+    stdout: r.stdout || '',
+    stderr: r.stderr || '',
+  };
 }
 
 maybeDescribe('Resolve-GhPath chain', () => {
@@ -224,10 +229,16 @@ maybeDescribe('Resolve-GhPath chain', () => {
 // ---- wrapper: configuration handling (AC 2) ------------------------------
 
 function runWrapper(args, envExtra) {
-  const fullArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', WRAPPER_SCRIPT].concat(args);
+  const fullArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', WRAPPER_SCRIPT].concat(
+    args
+  );
   const env = Object.assign({}, process.env, envExtra || {});
   const r = spawnSync(PS, fullArgs, { encoding: 'utf8', env });
-  return { status: r.status === null ? 1 : r.status, stdout: r.stdout || '', stderr: r.stderr || '' };
+  return {
+    status: r.status === null ? 1 : r.status,
+    stdout: r.stdout || '',
+    stderr: r.stderr || '',
+  };
 }
 
 maybeDescribe('governance-sync.ps1 configuration handling (AC 2)', () => {
@@ -301,10 +312,10 @@ maybeDescribe('governance-sync.ps1 configuration handling (AC 2)', () => {
 function makeGhStub(dir) {
   const stubPath = path.join(dir, 'gh-stub.ps1');
   const lines = [
-    "$a = $args",
+    '$a = $args',
     "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'list') {",
     '  if ($env:STUB_OPEN_PR) {',
-    "    Write-Output ('[{\"url\":\"' + $env:STUB_OPEN_PR + '\"}]')",
+    '    Write-Output (\'[{"url":"\' + $env:STUB_OPEN_PR + \'"}]\')',
     '  } else {',
     "    Write-Output '[]'",
     '  }',
@@ -357,7 +368,11 @@ function makeE2EFixture(opts) {
   git(parentDir, ['config', 'user.name', 'test']);
   git(parentDir, ['config', 'user.email', 'test@example.invalid']);
   writeFile(parentDir, 'governance-manifest.json', JSON.stringify(baseManifest(), null, 2));
-  writeFile(parentDir, 'shared/hello.txt', opts.parentHello !== undefined ? opts.parentHello : 'v1\n');
+  writeFile(
+    parentDir,
+    'shared/hello.txt',
+    opts.parentHello !== undefined ? opts.parentHello : 'v1\n'
+  );
   git(parentDir, ['add', '-A']);
   git(parentDir, ['commit', '-q', '-m', 'seed parent']);
 
@@ -382,7 +397,11 @@ function makeE2EFixture(opts) {
       2
     )
   );
-  writeFile(seedChildDir, 'CLAUDE.md', '# CLAUDE.md\n\n## Governing-artifact surface\n\nsome list\n');
+  writeFile(
+    seedChildDir,
+    'CLAUDE.md',
+    '# CLAUDE.md\n\n## Governing-artifact surface\n\nsome list\n'
+  );
   writeFile(seedChildDir, 'shared/hello.txt', 'v1\n');
   if (opts.childLegacy !== undefined) {
     writeFile(seedChildDir, 'legacy/old.txt', opts.childLegacy);
@@ -405,7 +424,18 @@ function makeE2EFixture(opts) {
   const shortSha = parentSha.substring(0, 8);
   const branchName = `issue-${syncIssue}-governance-sync-${shortSha}`;
 
-  return { root, parentDir, originDir, seedChildDir, childDir, ghStubPath, syncIssue, parentSha, shortSha, branchName };
+  return {
+    root,
+    parentDir,
+    originDir,
+    seedChildDir,
+    childDir,
+    ghStubPath,
+    syncIssue,
+    parentSha,
+    shortSha,
+    branchName,
+  };
 }
 
 function runE2EWrapper(fx, extraArgs, extraEnv) {
@@ -559,7 +589,9 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
 
     const r = runE2EWrapper(fx, [], { STUB_OPEN_PR: 'https://github.invalid/owner/repo/pull/7' });
     expect(r.status).toBe(0);
-    expect(r.stdout.trim().split('\n').pop()).toBe('sync PR open: https://github.invalid/owner/repo/pull/7');
+    expect(r.stdout.trim().split('\n').pop()).toBe(
+      'sync PR open: https://github.invalid/owner/repo/pull/7'
+    );
     const pushedContent = git(fx.originDir, ['show', `${branchName}:shared/hello.txt`]);
     expect(pushedContent).toBe('v2\n');
   });
@@ -584,12 +616,16 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
 
   it('an unreachable parent exits 2 with non-empty stderr and no sync PR opened line', () => {
     const fx = makeE2EFixture({});
-    writeFile(fx.childDir, 'repo-profile.json', JSON.stringify({
-      governanceHome: 'https://sync.invalid/parent.git',
-      syncIssue: fx.syncIssue,
-      defaultBranch: 'trunk',
-      ghPath: 'gh-stub-does-not-exist-on-path',
-    }));
+    writeFile(
+      fx.childDir,
+      'repo-profile.json',
+      JSON.stringify({
+        governanceHome: 'https://sync.invalid/parent.git',
+        syncIssue: fx.syncIssue,
+        defaultBranch: 'trunk',
+        ghPath: 'gh-stub-does-not-exist-on-path',
+      })
+    );
     const r = runE2EWrapper(fx);
     expect(r.status).toBe(2);
     expect(r.stderr.trim().length).toBeGreaterThan(0);
@@ -600,15 +636,21 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
     const fx = makeE2EFixture({});
     // A bare sharedPaths entry naming a file the parent tree does not have:
     // corruption, per Resolve-SharedSet's fail-closed contract.
-    writeFile(fx.parentDir, 'governance-manifest.json', JSON.stringify({
-      retired: [],
-      sharedPaths: ['this-file-does-not-exist.txt'],
-      excludedPaths: [],
-    }));
+    writeFile(
+      fx.parentDir,
+      'governance-manifest.json',
+      JSON.stringify({
+        retired: [],
+        sharedPaths: ['this-file-does-not-exist.txt'],
+        excludedPaths: [],
+      })
+    );
     git(fx.parentDir, ['add', '-A']);
     git(fx.parentDir, ['commit', '-q', '-m', 'corrupt manifest']);
 
-    const tmpBefore = new Set(fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith('governance-sync-')));
+    const tmpBefore = new Set(
+      fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith('governance-sync-'))
+    );
     const r = runE2EWrapper(fx);
     const tmpAfter = fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith('governance-sync-'));
     const leftover = tmpAfter.filter((n) => !tmpBefore.has(n));

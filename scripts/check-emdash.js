@@ -256,7 +256,15 @@ function main() {
   for (const rel of untrackedFiles) {
     let addDiff;
     try {
-      addDiff = runGitDiffTolerant(['diff', '--no-index', '--no-color', '-U0', '--', '/dev/null', rel]);
+      addDiff = runGitDiffTolerant([
+        'diff',
+        '--no-index',
+        '--no-color',
+        '-U0',
+        '--',
+        '/dev/null',
+        rel,
+      ]);
     } catch (err) {
       console.error(err.message);
       process.exitCode = 1;

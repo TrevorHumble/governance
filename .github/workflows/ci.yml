@@ -34,9 +34,13 @@ jobs:
       - run: npm ci
       - name: Tests
         run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Format check
+        run: npm run format:check
       # Runs only on pull_request/merge_group: a direct push to main has no
       # pull request, so no merge-base diff of added lines exists to judge.
       # See DESIGN.md "CI gate for added em dashes".
       - name: Em-dash gate
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-        run: node scripts/check-emdash.js
+        run: npm run check:emdash

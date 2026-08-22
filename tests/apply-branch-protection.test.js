@@ -47,7 +47,7 @@ maybeDescribe('apply-branch-protection -EmitPayload', () => {
     expect(r.stdout).not.toContain('"contexts"');
   });
 
-  it('-EmitPayload with no -RequiredChecks falls back to repo-profile.json\'s ciCheckNames', () => {
+  it("-EmitPayload with no -RequiredChecks falls back to repo-profile.json's ciCheckNames", () => {
     const r = run();
     expect(r.status).toBe(0);
     const body = JSON.parse(r.stdout);

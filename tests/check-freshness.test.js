@@ -222,7 +222,12 @@ maybeDescribe('realign ordering: overlap must be read before fast-forward', () =
   // main now trails origin/main by exactly that one commit.
   function makePrimaryTrailingMain() {
     const { cloneDir, siblingDir } = makeOriginAndClones();
-    pushFileChange(siblingDir, 'src/app.js', 'console.log("v2 rewritten");\n', 'wave rewrote app.js');
+    pushFileChange(
+      siblingDir,
+      'src/app.js',
+      'console.log("v2 rewritten");\n',
+      'wave rewrote app.js'
+    );
     return { cloneDir };
   }
 

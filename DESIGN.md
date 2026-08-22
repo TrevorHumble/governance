@@ -74,7 +74,7 @@ repo may declare (not only this repo's own choice):
   (`definition-of-done.md` § "6. Clean test run" defers to this key rather than naming `npm ci`
   itself, so the clause reads correctly for a non-npm repo whose install step is something else
   entirely). For example: `{"install": "npm ci", "test": "npm test", "emdash": "npm run
-  check:emdash"}`.
+check:emdash"}`.
 - `ghPath` (string). Allowed: `"gh"` (on PATH) or an absolute path to the GitHub CLI binary. A
   machine where `gh` lives elsewhere records the absolute path as a per-machine note in that
   machine's own `CLAUDE.local.md`, never in this committed file, and sets the `GH_PATH`
@@ -212,11 +212,11 @@ reads correctly for any product, not just a wedding app. The renamed titles are 
 canonical form; every citer (`agents/reviewer-issue.md`, `agents/reviewer-pr.md`) was updated in
 the same seed change:
 
-| Old title (wedding-scavenger-hunt) | New title (this repo) |
-| --- | --- |
-| Host takedown path | Operator takedown path |
-| Party-sized data | Production-sized data |
-| Guest undo | User undo |
+| Old title (wedding-scavenger-hunt) | New title (this repo)  |
+| ---------------------------------- | ---------------------- |
+| Host takedown path                 | Operator takedown path |
+| Party-sized data                   | Production-sized data  |
+| Guest undo                         | User undo              |
 
 Clause 9 ("Visual changes need owner approval" in the source) was retitled **"Pre-review-gated
 changes"** and rewritten to defer to `repo-profile.json`'s `preReview` field rather than asserting
