@@ -10,7 +10,9 @@
   "checkCommands": {
     "install": "npm ci",
     "test": "npm test",
-    "emdash": "npm run check:emdash"
+    "emdash": "npm run check:emdash",
+    "lint": "npm run lint",
+    "format": "npm run format:check"
   },
   "ghPath": "gh",
   "defaultBranch": "main",
