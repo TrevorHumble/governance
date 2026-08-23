@@ -275,8 +275,8 @@ function fieldKey(field) {
 
 /**
  * Extracts every `CLAUDE.md` section title cited by name in `text` (already
- * dewrapped), in either of the two shapes a sharedPaths file uses to name
- * the override home (issue #11 AC5, the same derived-citation guard the
+ * dewrapped), in either of the two shapes a sharedPaths file uses to name a
+ * `CLAUDE.md` section (issue #11 AC5, the same derived-citation guard the
  * `DESIGN.md` scanner above already runs):
  *
  * 1. The adjacent form, `CLAUDE.md` immediately next to a quoted or
@@ -912,8 +912,11 @@ describe('CLAUDE.md section citations from sharedPaths files appear in the owner
     expect(carveOut).not.toContain(titles[0]);
   });
 
-  // Mutation-coverage: the bare-heading-before-filename shape
-  // standards/governance-sync.md actually uses must also be extracted.
+  // Mutation-coverage: the bare-heading-before-filename shape (superseded
+  // 2026-08-23, issue #15: standards/governance-sync.md used to use this
+  // shape to cite CLAUDE.md's now-deleted "## Governance overrides" carve-out;
+  // that citation is gone, but the parser must still accept the shape in case
+  // a future sharedPaths file writes one the same way) must also be extracted.
   it('extracts the bare-heading-before-filename citation shape', () => {
     const line =
       "a line under `## Some Bare Heading` in the child's own `CLAUDE.md`, naming the rule.";

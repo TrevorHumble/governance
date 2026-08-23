@@ -110,6 +110,22 @@ function Test-IsSyncBranch {
   return ($Branch -cmatch '^issue-\d+-governance-sync-')
 }
 
+# Get-UnacknowledgedDivergent -- $Plan.RetainedDivergent minus every path the
+# child declares under repo-profile.json's acknowledgedDivergentPaths (AC7).
+# Pure planning logic, so it lives here rather than the side-effecting
+# wrapper; the one filter both a real run's warning loop and its divergence
+# issue (and the sync PR body) read, so none of them can disagree on what
+# counts as unacknowledged.
+function Get-UnacknowledgedDivergent {
+  param(
+    [Parameter(Mandatory = $true)] $Plan,
+    [string[]]$Acknowledged
+  )
+  $ackSet = New-Object 'System.Collections.Generic.HashSet[string]'
+  foreach ($p in @($Acknowledged)) { [void]$ackSet.Add($p) }
+  return @($Plan.RetainedDivergent | Where-Object { -not $ackSet.Contains($_) })
+}
+
 # Resolve-SharedSet -- expands $Manifest.sharedPaths into the concrete list of
 # repo-relative, forward-slashed file paths that actually exist under
 # $TreeRoot. A "dir/**" entry resolves to every file at or below dir that

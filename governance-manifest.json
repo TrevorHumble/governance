@@ -113,7 +113,8 @@
     { "name": "ghPath", "type": "string" },
     { "name": "defaultBranch", "type": "string" },
     { "name": "governanceHome", "type": "string" },
-    { "name": "syncIssue", "type": "positive integer" }
+    { "name": "syncIssue", "type": "positive integer" },
+    { "name": "acknowledgedDivergentPaths", "type": "array of strings" }
   ],
   "shelfRoots": ["docs/", "tools/", "scripts/", "skills/"]
 }

@@ -19,7 +19,12 @@ global wins by default; a child overrides only by declaring it in its own local 
 (superseded 2026-08-18, issue #3: the override home is now the tracked `## Governance overrides`
 heading in the child's own `CLAUDE.md`, per § "Governance sync" below and
 `standards/governance-sync.md`; this sentence stays as the historical record of the seed
-decision); governance fixes land here; children pull on build. Seed content comes from
+decision; superseded again 2026-08-23, issue #15: that tracked heading is itself deleted, not
+replaced by another heading. A child keeps a retained-divergent path on purpose by declaring it
+under `acknowledgedDivergentPaths` in its own `repo-profile.json` instead (§ "Merge-on-green
+sync" below). A child that cannot follow a global rule at all changes the rule in the governance
+home; there is no local override to declare); governance fixes land here; children pull on build.
+Seed content comes from
 wedding-scavenger-hunt, the gold-standard copy at the time, scrubbed of that repo's domain
 content and with every repo-specific value moved into `repo-profile.json`.
 
@@ -93,6 +98,13 @@ check:emdash"}`.
   `"self"`.
 - `syncIssue` (positive integer). The child's own standing GitHub issue number for governance
   syncs; required whenever `governanceHome` is not `"self"`. This repo does not declare it.
+- `acknowledgedDivergentPaths` (array of strings). Allowed: any list of repo-relative paths, or
+  `[]`; the retained-divergent paths (§ "Governance sync" below, "The `retired` entry schema and
+  provenance-checked pruning") this child means to keep un-pruned on purpose. A path in this list
+  produces no `WARNING retained divergent` line and no entry in the retained-divergent-paths
+  issue `tools/governance-sync.ps1` files (issue #15); this is what replaced the retired,
+  deleted `## Governance overrides` tracked-override home (§ "Merge-on-green sync" below). This
+  repo does not declare it.
 
 **`tools/repo-profile-core.ps1`.** All profile-reading PowerShell logic (resolving
 `repo-profile.json`'s path by default, or reading a caller-supplied `-ProfilePath` instead, and
@@ -231,10 +243,11 @@ slash and would otherwise be mistaken for a fifth shelf root. It scans the whole
 line, so a later editor rewrapping the shelf sentence cannot turn the check red for no visible
 reason, and it de-duplicates, since the section's prose may name a root twice (for example, a
 sentence explaining that `skills/` needs no manifest entry still contains the word `skills/`).
-`extractClaudeMdSectionCitations` matches a `CLAUDE.md` section citation in either token order:
-`standards/governance-sync.md` is the one `sharedPaths` file that writes the heading before the
-filename ("a line under `` `## Governance overrides` `` in the child's own `` `CLAUDE.md` ``"), so
-both orders must be caught.
+`extractClaudeMdSectionCitations` matches a `CLAUDE.md` section citation in either token order
+(superseded 2026-08-23, issue #15: `standards/governance-sync.md` used to be the one
+`sharedPaths` file that wrote the heading before the filename, in a citation of the now-deleted
+`## Governance overrides` carve-out; that citation is gone, but the parser still accepts both
+token orders in case a future `sharedPaths` file writes one that way).
 
 `docSectionCitationPatterns` is the single owner of the three citation-regex forms (double-quote,
 single-quote, and §-omitted), used by both the `DESIGN.md` and `CLAUDE.md` scanners, so the two
@@ -581,9 +594,12 @@ defaulted `self` would make a child that lost the field read as the governance h
 child's copy is pruned only when its current hash still matches. A child holding a copy older
 than the last-shipped version (or any locally edited copy) is retained-divergent instead,
 surfaced in the sync PR body and by a standing `WARNING retained divergent` line on every build
-until the contradiction reviewer disposes of it by hand. This is a deliberately accepted
-single-hash limitation: the mechanism does not attempt to distinguish "diverged before the last
-retirement" from "diverged after."
+(superseded 2026-08-23, issue #15: no contradiction reviewer disposes of it by hand any more;
+`tools/governance-sync.ps1` files a standing retained-divergent-paths issue naming every such
+path the child has not acknowledged under its own `acknowledgedDivergentPaths`, closed once none
+remain, per § "Merge-on-green sync" below). This is a deliberately accepted single-hash
+limitation: the mechanism does not attempt to distinguish "diverged before the last retirement"
+from "diverged after."
 
 **`tests/**` and this repo's own config files do not sync.** They assert facts about this repo's
 own tree (manifest coverage of its own file list, its own profile values) and would fail on
@@ -591,8 +607,10 @@ arrival in a child whose tree differs. Each child keeps its own test surface.
 
 **The `.claude/settings.json` relocation.** Moved from `sharedPaths` to `excludedPaths`: a
 child's `settings.json` carries that repo's own permission allowlist and hook wiring, and an
-unconditional sync overwrite would clobber it, a class of damage the contradiction review's one
-rule-conflict question would not catch (a settings clobber is not a rule contradiction). The hook
+unconditional sync overwrite would clobber it, damage no automated check catches (superseded
+2026-08-23, issue #15: a sync PR now merges on green CI with no reviewer at all, so this
+exclusion is what stands between a content-classed sync and an unreviewed clobber of a child's
+own settings, not merely a review question that would have missed it). The hook
 scripts themselves (`.claude/hooks/*.ps1`) stay shared; registering them in a child's
 `settings.json` is that child's own adoption work.
 
@@ -664,16 +682,76 @@ vendor default install location under `$env:ProgramFiles` (guarded against an un
 primary remote `origin` (git's default). Not parameterized speculatively: recorded here as an
 assumption, to be revisited if a real repo ever needs otherwise.
 
-**Declined-sync re-offer, deliberately.** Closing a sync PR unmerged pauses the decision rather
-than resolving it. The next build re-offers the same diff (or its current equivalent, if the
-parent has moved on since): the mechanism supports no permanent silent divergence of a shared
-file. The two permanent resolutions are declaring a local override, or fixing the global rule in
-this repo first.
+**A hand-closed sync PR re-offers, deliberately (superseded 2026-08-23, issue #15: this passage
+described a reviewer's decision to close a sync PR unmerged; a content-classed sync PR now merges
+itself on green CI with no reviewer to make that decision. The property it protected still
+holds, by a different route: a child cannot silently keep a diverged copy of a shared file
+forever, because retained divergence is never silent, see § "Merge-on-green sync" below).** A
+human can still close a sync PR by hand (a red PR, a branch protection outage, or any other
+reason to intervene); the next build re-offers the same diff, or its current equivalent if the
+parent has moved on since. The two ways to end that re-offer are the same two ways any retained
+divergence ends: declare the path under `acknowledgedDivergentPaths` in this repo's own
+`repo-profile.json`, or fix the global rule in the governance home first, since the ownership
+wall forbids editing a parent-owned file's local copy.
 
 **Orphan-branch recovery and supersession.** A stale local branch of the exact name a run is
 about to create can only hold a prior machine-generated sync commit, reproducible from the same
 inputs, so it is deleted and rebuilt rather than reused. A remote sync branch is never trusted as
 current either: it is always rebuilt from the current plan and force-pushed
 (`--force-with-lease`) over whatever is there. A branch name for a different parent commit is not
-a collision: the parent moved, and the new sync supersedes the old one; the standard tells the
-reviewer to close the superseded PR.
+a collision: the parent moved, and the new sync supersedes the old one; `tools/governance-sync.ps1`
+itself closes the superseded PR and deletes its branch before arming the new one (issue #15's
+superseded-PR sweep, § "Merge-on-green sync" below), not a reviewer, since no reviewer sees a
+content-classed sync PR any more.
+
+## Merge-on-green sync (issue #15)
+
+**Decision (owner, 2026-08-21).** A content-classed sync PR merges itself on green CI, with no
+reviewer, human or agent. Issue #11's ownership wall (a hard, mechanically-enforced separation
+between parent-owned and child-owned paths) and issue #14's rule checker (only a content-classed
+sync opens a PR at all) are what make this safe: separation replaces review as the safety
+mechanism for a sync PR specifically, not for any other kind of pull request in any repo this
+governance layer covers. `tools/governance-sync.ps1` calls `gh pr merge --auto` on the PR it just
+opened or refreshed and does not wait for the merge; the triggering build continues on the tree
+it already has, and the merged governance arrives at the next build, consistent with pull-on-
+build. (Superseded 2026-08-23, issue #15, the whole vocabulary this replaces: every section of
+`standards/governance-sync.md` and `standards/adversarial-review-protocol.md` that described a
+sync PR's now-retired one-question review, its escalation path, its override-declaration home,
+and its close-and-re-offer rule is deleted, not merely reworded, and so is every pointer elsewhere
+in the tree that sent a reader to one of them; a live citation to a deleted section is exactly how
+a child's orchestrator would fall back to the full round-1 review gate this issue exists to
+eliminate.)
+
+**What replaced the override home.** A child that wants to keep a retained-divergent path on
+purpose declares it under `acknowledgedDivergentPaths` in its own `repo-profile.json` (§
+"repo-profile.json schema" above), the same place every other repo-declared value already lives,
+rather than a heading in `CLAUDE.md` a reviewer used to read. A child that cannot follow a global
+rule at all has exactly one path: change the rule in the governance home, since the ownership
+wall forbids editing a parent-owned file's local copy; there is no local override to declare
+instead.
+
+**Two gates before "green" is trusted, not one.** `gh pr merge --auto` merges immediately on a
+branch with no required check, CI or none, so the tool confirms first that every check the child
+declares in `ciCheckNames` is actually required on its default branch (reading
+`required_status_checks.checks`, the same field `tools/apply-branch-protection.ps1` writes and
+reads back), never assuming a required-checks list that was never applied. It cannot verify a
+child's parent-owned-path CI guard job (issue #11's wall counterpart) is among those declared
+names, because no such job is defined, named, or specified anywhere in this tree today: it is
+purely a future child-owned addition. A child that adds one names it and lists that same name in
+its own declared `ciCheckNames`, so this gate requires it; until then there is nothing here for
+this tool to check.
+
+**Two readers of `required_status_checks.checks`, no shared home (recorded gap).**
+`tools/governance-sync.ps1`'s `Get-CiGateStatus` and `tools/apply-branch-protection.ps1` both
+read `required_status_checks.checks` off the GitHub API by hand; neither calls into the other and
+no third file holds the field name for both to share. `tools/apply-branch-protection.ps1` is
+outside this issue's declared `Touches` and stays untouched here. Each read site's own comment
+names the other as its twin, so a GitHub field rename is at least discoverable from either side,
+but a rename must still be applied to both by hand; unifying them into one shared reader is
+follow-up work, not done by issue #15.
+
+**Non-fatal by contract.** Every step of arming (the CI-check gate, the superseded-PR sweep, the
+`gh pr merge --auto` call itself) is wrapped so a failure anywhere in that path is a warning on
+stderr, never a non-zero exit: a sync PR that cannot be armed stays open for hand-merge, and the
+run that tried to arm it still succeeded at its actual job, computing the plan and shipping the
+PR.

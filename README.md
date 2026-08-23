@@ -7,14 +7,14 @@ to every child repo (wedding-scavenger-hunt, the Blender repos, and whatever com
 
 Rules of the road, settled 2026-08-16:
 
-- **Global wins by default.** A child overrides only by declaring it in its own tracked override
-  home, never by editing the global file. Full mechanics, including where that home lives:
+- **Global wins by default.** A child never edits its own local copy of a parent-owned file; the
+  one path to changing a global rule is changing it here. Full mechanics:
   `standards/governance-sync.md`.
 - **Governance fixes are made here**, in this repo, even when discovered mid-build in a
   child. Full review runs here.
-- **Children pull on build.** Every child checks this repo for updates at build start.
-  A pull lands as a small PR in the child with one lightweight review. Full mechanics,
-  including the review's operative question and its outcomes: `standards/governance-sync.md`.
+- **Children pull on build.** Every child checks this repo for updates at build start. A
+  content-classed pull lands as a small PR in the child and merges itself on green CI, no
+  reviewer. Full mechanics: `standards/governance-sync.md`.
 
 Seed content comes from wedding-scavenger-hunt, the gold standard at the time this repo was
 created (2026-08-16). See `docs/seed-classification-2026-08-16.md` for the file-by-file
@@ -55,9 +55,9 @@ If `format:check` fails, `npm run format` rewrites the flagged files in place.
   retired tombstones. Schema documented in `DESIGN.md`.
 - `tools/governance-sync.ps1`: pulls this repo's declared shared governance into a child, and
   classifies what it finds as content or structure against `governance-manifest.json`. A
-  content-classed change ships as a small PR; a structure-classed change ships no PR and opens a
-  standing issue in the child instead, for a human to sequence by hand. The contradiction review a
-  child's reviewer runs on a content PR: `standards/governance-sync.md`.
+  content-classed change ships as a small PR that merges itself on green CI, no reviewer; a
+  structure-classed change ships no PR and opens a standing issue in the child instead, for a
+  human to sequence by hand. Full mechanics: `standards/governance-sync.md`.
 - `DESIGN.md`: architecture decisions and rationale, including the founding ADR for this repo.
 - `standards/`, `agents/`, `.claude/`, `.githooks/`, `tools/`, `scripts/`: the governance layer
   itself.

@@ -226,6 +226,48 @@ maybeDescribe('Resolve-GhPath chain', () => {
   });
 });
 
+// ---- Get-UnacknowledgedDivergent (pure, dot-sourced; AC 7) ---------------
+
+function runGetUnacknowledgedDivergent(retainedDivergent, acknowledged) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-unack-'));
+  const planPath = path.join(dir, 'plan.json');
+  fs.writeFileSync(planPath, JSON.stringify({ RetainedDivergent: retainedDivergent }));
+  const ackArg = (acknowledged || []).map((p) => `'${String(p).replace(/'/g, "''")}'`).join(',');
+  const cmd =
+    `. '${CORE_SCRIPT}'; ` +
+    `$pl = (Get-Content -Raw '${planPath}') | ConvertFrom-Json; ` +
+    `try { $r = Get-UnacknowledgedDivergent -Plan $pl -Acknowledged @(${ackArg}); ` +
+    `ConvertTo-Json -InputObject @($r) -Depth 3 -Compress } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 9 }`;
+  const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], {
+    encoding: 'utf8',
+  });
+  fs.rmSync(dir, { recursive: true, force: true });
+  return r;
+}
+
+maybeDescribe('Get-UnacknowledgedDivergent (AC 7)', () => {
+  it('an acknowledged path is removed from RetainedDivergent, an unacknowledged one survives', () => {
+    const r = runGetUnacknowledgedDivergent(
+      ['standards/kept.md', 'standards/acked.md'],
+      ['standards/acked.md']
+    );
+    expect(r.status).toBe(0);
+    expect(toArray(JSON.parse(r.stdout))).toEqual(['standards/kept.md']);
+  });
+
+  it('an empty or absent Acknowledged list leaves every retained-divergent path unacknowledged', () => {
+    const r = runGetUnacknowledgedDivergent(['standards/kept.md'], []);
+    expect(r.status).toBe(0);
+    expect(toArray(JSON.parse(r.stdout))).toEqual(['standards/kept.md']);
+  });
+
+  it('every retained-divergent path acknowledged returns an empty list, not null', () => {
+    const r = runGetUnacknowledgedDivergent(['standards/acked.md'], ['standards/acked.md']);
+    expect(r.status).toBe(0);
+    expect(toArray(JSON.parse(r.stdout))).toEqual([]);
+  });
+});
+
 // ---- wrapper: configuration handling (AC 2) ------------------------------
 
 function runWrapper(args, envExtra) {
@@ -311,9 +353,14 @@ maybeDescribe('governance-sync.ps1 configuration handling (AC 2)', () => {
 
 // makeGhStub -- a fake `gh` that logs every invocation (args, plus any
 // --body-file content, base64-encoded) to gh-log.txt for readGhLog below to
-// parse. `pr *` arms are env-driven by STUB_OPEN_PR; `issue *` arms (see
-// standards/governance-sync.md § "The standing-issue rule") by
-// STUB_OPEN_STRUCTURE_ISSUE_JSON.
+// parse. `pr list --head ...` (the wrapper's own PR lookup) and `pr merge`
+// are env-driven by STUB_OPEN_PR and STUB_PR_MERGE_FAIL; `pr list` with no
+// `--head` (the AC5 superseded-PR sweep) by STUB_SWEEP_PRS_JSON; `issue
+// list` (see standards/governance-sync.md § "The standing-issue rule") by
+// STUB_OPEN_STRUCTURE_ISSUE_JSON and STUB_OPEN_DIVERGENT_ISSUE_JSON
+// together; the AC4 branch-protection read (`gh api .../protection`) by
+// STUB_REQUIRED_CHECKS_JSON, absent meaning unreadable (exit 1), matching
+// the "unreadable protection counts as absent" rule.
 function makeGhStub(dir) {
   const stubPath = path.join(dir, 'gh-stub.ps1');
   const logPath = path.join(dir, 'gh-log.txt');
@@ -330,9 +377,17 @@ function makeGhStub(dir) {
     `    Add-Content -LiteralPath '${logPathLiteral}' -Value ('BODY-FILE-BASE64: ' + $bodyB64)`,
     '  }',
     '}',
-    "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'list') {",
+    "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'list' -and ($a -contains '--head')) {",
     '  if ($env:STUB_OPEN_PR) {',
     '    Write-Output (\'[{"url":"\' + $env:STUB_OPEN_PR + \'"}]\')',
+    '  } else {',
+    "    Write-Output '[]'",
+    '  }',
+    '  exit 0',
+    '}',
+    "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'list') {",
+    '  if ($env:STUB_SWEEP_PRS_JSON) {',
+    '    Write-Output $env:STUB_SWEEP_PRS_JSON',
     '  } else {',
     "    Write-Output '[]'",
     '  }',
@@ -345,12 +400,25 @@ function makeGhStub(dir) {
     "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'edit') {",
     '  exit 0',
     '}',
-    "if ($a.Count -ge 2 -and $a[0] -eq 'issue' -and $a[1] -eq 'list') {",
-    '  if ($env:STUB_OPEN_STRUCTURE_ISSUE_JSON) {',
-    '    Write-Output $env:STUB_OPEN_STRUCTURE_ISSUE_JSON',
-    '  } else {',
-    "    Write-Output '[]'",
+    "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'close') {",
+    '  exit 0',
+    '}',
+    "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'merge') {",
+    '  if ($env:STUB_PR_MERGE_FAIL) { exit 1 }',
+    '  exit 0',
+    '}',
+    "if ($a.Count -ge 1 -and $a[0] -eq 'api') {",
+    '  if ($env:STUB_REQUIRED_CHECKS_JSON) {',
+    '    Write-Output $env:STUB_REQUIRED_CHECKS_JSON',
+    '    exit 0',
     '  }',
+    '  exit 1',
+    '}',
+    "if ($a.Count -ge 2 -and $a[0] -eq 'issue' -and $a[1] -eq 'list') {",
+    '  $combined = @()',
+    '  if ($env:STUB_OPEN_STRUCTURE_ISSUE_JSON) { $combined += @(($env:STUB_OPEN_STRUCTURE_ISSUE_JSON | ConvertFrom-Json)) }',
+    '  if ($env:STUB_OPEN_DIVERGENT_ISSUE_JSON) { $combined += @(($env:STUB_OPEN_DIVERGENT_ISSUE_JSON | ConvertFrom-Json)) }',
+    '  Write-Output (ConvertTo-Json -InputObject $combined -Depth 4 -Compress)',
     '  exit 0',
     '}',
     "if ($a.Count -ge 2 -and $a[0] -eq 'issue' -and $a[1] -eq 'create') {",
@@ -465,20 +533,19 @@ function makeE2EFixture(opts) {
   git(seedChildDir, ['init', '-q']);
   git(seedChildDir, ['config', 'user.name', 'test']);
   git(seedChildDir, ['config', 'user.email', 'test@example.invalid']);
-  writeFile(
-    seedChildDir,
-    'repo-profile.json',
-    JSON.stringify(
-      {
-        governanceHome: parentDir,
-        syncIssue: syncIssue,
-        defaultBranch: 'trunk',
-        ghPath: 'gh-stub-does-not-exist-on-path',
-      },
-      null,
-      2
-    )
-  );
+  const childProfile = {
+    governanceHome: parentDir,
+    syncIssue: syncIssue,
+    defaultBranch: 'trunk',
+    ghPath: 'gh-stub-does-not-exist-on-path',
+  };
+  if (opts.childCiCheckNames !== undefined) {
+    childProfile.ciCheckNames = opts.childCiCheckNames;
+  }
+  if (opts.childAcknowledgedDivergentPaths !== undefined) {
+    childProfile.acknowledgedDivergentPaths = opts.childAcknowledgedDivergentPaths;
+  }
+  writeFile(seedChildDir, 'repo-profile.json', JSON.stringify(childProfile, null, 2));
   writeFile(
     seedChildDir,
     'CLAUDE.md',
@@ -965,5 +1032,274 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('in sync with');
     expect(r.stderr).toContain('warning');
+  });
+
+  // ---- governance #15: merge-on-green ------------------------------------
+
+  it('the PR body never carries a `## Governance overrides` reference (AC8)', () => {
+    const fx = makeE2EFixture({});
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+
+    const calls = readGhLog(fx.ghLogPath);
+    const prCreateCall = calls.find((c) => c.args.startsWith('pr create'));
+    expect(prCreateCall).toBeDefined();
+    expect(prCreateCall.body).not.toContain('Governance overrides');
+  });
+
+  it('AC3: -NoAutoMerge opens the PR but calls no pr merge, leaving every other marker unchanged', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const r = runE2EWrapper(fx, ['-NoAutoMerge'], {
+      STUB_REQUIRED_CHECKS_JSON: JSON.stringify(['build']),
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/^sync PR opened: /m);
+    expect(r.stdout).toContain('-NoAutoMerge passed');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr merge'))).toBe(false);
+  });
+
+  it('AC1/AC4: every declared ciCheckNames entry required on the default branch arms `gh pr merge --auto --merge`', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build', 'test'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const r = runE2EWrapper(fx, [], {
+      STUB_REQUIRED_CHECKS_JSON: JSON.stringify(['build', 'test', 'extra']),
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('auto-merge armed: ');
+
+    const calls = readGhLog(fx.ghLogPath);
+    const mergeCall = calls.find((c) => c.args.startsWith('pr merge'));
+    expect(mergeCall).toBeDefined();
+    expect(mergeCall.args).toContain('--auto');
+    expect(mergeCall.args).toContain('--merge');
+    expect(mergeCall.args).not.toContain('--admin');
+  });
+
+  it('AC2: a failing `gh pr merge --auto` call is a warning, never a failure of the run', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const r = runE2EWrapper(fx, [], {
+      STUB_REQUIRED_CHECKS_JSON: JSON.stringify(['build']),
+      STUB_PR_MERGE_FAIL: '1',
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+    expect(r.stdout).not.toContain('auto-merge armed');
+    expect(r.stderr).toContain('gh pr merge --auto failed');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr merge'))).toBe(true);
+  });
+
+  it('AC4: a declared ciCheckNames entry missing from the required checks never arms, and never fails the run', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build', 'guard'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    // 'guard' is declared but not actually required: the gate must withhold.
+    const r = runE2EWrapper(fx, [], { STUB_REQUIRED_CHECKS_JSON: JSON.stringify(['build']) });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+    expect(r.stderr).toContain('guard');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr merge'))).toBe(false);
+  });
+
+  it('AC4: an empty declared ciCheckNames never arms', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: [] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    // Branch protection would satisfy any check, proving it's the empty
+    // declared list itself, not an unreadable protection object, withholding.
+    const r = runE2EWrapper(fx, [], { STUB_REQUIRED_CHECKS_JSON: JSON.stringify(['build']) });
+    expect(r.status).toBe(0);
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr merge'))).toBe(false);
+  });
+
+  it('AC4: an empty required-check list on the default branch never arms, even with a non-empty declared ciCheckNames', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const r = runE2EWrapper(fx, [], { STUB_REQUIRED_CHECKS_JSON: JSON.stringify([]) });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+    expect(r.stderr).toContain('no required status checks');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr merge'))).toBe(false);
+  });
+
+  it('AC4: an unreadable/absent branch-protection object never arms and names the branch in the warning', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    // No STUB_REQUIRED_CHECKS_JSON at all: the stub's `gh api` branch exits 1,
+    // matching an unreadable-or-absent protection object.
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+    expect(r.stderr).toContain('could not read required status checks on trunk');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr merge'))).toBe(false);
+  });
+
+  it('AC5: a superseded sync PR is closed and its branch deleted before this run arms', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const sweepPrs = JSON.stringify([
+      { number: 55, headRefName: 'issue-42-governance-sync-deadbeef' },
+    ]);
+    const r = runE2EWrapper(fx, [], {
+      STUB_SWEEP_PRS_JSON: sweepPrs,
+      STUB_REQUIRED_CHECKS_JSON: JSON.stringify(['build']),
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('auto-merge armed: ');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args === 'pr close 55 --delete-branch')).toBe(true);
+  });
+
+  it('AC5: a failed superseded-PR close skips arming entirely, leaving the new PR open for hand-merge', () => {
+    const fx = makeE2EFixture({ childCiCheckNames: ['build'] });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const sweepPrs = JSON.stringify([
+      { number: 66, headRefName: 'issue-42-governance-sync-deadbeef' },
+    ]);
+    const brokenCloseGh = path.join(fx.root, 'gh-close-broken.ps1');
+    fs.writeFileSync(
+      brokenCloseGh,
+      fs
+        .readFileSync(fx.ghStubPath, 'utf8')
+        .replace(
+          "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'close') {\n  exit 0\n}",
+          "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'close') {\n  exit 1\n}"
+        )
+    );
+    const r = runE2EWrapper(fx, [], {
+      STUB_SWEEP_PRS_JSON: sweepPrs,
+      STUB_REQUIRED_CHECKS_JSON: JSON.stringify(['build']),
+      GH_PATH: brokenCloseGh,
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+    expect(r.stdout).not.toContain('auto-merge armed');
+    expect(r.stderr).toContain('superseded');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr merge'))).toBe(false);
+  });
+
+  it('AC7: a retired path declared under acknowledgedDivergentPaths produces no WARNING line and no divergent-paths issue', () => {
+    const fx = makeE2EFixture({
+      childLegacy: 'a local edit no one recorded\n',
+      childAcknowledgedDivergentPaths: ['legacy/old.txt'],
+    });
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('in sync with');
+    expect(r.stdout).not.toContain('WARNING retained divergent');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('issue create'))).toBe(false);
+  });
+
+  it('AC6/AC7: an unacknowledged retained-divergent path on an in-sync run files the divergent-paths issue naming it', () => {
+    const fx = makeE2EFixture({ childLegacy: 'a local edit no one recorded\n' });
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('WARNING retained divergent: legacy/old.txt');
+
+    const calls = readGhLog(fx.ghLogPath);
+    const issueCreateCall = calls.find(
+      (c) =>
+        c.args.startsWith('issue create') &&
+        c.args.includes('retained divergent paths pending disposition')
+    );
+    expect(issueCreateCall).toBeDefined();
+    expect(issueCreateCall.body).toContain('legacy/old.txt');
+  });
+
+  it('AC6: a since-resolved divergent-paths issue is closed once every retained-divergent path is acknowledged or gone', () => {
+    const fx = makeE2EFixture({
+      childLegacy: 'a local edit no one recorded\n',
+      childAcknowledgedDivergentPaths: ['legacy/old.txt'],
+    });
+    const openIssueJson = JSON.stringify([
+      {
+        number: 123,
+        title: 'governance sync: retained divergent paths pending disposition',
+        url: 'https://github.invalid/owner/repo/issues/123',
+      },
+    ]);
+    const r = runE2EWrapper(fx, [], { STUB_OPEN_DIVERGENT_ISSUE_JSON: openIssueJson });
+    expect(r.status).toBe(0);
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.filter((c) => c.args.startsWith('issue close 123'))).toHaveLength(1);
+  });
+
+  it('AC5: the no-sync-PR structure exit never sweeps -- an open sync PR on another branch survives untouched', () => {
+    const childManifest = Object.assign({}, baseManifest(), { classesDefault: 'structure' });
+    const fx = makeE2EFixture({ childManifest });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const sweepPrs = JSON.stringify([
+      { number: 55, headRefName: 'issue-42-governance-sync-deadbeef' },
+    ]);
+    const r = runE2EWrapper(fx, [], { STUB_SWEEP_PRS_JSON: sweepPrs });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('structure change: no sync PR');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr close'))).toBe(false);
+  });
+
+  it('AC5: the empty-plan exit sweeps -- an open sync PR on another branch is closed even with nothing left to ship', () => {
+    const fx = makeE2EFixture({});
+    const sweepPrs = JSON.stringify([
+      { number: 55, headRefName: 'issue-42-governance-sync-deadbeef' },
+    ]);
+    const r = runE2EWrapper(fx, [], { STUB_SWEEP_PRS_JSON: sweepPrs });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('in sync with');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args === 'pr close 55 --delete-branch')).toBe(true);
   });
 });

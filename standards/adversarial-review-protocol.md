@@ -271,10 +271,7 @@ Only after the owner approves is that surface's acceptance criteria written and 
 pipeline (issue review, implementation, PR review) runs. The loop carries no review finding to
 the owner and resolves no defect; it is exactly the "product direction, taste" carve-out this
 section already reserves for human judgment, made into an explicit step. A second sanctioned
-owner-decision point exists for a governance-sync PR: `standards/governance-sync.md`'s "multiple
-ways to fix: stop and ask the owner" escalation is cross-repo legislation, an upstream owner
-control outside this section's findings-resolution rule, for the same reason the Pre-review step
-above is not one. A third sanctioned owner-decision point is the end-of-run report defined in
+owner-decision point is the end-of-run report defined in
 `agents/orchestrator.md` § "No agent files its own issue". It decides, for example, whether an
 already-disposed, genuinely separable item under disposition 3 graduates from a report note to a
 new board row, and, for a held dependency PR under
@@ -282,10 +279,14 @@ new board row, and, for a held dependency PR under
 resolves a finding's severity or verdict, and it does not touch disposition 1 or disposition 2
 above.
 
-Separately, that same PR type (a machine-generated pull of content already
-reviewed in the governance home, identified by its `syncIssue` reference) takes the
-contradiction review `standards/governance-sync.md` defines in place of this protocol's
-reviewer-count and review-size rules below.
+Separately, that same PR type (a machine-generated pull of content already reviewed in the
+governance home, identified by its `syncIssue` reference) needs no findings-resolution rule from
+this protocol at all. `standards/governance-sync.md` states the current rule directly
+(superseded 2026-08-23, issue #15: a
+content-classed sync PR used to carry a one-question contradiction review and an owner escalation
+for it; both are gone, and a content-classed sync PR now merges itself on green CI with no
+reviewer, so this protocol's reviewer-count and review-size rules below never applied to it in
+the first place and there is nothing left here to carve out).
 
 ---
 

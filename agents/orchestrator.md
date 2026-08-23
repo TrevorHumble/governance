@@ -405,10 +405,11 @@ When an agent hits a problem mid-run:
    what makes it survive one.
    **The unit is the session, not the issue.** The pipeline creates one worktree per session
    (§ "Isolation precondition" above; `.claude/commands/build.md` Step 0 cuts it once, and a Step
-   0b governance-sync merge re-cuts it, carrying `.run_state/notes.md` forward into the new
-   worktree), so every later segment shares one `notes.md` across all of them. There is nothing to
-   disambiguate: no header, no branch identity, no issue identity, no reading above or below
-   anything. Append only. The end-of-run report (rule 4 below) simply reads the whole file.
+   0b governance sync never re-cuts it, per `standards/governance-sync.md` § "After merge": a
+   content-classed sync PR merges on green CI on its own schedule, so this build stays on the tree
+   it already has), so every later segment shares one `notes.md` across all of them. There is
+   nothing to disambiguate: no header, no branch identity, no issue identity, no reading above or
+   below anything. Append only. The end-of-run report (rule 4 below) simply reads the whole file.
 3. **If the problem blocks the run,** halt and report it to the owner right then, in the same
    four-option shape below. This is the old `fix-now` case: a defect that stops the current task's
    correctness or safety and cannot be worked around. The run halts, the halt is logged per §

@@ -9,9 +9,9 @@ This is the parent governance repo: standards, agent definitions, pipeline comma
 their wiring, worktree tools, and the checks that enforce them, scrubbed of any one child
 project's domain content and with every repo-specific value moved into `repo-profile.json`. It
 exists so a canonical, generic, running governance tree can be pulled into child repos: the pull
-is mechanized by `tools/governance-sync.ps1`, and the review a child runs on its sync PR is
-`standards/governance-sync.md`. See `DESIGN.md` for the founding rationale and `README.md` for
-the federalism rules.
+is mechanized by `tools/governance-sync.ps1`, and the merge-on-green rule a content-classed sync
+PR follows is `standards/governance-sync.md`. See `DESIGN.md` for the founding rationale and
+`README.md` for the federalism rules.
 
 ## Governing-artifact surface
 
@@ -80,15 +80,16 @@ TRULY_FINAL in filenames or headers. No AI-slop filler (`elegantly`, `robustly`,
 
 This repo is the global source of truth for governance. The rules, settled by the owner:
 
-- **Global wins by default.** A child overrides only by declaring it in its own tracked override
-  home, never by editing the global file. Full mechanics, including where that home lives:
-  `standards/governance-sync.md`.
+- **Global wins by default.** A child never edits its own local copy of a parent-owned file; the
+  ownership wall (`standards/ownership-map.md`) forbids it, so the one path to changing a global
+  rule is changing it here. Full mechanics: `standards/governance-sync.md`.
 - **Governance fixes are made here**, in this repo, even when discovered mid-build in a child.
   Full review runs here.
-- **Children pull on build.** Every child checks this repo for updates at build start. A pull
-  lands as a small PR in the child with one lightweight review. Full mechanics, including the
-  review's operative question and its outcomes, and what the pull mechanizes and what it cannot
-  force: `standards/governance-sync.md` § "What the tool mechanizes and what it cannot force".
+- **Children pull on build.** Every child checks this repo for updates at build start. A
+  content-classed pull lands as a small PR in the child and merges itself on green CI, no
+  reviewer, once the child's declared CI guard is confirmed required on its default branch. Full
+  mechanics, and what the pull mechanizes and what it cannot force: `standards/governance-sync.md`
+  § "What the tool mechanizes and what it cannot force".
 
 ## Repo conventions
 
@@ -121,8 +122,10 @@ This repo is the global source of truth for governance. The rules, settled by th
   the nine.
 - **Local governance convention.** Every child repo (and this repo itself, on any given machine)
   keeps its own gitignored `CLAUDE.local.md` for per-machine notes only (a local gh path, other
-  machine-specific values); it is never a governance-override home. For the tracked override
-  home and why a gitignored file cannot serve as one: `standards/governance-sync.md`.
+  machine-specific values); a fresh worktree never contains it, so nothing a build needs to act on
+  belongs there. A retained-divergent path a child means to keep on purpose is declared in the
+  child's own tracked `repo-profile.json` instead, under `acknowledgedDivergentPaths`: see
+  `standards/governance-sync.md` § "The retained-divergent rule".
 
 ## What needs extra rigor
 

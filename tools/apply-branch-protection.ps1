@@ -109,6 +109,9 @@ if ($LASTEXITCODE -ne 0) {
 # The tool now both sends and reads required checks under `checks`: the PUT
 # body above writes required_status_checks.checks, and GitHub echoes that
 # same key back on read, so this --jq expression needs no field-name mapping.
+# tools/governance-sync.ps1's Get-CiGateStatus is this read site's twin: it also
+# reads required_status_checks.checks, so a GitHub field rename found here must
+# be applied there too.
 $readBack = & $gh api "repos/$slug/branches/$Branch/protection" --jq '{strict: .required_status_checks.strict, contexts: (.required_status_checks.checks | map(.context) | sort), approving_reviews: .required_pull_request_reviews.required_approving_review_count, enforce_admins: .enforce_admins.enabled}' 2>$null
 if ($LASTEXITCODE -ne 0) {
   [Console]::Error.WriteLine("apply-branch-protection: applied protection but read-back failed (exit $LASTEXITCODE)")
