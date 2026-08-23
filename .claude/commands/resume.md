@@ -12,7 +12,7 @@ Re-read these files in order, they carry the context you need:
 
 Optionally, if you have access to the user's global `~/.claude/CLAUDE.md`, read it afterward for personal working-style preferences. It is secondary to the repo's own `CLAUDE.md` and not required for safe operation in this repo.
 
-Then confirm the commit-msg hook is armed:
+Then confirm the local hooks are armed:
 
 ```powershell
 git config --get core.hooksPath

@@ -12,9 +12,13 @@
 #
 # A CODE commit must name an issue: (#N), a GitHub closing keyword + #N, or an
 # issue-N branch (see Resolve-IssueNumber in tools/issue-core.ps1). No review
-# evidence is checked here; review practice is unmechanized (see
-# WHAT-IT-CHECKS.md and CLAUDE.md "Governing-artifact surface" for the surface path list).
-# --no-verify bypasses this hook; CI is the backstop.
+# evidence is checked here; review practice is unmechanized. This file syncs to
+# every child repo verbatim, so it cannot name a specific doc for the surface
+# path list or the review-coverage description: check your own repo's
+# governance docs, if any exist, for either.
+# --no-verify bypasses this hook. This file syncs to every child repo verbatim, so it cannot
+# assert whether a CI job backstops it here: that is a per-repo fact. Check your own repo's
+# honest-description doc, if it has one, for whether CI backstops this hook locally.
 set -e
 
 msg_file="$1"

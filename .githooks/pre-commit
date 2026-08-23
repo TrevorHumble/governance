@@ -16,7 +16,9 @@
 #
 # A blocked commit belongs in the governance home repo instead, per
 # standards/ownership-map.md "The redirect rule".
-# --no-verify bypasses this hook; CI is the backstop.
+# --no-verify bypasses this hook. This file syncs to every child repo verbatim, so it cannot
+# assert whether a CI job backstops it here: that is a per-repo fact. Check your own repo's
+# honest-description doc, if it has one, for whether CI backstops this hook locally.
 set -e
 
 # sq -- single-quote-escape a value for interpolation into a PowerShell

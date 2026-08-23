@@ -42,8 +42,10 @@ and do not skip steps.
    to `repo-profile.json`'s `shipMode` field: a `"pr"`-mode repo branches, opens a pull request
    (`gh pr create`), watches CI to green, then merges; a `"direct"`-mode repo commits straight to
    the default branch and watches CI to green there. No file asserts which mode any particular
-   repo runs. `.githooks/commit-msg` (a code commit must name a GitHub issue) is the only local
-   hook; CI is the rest of the gate. This repo's own profile declares `"shipMode": "pr"`.
+   repo runs. Two local hooks run at commit time: `.githooks/commit-msg` (a code commit must name a
+   GitHub issue) and `.githooks/pre-commit` (a child repo commit cannot stage a parent-owned
+   governance path; see `standards/ownership-map.md`). CI is the rest of the gate. This repo's own
+   profile declares `"shipMode": "pr"`.
 6. **Report**: every session ends with a short priced report to the owner, notes only, never a new
    board row filed on the session's own initiative. Full shape: `agents/orchestrator.md` § "No
    agent files its own issue".
