@@ -1,10 +1,8 @@
 # Governance Sync Standard
 
 **Scope:** every repo that declares a `governanceHome` in its own `repo-profile.json` (a
-"child"), and the reviewers of the repo where a sync PR arrives (a sync PR never arrives at the
-governance home itself). This standard rides
-`standards/**` into every child on sync, so it is the single synced document that names the
-adoption fields and the operative merge rule; do not restate its wording elsewhere.
+"child"). This standard rides `standards/**` into every child on sync, so it is the single synced
+document that names the adoption fields and the merge rule; do not restate its wording elsewhere.
 
 ---
 
@@ -22,41 +20,18 @@ encodes it, so the checker cannot see it and returns content for it), and, when 
 content-classed remains, opens (or refreshes) a small pull request in the child carrying exactly
 that diff. A path no `classes` entry names is judged by the manifest's own `classesDefault` field:
 structure, the safe side, unless that field names the literal string `content` (a manifest
-declaring no `classesDefault` field at all is also structure). Nothing merges automatically: the
-PR sits until a contradiction review disposes of it, per this standard.
+declaring no `classesDefault` field at all is also structure). A content-classed sync PR merges
+itself on green CI, with no reviewer, human or agent; § "Merge-on-green" below is the mechanism
+and its precondition.
 
 A structure change is withheld from the PR, never merged silently. A run that still ships
 something after withholding prints the marker `structure change: partial withhold` and opens the
 PR carrying only what was not withheld. A run where the whole plan classifies as structure (the
 parent's manifest differs from the child's installed copy at all, a shipped file's text cites a
 withheld path, or nothing is left to ship after withholding) prints `structure change: no sync PR`
-and opens no PR at all. Either way the withheld paths are named in the child's standing structure
-issue (§ "The standing-issue rule" below) instead, for a human to sequence by hand.
-
-## The contradiction review
-
-A governance-sync PR gets exactly one question, asked once, not the full round-1 reviewer
-gate: **does the new global content contradict a rule the receiving repo's tracked override home
-declares** (the child's own `CLAUDE.md`, under the literal heading `## Governance overrides`)?
-Three outcomes:
-
-- **No contradiction:** merge.
-- **One clear fix:** fix and merge.
-- **Multiple ways to fix:** stop and ask the owner.
-
-This is the entire review a sync PR needs. `standards/adversarial-review-protocol.md`'s
-reviewer-count and review-size rules do not apply to it (see "Reconciliation with the review
-protocol" below).
-
-## The override rule
-
-A child overrides a global rule only by declaring it in its own tracked override home: a
-line under `## Governance overrides` in the child's own `CLAUDE.md`, naming the rule being
-overridden and the reason. The global copy of that rule is never edited in a child. This home
-is a **tracked** file, present in every worktree; the gitignored, per-machine
-`CLAUDE.local.md` cannot serve this purpose, since a fresh worktree does not contain it and
-the contradiction review (which runs inside a fresh worktree, at build time) could never see
-a declaration living there.
+and opens no PR at all: no PR to merge, so no reviewer question ever arises for it either. Either
+way the withheld paths are named in the child's standing structure issue (§ "The standing-issue
+rule" below) instead, for a human to sequence by hand.
 
 ## Adoption fields
 
@@ -72,8 +47,53 @@ A child whose default branch is not `main` must also declare `defaultBranch` in 
 and branch from `origin/<defaultBranch>`, so a child on a different default branch left
 undeclared would have the sync target the wrong ref.
 
+A child also declares, optionally:
+
+- `ciCheckNames` (array of strings): the check names required on its default branch. This is the
+  same field `tools/apply-branch-protection.ps1` writes into branch protection; § "Merge-on-green"
+  below is what reads it back.
+- `acknowledgedDivergentPaths` (array of strings): the retained-divergent paths (§ "The
+  retained-divergent rule" below) this child means to keep on purpose. Absent or empty means none
+  acknowledged. Each entry must be written repo-relative, forward-slashed, and exact-case, the
+  same form `Plan.RetainedDivergent` itself uses: matching is ordinal (case-sensitive,
+  separator-sensitive), so `Standards/foo.md` or `standards\foo.md` will not acknowledge
+  `standards/foo.md` and that path keeps warning, keeps opening the issue, and keeps appearing in
+  the PR body as unacknowledged.
+
 This standard is the synced document that names these fields, since `DESIGN.md`'s
 `repo-profile.json` schema section never reaches a child (`DESIGN.md` is not itself synced).
+
+## Merge-on-green
+
+A content-classed sync PR arms itself for auto-merge (`gh pr merge --auto`) the moment it is
+opened or refreshed, provided a precondition holds: every check name the child declares in
+`ciCheckNames` must actually be required on its default branch (read back from GitHub's branch
+protection, the same required-checks list `tools/apply-branch-protection.ps1` writes). An
+unreadable or absent protection object, an empty required-check list, and an empty declared
+`ciCheckNames` each count as absent, so none of the three ever arms; a declared check name GitHub
+does not actually require also withholds arming. Confirming this precondition is what makes
+"green" mean something: auto-merge on a branch with no required check merges immediately, CI or
+no CI, so the tool never arms a PR it cannot first confirm a real gate protects. It cannot confirm
+one thing beyond that. No CI job that mechanically guards a child's parent-owned paths against
+local edits (the wall's counterpart to `standards/ownership-map.md`) is defined, named, or
+specified anywhere in this tree today. `.githooks/pre-commit` does that guarding locally (it
+dot-sources `tools/ownership-core.ps1` and blocks a staged edit to a path the child does not own),
+but it is a local hook, not a CI check: it runs on the machine making the commit, GitHub never
+runs it, and it cannot appear in `ciCheckNames`, which only names checks GitHub itself reports as
+required. A child that adds a CI-side version of this guard is responsible for naming it, and for
+also listing that name in its own declared `ciCheckNames`, so this gate actually requires it
+before arming; until a child does both, this tool has nothing to confirm on that front and cannot
+close the gap for itself.
+
+Arming is entirely non-fatal: a failure at any step (the precondition above, a superseded-PR
+sweep failure per § "Superseded syncs" below, or the merge call itself) is a warning on stderr,
+never a failure of the run. A PR that could not be armed stays open for hand-merge; the run that
+tried still succeeded at its actual job, computing the plan and shipping the PR.
+
+The triggering build does not wait for the merge. It continues on the tree it already has; the
+merged governance, once GitHub actually merges the PR, arrives at the next build, consistent with
+pull-on-build. Passing `-NoAutoMerge` to `tools/governance-sync.ps1` suppresses the arming call
+only; the superseded-PR sweep and every other step of the run stay unchanged.
 
 ## The standing-issue rule
 
@@ -112,72 +132,60 @@ closed on its own, so the branch exemption is never consulted.
 A sync branch is named for the parent commit it carries (`issue-<N>-governance-sync-<shortsha>`).
 When the parent has moved since a still-open sync PR was opened, the next sync run opens a PR
 under a new branch name for the new commit; this is not a collision, it supersedes the older
-one. The reviewer closes the older, now-superseded sync PR unmerged when disposing of the new
-one, and deletes the superseded sync branch along with it.
+one. `tools/governance-sync.ps1` closes every other open PR whose head branch
+`Test-IsSyncBranch` recognizes, unmerged, and deletes its branch, before arming this run's own
+PR: a whole-file snapshot carries one parent commit, so an older armed PR going green after a
+newer one merged would write the older snapshot back over the newer. This sweep runs on the ship
+path and the empty-plan exit, on every real run including `-NoAutoMerge`, but never on the
+no-sync-PR (structure) exit: an older sync PR there still carries content this child has not
+received, and closing it would strand that content until a human adopts the withheld structure
+change. A sweep failure withholds this run's own PR from arming too (warn, leave every sync PR
+open for hand-merge): a surviving older armed PR is the one failure arming would make worse.
 
 ## The retained-divergent rule
 
-A retired path (one the governance home used to declare shared but no longer does) is pruned from a
-child automatically only when the child's copy still matches the last-shipped content
-byte-for-byte (its recorded `sha256`). When the child's copy has diverged, the sync PR body
-lists it as retained-divergent instead of deleting it: the contradiction review disposes of
-each retained-divergent entry by hand, either deleting the file (accepting the retirement) or
-keeping it by declaring it under `## Governance overrides` (accepting that the child intends
-to keep content the governance home no longer maintains).
+A retired path (one the governance home used to declare shared but no longer does) is pruned from
+a child automatically only when the child's copy still matches the last-shipped content
+byte-for-byte (its recorded `sha256`). When the child's copy has diverged, the sync PR body lists
+it as retained-divergent instead of deleting it, and, when it is not (yet) declared under the
+child's own `acknowledgedDivergentPaths`, the tool also prints a standing `WARNING retained
+divergent: <path>` line on every build (even a build with nothing else to sync) and files it in a
+second standing issue, titled exactly `governance sync: retained divergent paths pending
+disposition`, found and refreshed the same exact-title way as the standing structure issue above.
+Filing or closing this issue is best-effort at every exit the tool reaches: a `gh` failure there
+is a warning, never a failure of the run.
 
-## The declined-sync rule
-
-Closing a sync PR unmerged pauses the decision, deliberately: the mechanism supports no
-permanent silent divergence of a shared file. The next build re-offers the same diff (or its
-current equivalent, if the parent has moved on). The two permanent resolutions are: take the
-sync and declare a local override under `## Governance overrides`, or change the global rule
-in the home repo first, so the next sync carries the fix instead of the contradiction.
-
-## The no-PR divergence disposition
-
-A `WARNING retained divergent: <path>` line can appear on its own, with nothing else to sync
-(the tool still prints it every run, even when the plan is otherwise empty, so a
-divergence-only child is surfaced on every build). This has no PR to carry a decision, so the
-orchestrator disposes of it by hand, the same two ways as § "The retained-divergent rule"
-above: deleting the file ends the warning next run, and keeping it under
-`## Governance overrides` leaves it standing by design.
-
-A structure verdict is a second, distinct no-PR outcome, disposed of differently: no PR opens, and
-the tool prints the literal marker `structure change: no sync PR` naming the run reason, with every
-withheld path carried by the standing structure issue (§ "The standing-issue rule" above), not by a
-sync PR body or a bare warning line. `.claude/commands/build.md` step 0b's structure branch reports
-that issue in the session and continues the build on the governance already in the tree.
-
-## Reconciliation with the review protocol
-
-The escalation outcome above ("multiple ways to fix: stop and ask the owner") is cross-repo
-legislation: an upstream owner control, the same class as issue-speccing, not an adversarial
-reviewer finding. It sits outside `standards/adversarial-review-protocol.md`'s
-finding-disposition rule, which governs findings raised on an artifact under review, not a
-global-vs-local rule conflict with more than one defensible resolution. That protocol's own
-carve-out paragraph ("Findings-resolution vs. the Pre-review step", in § "No human in the
-loop") names this escalation as its second sanctioned owner-decision point. Separately, a
-governance-sync PR (identified by its `syncIssue` reference) takes the contradiction review
-above in place of that protocol's reviewer-count and review-size rules: the content already
-passed full review in the governance home, so re-running a full round-1 gate on arrival would
-give a child's orchestrator instructions opposite to this standard's one-question review, for
-the same PR.
+A path stops appearing in the warning line and the issue the moment it is declared under
+`acknowledgedDivergentPaths` in the child's own `repo-profile.json`; the issue closes instead of
+refreshing once every retained-divergent path for that child is either acknowledged or gone
+(deleted, or no longer retired). There are exactly two ways to end a retained-divergent path's
+standing: declare it under `acknowledgedDivergentPaths`, accepting that the child intends to keep
+content the governance home no longer maintains, or delete the file, accepting the retirement. A
+child that finds itself needing to keep diverged _content_ the governance home still actively
+maintains, rather than a retired path, has no such choice: the ownership wall
+(`standards/ownership-map.md`) forbids editing a parent-owned file's local copy at all, so the one
+path left is changing the rule in the governance home itself, the same repo every other governance
+fix is made in.
 
 ## After merge
 
-Once a sync PR merges, re-cut any live worktree from the updated default branch before
-continuing the build: the pull just changed the governance tree that worktree was cut from.
+Once a sync PR merges, the merged governance is not necessarily in any worktree yet: merge-on-green
+means the merge can land after the triggering build already finished (§ "Merge-on-green" above).
+The next build to run `tools/governance-sync.ps1` against that child sees an in-sync tree (or the
+next pending diff, if the parent moved on again) and proceeds normally; nothing in this pipeline
+waits for or re-cuts a worktree mid-build on account of a sync merge.
 
 ## What the tool mechanizes and what it cannot force
 
-`tools/governance-sync.ps1` mechanizes the diff, the classification, and the PR: it computes the
-plan, classifies every planned path as content or structure, opens (or refreshes) the sync PR when
-anything content-classed remains, opens (or refreshes, or closes) the standing structure issue as
-the classification calls for, and prunes a retired path only when the child's copy still matches
-the last-shipped hash. It cannot force a child to run it at all, force an opened sync PR to merge,
-force a human to act on an open structure issue, or force the contradiction review above to happen
-with rigor rather than a rubber stamp: none of that is detectable from the governance home. A
-child may keep its own `WHAT-IT-CHECKS.md` describing that child's own CI and coverage; the
-governance home's own `governance-manifest.json` never lists it in `sharedPaths`, so this tool
-neither creates nor maintains one, and it carries no promise about what any given child's build
-actually checks.
+`tools/governance-sync.ps1` mechanizes the diff, the classification, the PR, and the merge: it
+computes the plan, classifies every planned path as content or structure, opens (or refreshes) the
+sync PR when anything content-classed remains, arms that PR for auto-merge once the CI-guard
+precondition holds, sweeps every superseded sync PR first, opens (or refreshes, or closes) the
+standing structure issue and the retained-divergent-paths issue as the plan and classification
+call for, and prunes a retired path only when the child's copy still matches the last-shipped
+hash. It cannot force a child to run it at all, force GitHub to actually merge an armed PR, force
+a human to act on an open standing issue, or verify that a child's own CI guard job is among its
+declared `ciCheckNames`: none of that is detectable from the governance home. A child may keep its
+own `WHAT-IT-CHECKS.md` describing that child's own CI and coverage; the governance home's own
+`governance-manifest.json` never lists it in `sharedPaths`, so this tool neither creates nor
+maintains one, and it carries no promise about what any given child's build actually checks.

@@ -110,6 +110,39 @@ function Test-IsSyncBranch {
   return ($Branch -cmatch '^issue-\d+-governance-sync-')
 }
 
+# Get-UnacknowledgedDivergent -- $Plan.RetainedDivergent minus every path the
+# child declares under repo-profile.json's acknowledgedDivergentPaths (AC7).
+# Pure planning logic, so it lives here rather than the side-effecting
+# wrapper; the one filter both a real run's warning loop and its divergence
+# issue (and the sync PR body) read, so none of them can disagree on what
+# counts as unacknowledged.
+function Get-UnacknowledgedDivergent {
+  param(
+    [Parameter(Mandatory = $true)] $Plan,
+    [string[]]$Acknowledged
+  )
+  $ackSet = New-Object 'System.Collections.Generic.HashSet[string]'
+  foreach ($p in @($Acknowledged)) { [void]$ackSet.Add($p) }
+  # A $null RetainedDivergent needs its own branch: piping $null straight into
+  # Where-Object still runs the filter once with $null as the item
+  # (PowerShell does not treat piping $null as piping nothing), and
+  # $ackSet.Contains($null) is false, so that phantom $null would survive the
+  # filter as a one-element result. @()-wrapping RetainedDivergent first does
+  # not fix this either: @($null) is a one-element array holding $null, not
+  # an empty one, the same trap tools/governance-sync.ps1 already documents
+  # at its `gh pr list` parsing. Only an explicit $null check before the pipe
+  # gets a real empty array out of a $null plan field.
+  $retained = if ($null -eq $Plan.RetainedDivergent) { @() } else { @($Plan.RetainedDivergent) }
+  # @()-wrapping the RESULT of the pipe is also not enough on its own: a
+  # `return` (or any bare output) unrolls an array onto the pipeline element
+  # by element, and an empty array unrolls to zero elements, which the
+  # caller's assignment collapses back to $null. The leading comma makes the
+  # array itself the single pipeline object, so a zero-count result still
+  # arrives at the caller as a real empty array, on both Windows PowerShell
+  # 5.1 and PowerShell 7.
+  return ,@($retained | Where-Object { -not $ackSet.Contains($_) })
+}
+
 # Resolve-SharedSet -- expands $Manifest.sharedPaths into the concrete list of
 # repo-relative, forward-slashed file paths that actually exist under
 # $TreeRoot. A "dir/**" entry resolves to every file at or below dir that

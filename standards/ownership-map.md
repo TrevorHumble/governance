@@ -119,15 +119,20 @@ A parent-owned rule file may reference a child-owned profile value without ownin
 A child's `CLAUDE.md` holds repo facts and slot values only, never a restated or rewritten parent
 rule, except the sections parent-owned machinery points at, which this list makes checkable:
 
-- `## Governance overrides`
 - `## Governing-artifact surface`
 - `## Model policy`
 - `## Repo conventions`
 
-Without the carve-out the leash would order a child to delete the only home an override may live
-in, the heading the sync tool checks for, and the sections that parent-owned, synced files send a
-reader to. The list is not left as a hand inventory: a derived check scans every `sharedPaths`
-file for a `CLAUDE.md` section citation and fails when the cited title is missing from this list.
+Without the carve-out the leash would order a child to delete the sections that parent-owned,
+synced files send a reader to. The list is not left as a hand inventory: a derived check scans
+every `sharedPaths` file for a `CLAUDE.md` section citation and fails when the cited title is
+missing from this list.
+
+(Superseded 2026-08-23, issue #15: a fourth heading used to sit on this list, the tracked home a
+child declared a rule override under. A content-classed sync PR merges on green CI with no
+reviewer now, so there is no review step left to read a declared override; the field a child uses
+to keep a retained-divergent path on purpose moved to `acknowledgedDivergentPaths` in its own
+`repo-profile.json`, per `standards/governance-sync.md` § "The retained-divergent rule".)
 
 ---
 

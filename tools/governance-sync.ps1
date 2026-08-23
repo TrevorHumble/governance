@@ -1,12 +1,14 @@
 # tools/governance-sync.ps1: pulls this repo's declared shared governance into
-# a child repo as a small, reviewed pull request. The only file in this pair
-# with side effects (clone, fetch, worktree, commit, push, gh); the planning
-# logic itself is pure and lives in tools/governance-sync-core.ps1.
+# a child repo as a small pull request that merges itself on green CI, no
+# reviewer, once the child's declared CI guard is confirmed required on its
+# default branch. The only file in this pair with side effects (clone,
+# fetch, worktree, commit, push, gh); the planning logic itself is pure and
+# lives in tools/governance-sync-core.ps1.
 #
 # Exit-code contract, the same-tree invariant, and the one-profile-parsed-once
 # rule this wrapper implements: the governance repo's DESIGN.md § "Governance
-# sync". The contradiction review a child's reviewer runs on the PR this
-# opens: standards/governance-sync.md.
+# sync". Merge-on-green mechanics, the CI-guard gate, the superseded-PR
+# sweep, and the retained-divergent issue: standards/governance-sync.md.
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||. Native
 # command output is redirected on stdout only, never merged via 2>&1 (that
@@ -16,27 +18,44 @@
 param(
   [string]$ChildRoot = (Join-Path $PSScriptRoot '..'),
   [string]$ProfilePath,
-  [switch]$DryRun
+  [switch]$DryRun,
+  # Suppresses the auto-merge arming call only (issue #15 AC3): the superseded-PR sweep,
+  # the PR/issue bodies, and every other step of a real run stay unchanged.
+  [switch]$NoAutoMerge
 )
 
 . (Join-Path $PSScriptRoot 'governance-sync-core.ps1')
 . (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
 
-# The standing structure issue: standards/governance-sync.md § "The
-# standing-issue rule". One open issue per child; the constant title lets
-# Find-StandingStructureIssue match it exactly, never via gh's own
-# partial-match --search.
+# The two standing issues: standards/governance-sync.md § "The standing-issue
+# rule". One open issue per title per child; the constant titles let
+# Find-IssueByTitle match exactly, never via gh's own partial-match --search.
 $StructureIssueTitle = 'governance sync: structure change pending adoption'
+$DivergentIssueTitle = 'governance sync: retained divergent paths pending disposition'
 
-# Find-StandingStructureIssue -- the open issue in the CURRENT working
-# directory's repo (gh resolves its target repo from cwd; callers push
-# $ChildRoot first) whose title exactly equals $StructureIssueTitle, or $null.
-# --search is never used: its index is partial-match and lags issue creation,
-# which would let a freshly-created issue go unfound and accumulate a
-# duplicate on every run. The 1000 cap is a recorded limitation: a child
-# holding more than 1000 open issues can miss the match and open a duplicate.
-function Find-StandingStructureIssue {
-  param([Parameter(Mandatory = $true)] [string]$Gh)
+# The one wording both the divergent-paths issue body and the sync PR body
+# use for how to dispose of a retained-divergent path (issue #15 AC7). A single
+# constant so the two sentences cannot drift apart.
+$DivergentDisposalInstruction = 'dispose of by hand: delete the file, or declare the path under acknowledgedDivergentPaths in this repo''s own repo-profile.json'
+
+# The one wording both superseded-sweep report sites (the nothing-to-sync exit and the
+# shipped-PR exit) use for the sweep's outcome. A single pair of constants so the two
+# copies cannot drift.
+$SweepClosedMessageFormat = 'closed {0} superseded sync PR(s)'
+$SweepFailureWarning = 'governance-sync: warning: could not close every superseded sync PR'
+
+# Find-IssueByTitle -- the open issue in the CURRENT working directory's repo
+# (gh resolves its target repo from cwd; callers push $ChildRoot first) whose
+# title exactly equals $Title, or $null. --search is never used: its index is
+# partial-match and lags issue creation, which would let a freshly-created
+# issue go unfound and accumulate a duplicate on every run. The 1000 cap is a
+# recorded limitation: a child holding more than 1000 open issues can miss
+# the match and open a duplicate.
+function Find-IssueByTitle {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$Title
+  )
   $listOut = & $Gh issue list --state open --limit 1000 --json number,title,url
   if ($LASTEXITCODE -ne 0) {
     throw "governance-sync: gh issue list failed (exit $LASTEXITCODE)"
@@ -46,34 +65,26 @@ function Find-StandingStructureIssue {
     return $null
   }
   foreach ($i in @($parsed)) {
-    if ($i.title -eq $StructureIssueTitle) {
+    if ($i.title -eq $Title) {
       return $i
     }
   }
   return $null
 }
 
-# Set-StandingStructureIssue -- creates the standing structure issue, or
-# refreshes it in place when one is already open, so a run that keeps finding
-# the same structure change never accumulates one issue per parent commit.
-# Body shape: standards/governance-sync.md § "The standing-issue rule".
-function Set-StandingStructureIssue {
+# Set-IssueByTitle -- creates the issue titled $Title, or refreshes its body
+# in place when one is already open, so a run that keeps finding the same
+# condition never accumulates one issue per parent commit. The one home for
+# the exact-title-match-plus-refresh-in-place shape both standing issues use.
+function Set-IssueByTitle {
   param(
     [Parameter(Mandatory = $true)] [string]$Gh,
-    [Parameter(Mandatory = $true)] [string]$ParentSha,
-    [Parameter(Mandatory = $true)] [string]$RunReason,
-    [string[]]$WithheldPaths
+    [Parameter(Mandatory = $true)] [string]$Title,
+    [Parameter(Mandatory = $true)] [string]$Body
   )
-  $existing = Find-StandingStructureIssue -Gh $Gh
-  $bodyLines = New-Object System.Collections.Generic.List[string]
-  $bodyLines.Add("Governance sync from parent sha $ParentSha.")
-  $bodyLines.Add('')
-  $bodyLines.Add("Reason: $RunReason")
-  $bodyLines.Add('')
-  $bodyLines.Add('Withheld paths:')
-  foreach ($p in @($WithheldPaths)) { $bodyLines.Add("- $p") }
-  $bodyPath = Join-Path ([System.IO.Path]::GetTempPath()) ('governance-structure-issue-' + [guid]::NewGuid().ToString('N') + '.md')
-  Set-Content -LiteralPath $bodyPath -Value ($bodyLines -join "`n") -NoNewline
+  $existing = Find-IssueByTitle -Gh $Gh -Title $Title
+  $bodyPath = Join-Path ([System.IO.Path]::GetTempPath()) ('governance-issue-' + [guid]::NewGuid().ToString('N') + '.md')
+  Set-Content -LiteralPath $bodyPath -Value $Body -NoNewline
   try {
     if ($null -ne $existing) {
       & $Gh issue edit $existing.number --body-file $bodyPath | Out-Null
@@ -82,13 +93,13 @@ function Set-StandingStructureIssue {
       }
       return $existing.url
     }
-    $createOut = & $Gh issue create --title $StructureIssueTitle --body-file $bodyPath
+    $createOut = & $Gh issue create --title $Title --body-file $bodyPath
     if ($LASTEXITCODE -ne 0) {
       throw "governance-sync: gh issue create failed (exit $LASTEXITCODE)"
     }
     $url = @($createOut) | Where-Object { $_ -match '^https?://' } | Select-Object -Last 1
     if (-not $url) {
-      $refetched = Find-StandingStructureIssue -Gh $Gh
+      $refetched = Find-IssueByTitle -Gh $Gh -Title $Title
       if ($null -ne $refetched) { $url = $refetched.url }
     }
     if (-not $url) {
@@ -102,21 +113,188 @@ function Set-StandingStructureIssue {
   }
 }
 
-# Close-StandingStructureIssue -- a run that ships a PR with nothing withheld,
-# or an empty plan, closes any open standing structure issue instead, so a
-# child that has adopted the change does not keep a false open row.
-function Close-StandingStructureIssue {
+# Close-IssueByTitle -- closes the open issue titled $Title, if any. Shared by
+# both standing issues so a run that finds nothing pending, of either kind,
+# does not keep a false open row.
+function Close-IssueByTitle {
   param(
     [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$Title,
     [Parameter(Mandatory = $true)] [string]$Reason
   )
-  $existing = Find-StandingStructureIssue -Gh $Gh
+  $existing = Find-IssueByTitle -Gh $Gh -Title $Title
   if ($null -ne $existing) {
     & $Gh issue close $existing.number --comment $Reason | Out-Null
     if ($LASTEXITCODE -ne 0) {
       throw "governance-sync: gh issue close failed for issue $($existing.number) (exit $LASTEXITCODE)"
     }
   }
+}
+
+# Set-StandingStructureIssue / Close-StandingStructureIssue -- the structure
+# issue's own body shape (standards/governance-sync.md § "The standing-issue
+# rule") on top of the generic pair above.
+function Set-StandingStructureIssue {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$ParentSha,
+    [Parameter(Mandatory = $true)] [string]$RunReason,
+    [string[]]$WithheldPaths
+  )
+  $bodyLines = New-Object System.Collections.Generic.List[string]
+  $bodyLines.Add("Governance sync from parent sha $ParentSha.")
+  $bodyLines.Add('')
+  $bodyLines.Add("Reason: $RunReason")
+  $bodyLines.Add('')
+  $bodyLines.Add('Withheld paths:')
+  foreach ($p in @($WithheldPaths)) { $bodyLines.Add("- $p") }
+  return Set-IssueByTitle -Gh $Gh -Title $StructureIssueTitle -Body ($bodyLines -join "`n")
+}
+
+function Close-StandingStructureIssue {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$Reason
+  )
+  Close-IssueByTitle -Gh $Gh -Title $StructureIssueTitle -Reason $Reason
+}
+
+# Set-DivergentPathsIssue / Close-DivergentPathsIssue -- the retained-divergent
+# issue (issue #15 AC6, AC7): filed only for a retained-divergent path the child has not
+# acknowledged under its own repo-profile.json's acknowledgedDivergentPaths.
+function Set-DivergentPathsIssue {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$ParentSha,
+    [Parameter(Mandatory = $true)] [string[]]$Paths
+  )
+  $bodyLines = New-Object System.Collections.Generic.List[string]
+  $bodyLines.Add("Governance sync from parent sha $ParentSha.")
+  $bodyLines.Add('')
+  $bodyLines.Add("Retained divergent paths, unacknowledged ($DivergentDisposalInstruction):")
+  foreach ($p in @($Paths)) { $bodyLines.Add("- $p") }
+  return Set-IssueByTitle -Gh $Gh -Title $DivergentIssueTitle -Body ($bodyLines -join "`n")
+}
+
+function Close-DivergentPathsIssue {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$Reason
+  )
+  Close-IssueByTitle -Gh $Gh -Title $DivergentIssueTitle -Reason $Reason
+}
+
+# Sync-DivergentPathsIssue -- the one place that decides "file the divergent-
+# paths issue or close it": files it when $UnacknowledgedPaths (already filtered
+# through Get-UnacknowledgedDivergent by the caller) is non-empty, closes it
+# otherwise. Best-effort (issue #15 AC6): a gh failure here is a warning, never a
+# failure of the run, at every one of the three real exits that call this.
+# The one owner of that decision, so the three exits' logic and warning text
+# cannot drift.
+function Sync-DivergentPathsIssue {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$ParentSha,
+    [string[]]$UnacknowledgedPaths
+  )
+  try {
+    # An empty pipeline result collapses to $null, and @($null) is a one-element
+    # array holding $null, not an empty one, so $null must be special-cased
+    # before the @() wrap and count check or a fully-acknowledged run would
+    # misread as one unacknowledged path and call Set-DivergentPathsIssue with
+    # a $null -Paths, whose Mandatory binding throws.
+    $realPaths = @()
+    if ($null -ne $UnacknowledgedPaths) {
+      $realPaths = @($UnacknowledgedPaths | Where-Object { $null -ne $_ })
+    }
+    if ($realPaths.Count -gt 0) {
+      Set-DivergentPathsIssue -Gh $Gh -ParentSha $ParentSha -Paths $realPaths | Out-Null
+    } else {
+      Close-DivergentPathsIssue -Gh $Gh -Reason 'Governance sync found no unacknowledged retained-divergent paths; closing.'
+    }
+  } catch {
+    [Console]::Error.WriteLine("governance-sync: warning: could not file or close the retained-divergent paths issue ($($_.Exception.Message))")
+  }
+}
+
+# Get-CiGateStatus -- issue #15 AC4: Armed is true only when every check name the child
+# declares in ciCheckNames is present among the checks GitHub actually
+# requires on its default branch. An unreadable/absent protection object, an
+# empty required-check list, and an empty declared ciCheckNames each count as
+# absent, so none of the three ever arms. Named Get-, not Test-: this returns
+# a status object (Armed, Reason), not a boolean, unlike every other Test-*
+# in this codebase; an idiomatic `if (-not (Test-...))` caller would read the
+# object as always-truthy and the guard would silently never fire.
+function Get-CiGateStatus {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$DefaultBranch,
+    [string[]]$CiCheckNames
+  )
+  $declared = @($CiCheckNames)
+  if ($declared.Count -eq 0) {
+    return [PSCustomObject]@{ Armed = $false; Reason = 'ciCheckNames is empty in repo-profile.json; nothing declared to require' }
+  }
+  # This reads required_status_checks.checks; tools/apply-branch-protection.ps1:112
+  # is this read site's twin, writing that same field and reading it back with
+  # the identical .required_status_checks.checks path. No shared home exists
+  # for the two reads (recorded gap, the governance repo's DESIGN.md §
+  # "Merge-on-green sync (issue #15)"): a GitHub field rename must fix both
+  # call sites by hand.
+  $checksOut = & $Gh api "repos/{owner}/{repo}/branches/$DefaultBranch/protection" --jq '.required_status_checks.checks | map(.context)' 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    return [PSCustomObject]@{ Armed = $false; Reason = "could not read required status checks on $DefaultBranch (branch protection unreadable or absent)" }
+  }
+  $joined = ($checksOut -join "`n").Trim()
+  $required = @()
+  if ($joined) {
+    $parsedChecks = $joined | ConvertFrom-Json
+    if ($null -ne $parsedChecks) { $required = @($parsedChecks) }
+  }
+  if ($required.Count -eq 0) {
+    return [PSCustomObject]@{ Armed = $false; Reason = "$DefaultBranch has no required status checks" }
+  }
+  $requiredSet = New-Object 'System.Collections.Generic.HashSet[string]'
+  foreach ($c in $required) { [void]$requiredSet.Add($c) }
+  $missing = @($declared | Where-Object { -not $requiredSet.Contains($_) })
+  if ($missing.Count -gt 0) {
+    return [PSCustomObject]@{ Armed = $false; Reason = "declared ciCheckNames not required on ${DefaultBranch}: $($missing -join ', ')" }
+  }
+  return [PSCustomObject]@{ Armed = $true; Reason = $null }
+}
+
+# Invoke-SupersededSyncSweep -- issue #15 AC5: closes (unmerged) and deletes every open
+# PR whose head branch Test-IsSyncBranch matches and that is not $KeepBranch
+# (this run's own branch, or $null/empty when this run built no branch at
+# all, e.g. the empty-plan exit), so no older whole-file snapshot can merge
+# over a newer one. Never throws: a close failure is reported back to the
+# caller, which must not arm this run's PR when the sweep did not fully
+# succeed.
+function Invoke-SupersededSyncSweep {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [string]$KeepBranch
+  )
+  # The 1000 cap mirrors Find-IssueByTitle's own recorded limitation above: a
+  # child holding more than 1000 open PRs can miss an older sync PR here and
+  # leave it unswept.
+  $listOut = & $Gh pr list --state open --limit 1000 --json number,headRefName
+  if ($LASTEXITCODE -ne 0) {
+    return [PSCustomObject]@{ Success = $false; ClosedCount = 0 }
+  }
+  $parsed = ($listOut -join "`n") | ConvertFrom-Json
+  $prs = @()
+  if ($null -ne $parsed) { $prs = @($parsed) }
+  $toClose = @($prs | Where-Object { (Test-IsSyncBranch -Branch $_.headRefName) -and ($_.headRefName -ne $KeepBranch) })
+  $closedCount = 0
+  foreach ($pr in $toClose) {
+    & $Gh pr close $pr.number --delete-branch | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      return [PSCustomObject]@{ Success = $false; ClosedCount = $closedCount }
+    }
+    $closedCount++
+  }
+  return [PSCustomObject]@{ Success = $true; ClosedCount = $closedCount }
 }
 
 # Get-Classification -- reads the child manifest from $ChildTreeRoot and
@@ -142,7 +320,7 @@ function Get-Classification {
   return Get-SyncClassification -ParentManifest $ParentManifest -ChildManifest $childManifest -Plan $Plan -ParentRoot $ParentRoot
 }
 
-# Write-ClassificationLines -- prints the AC5 contract for $Classification:
+# Write-ClassificationLines -- prints the issue #14 AC5 contract for $Classification:
 # one `classify <class>: <path> (<reason>)` line per plan path, then one
 # `classify RUN <content|structure>: <reason>` line (`.claude/commands/build.md`
 # step 0b branches on that marker). The one call both the dry-run and
@@ -213,6 +391,20 @@ if (-not $syncIssueValid) {
 $defaultBranch = Get-RepoProfileValue -Field 'defaultBranch' -ProfilePath $ProfilePath
 $profileGhPath = Get-RepoProfileValue -Field 'ghPath' -ProfilePath $ProfilePath
 
+# ciCheckNames (the issue #15 AC4 gate) and acknowledgedDivergentPaths (issue #15 AC7) are read
+# directly off the one already-parsed $profileObj, same as governanceHome and
+# syncIssue above, per the one-profile-parsed-once rule.
+$ciCheckNamesProp = $profileObj.PSObject.Properties['ciCheckNames']
+$ciCheckNames = @()
+if ($null -ne $ciCheckNamesProp -and $null -ne $ciCheckNamesProp.Value) {
+  $ciCheckNames = @($ciCheckNamesProp.Value)
+}
+$acknowledgedDivergentProp = $profileObj.PSObject.Properties['acknowledgedDivergentPaths']
+$acknowledgedDivergentPaths = @()
+if ($null -ne $acknowledgedDivergentProp -and $null -ne $acknowledgedDivergentProp.Value) {
+  $acknowledgedDivergentPaths = @($acknowledgedDivergentProp.Value)
+}
+
 $tempRoot = [System.IO.Path]::GetTempPath()
 $tempCloneDir = Join-Path $tempRoot ('governance-sync-parent-' + [guid]::NewGuid().ToString('N'))
 $syncWorktreeDir = $null
@@ -249,7 +441,8 @@ try {
     foreach ($p in $plan.Adds) { Write-Output "add: $p" }
     foreach ($p in $plan.Updates) { Write-Output "update: $p" }
     foreach ($p in $plan.Prunes) { Write-Output "prune: $p" }
-    foreach ($p in $plan.RetainedDivergent) { Write-Output "WARNING retained divergent: $p" }
+    $unacknowledgedDivergentDry = Get-UnacknowledgedDivergent -Plan $plan -Acknowledged $acknowledgedDivergentPaths
+    foreach ($p in $unacknowledgedDivergentDry) { Write-Output "WARNING retained divergent: $p" }
 
     # Classify against the invoking tree (the dry-run preview's own tree, per
     # the same-tree invariant above). Preview only: opens no issue, touches no
@@ -285,14 +478,18 @@ try {
   # computed against the wrong tree would silently revert that divergence.
   $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $syncWorktreeDir -Manifest $parentManifest
   foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
-  foreach ($p in $plan.RetainedDivergent) { Write-Output "WARNING retained divergent: $p" }
+  $unacknowledgedDivergent = Get-UnacknowledgedDivergent -Plan $plan -Acknowledged $acknowledgedDivergentPaths
+  foreach ($p in $unacknowledgedDivergent) { Write-Output "WARNING retained divergent: $p" }
 
   $isEmpty = ($plan.Adds.Count -eq 0) -and ($plan.Updates.Count -eq 0) -and ($plan.Prunes.Count -eq 0)
   if ($isEmpty) {
     # Best-effort only (standards/governance-sync.md § "The standing-issue
     # rule"): a human can adopt a structure change by hand, leaving a stale
     # open issue this cleans up, but "nothing to sync" must still print and
-    # exit 0 even when gh cannot be resolved or reached.
+    # exit 0 even when gh cannot be resolved or reached. The divergence issue
+    # (issue #15 AC6) and the superseded-PR sweep (issue #15 AC5) share the same best-effort
+    # contract on this exit: a gh failure is a warning, never a failure of
+    # the run.
     try {
       $gh = Resolve-GhPath -ProfileGhPath $profileGhPath
       if (-not $pushedLocation) {
@@ -300,11 +497,17 @@ try {
         $pushedLocation = $true
       }
       Close-StandingStructureIssue -Gh $gh -Reason 'Governance sync found nothing pending; closing the standing structure issue.'
+      Sync-DivergentPathsIssue -Gh $gh -ParentSha $parentSha -UnacknowledgedPaths $unacknowledgedDivergent
+      $sweep = Invoke-SupersededSyncSweep -Gh $gh -KeepBranch $null
+      if ($sweep.Success -and $sweep.ClosedCount -gt 0) {
+        Write-Output ($SweepClosedMessageFormat -f $sweep.ClosedCount)
+      }
+      if (-not $sweep.Success) {
+        [Console]::Error.WriteLine($SweepFailureWarning)
+      }
     } catch {
-      [Console]::Error.WriteLine("governance-sync: warning: could not close a stale standing structure issue ($($_.Exception.Message))")
+      [Console]::Error.WriteLine("governance-sync: warning: could not update the standing structure or divergent-paths issue, or sweep superseded sync PRs ($($_.Exception.Message))")
     }
-    # Retained-divergent entries alone never open a PR: there is no diff to
-    # merge, and their WARNING lines above are the whole surface.
     Write-Output "in sync with $parentSha"
     exit 0
   }
@@ -332,6 +535,10 @@ try {
   if (-not $classification.OpensPr) {
     $issueUrl = Set-StandingStructureIssue -Gh $gh -ParentSha $parentSha -RunReason $classification.RunReason -WithheldPaths $classification.Withheld
     Write-Output "structure change: no sync PR ($($classification.RunReason)); child issue: $issueUrl"
+    # No superseded-PR sweep on this exit (issue #15 AC5): an older sync PR here still
+    # carries content this child has not received, and closing it would
+    # strand that content until a human adopts the withheld structure change.
+    Sync-DivergentPathsIssue -Gh $gh -ParentSha $parentSha -UnacknowledgedPaths $unacknowledgedDivergent
     exit 0
   }
   if ($classification.Withheld.Count -gt 0) {
@@ -461,7 +668,7 @@ try {
   $bodyLines = New-Object System.Collections.Generic.List[string]
   $bodyLines.Add("Governance sync from $governanceHome at $parentSha.")
   $bodyLines.Add('')
-  $bodyLines.Add('Review per `standards/governance-sync.md`: does the new global content contradict a rule this repo declares in `CLAUDE.md` under `## Governance overrides`?')
+  $bodyLines.Add('Merges on green CI per `standards/governance-sync.md`: no reviewer.')
   $bodyLines.Add('')
   $bodyLines.Add('Add:')
   foreach ($p in $plan.Adds) { $bodyLines.Add("- $p") }
@@ -472,8 +679,12 @@ try {
   $bodyLines.Add('Prune:')
   foreach ($p in $plan.Prunes) { $bodyLines.Add("- $p") }
   $bodyLines.Add('')
-  $bodyLines.Add('Retained divergent (dispose of by hand: delete the file, or keep it by declaring it under `## Governance overrides`):')
-  foreach ($p in $plan.RetainedDivergent) { $bodyLines.Add("- $p") }
+  # Read from Get-UnacknowledgedDivergent's own filtered list, the one owner
+  # both the warning loop and the divergent-paths issue also read (issue #15 AC7): an
+  # acknowledged path must stop appearing here too, not just stop warning and
+  # stop opening the issue.
+  $bodyLines.Add("Retained divergent, unacknowledged ($DivergentDisposalInstruction):")
+  foreach ($p in $unacknowledgedDivergent) { $bodyLines.Add("- $p") }
   if ($plan.Warnings.Count -gt 0) {
     $bodyLines.Add('')
     $bodyLines.Add('Warnings:')
@@ -503,13 +714,13 @@ try {
   }
 
   if ($existing.Count -gt 0) {
-    $existingUrl = $existing[0].url
-    & $gh pr edit $existingUrl --body-file $prBodyPath | Out-Null
+    $prUrl = $existing[0].url
+    & $gh pr edit $prUrl --body-file $prBodyPath | Out-Null
     if ($LASTEXITCODE -ne 0) {
-      [Console]::Error.WriteLine("governance-sync: gh pr edit failed for $existingUrl (exit $LASTEXITCODE)")
+      [Console]::Error.WriteLine("governance-sync: gh pr edit failed for $prUrl (exit $LASTEXITCODE)")
       exit 2
     }
-    Write-Output "sync PR open: $existingUrl"
+    Write-Output "sync PR open: $prUrl"
   } else {
     $createOut = & $gh pr create --head $branchName --base $defaultBranch --title "governance sync from $shortSha (#$syncIssue)" --body-file $prBodyPath
     if ($LASTEXITCODE -ne 0) {
@@ -523,24 +734,24 @@ try {
     # like a URL; if none does, the PR still exists (exit 0), so recover the
     # URL the same way an already-open PR is found rather than treating a
     # created PR as a failure.
-    $newUrl = @($createOut) | Where-Object { $_ -match '^https?://' } | Select-Object -Last 1
-    if (-not $newUrl) {
+    $prUrl = @($createOut) | Where-Object { $_ -match '^https?://' } | Select-Object -Last 1
+    if (-not $prUrl) {
       $recoverOut = & $gh pr list --head $branchName --state open --json url
       if ($LASTEXITCODE -eq 0) {
         $recoverParsed = ($recoverOut -join "`n") | ConvertFrom-Json
         if ($null -ne $recoverParsed) {
           $recovered = @($recoverParsed)
           if ($recovered.Count -gt 0) {
-            $newUrl = $recovered[0].url
+            $prUrl = $recovered[0].url
           }
         }
       }
     }
-    if (-not $newUrl) {
+    if (-not $prUrl) {
       [Console]::Error.WriteLine("governance-sync: gh pr create exited 0 but no PR URL could be captured from its output or recovered via gh pr list")
       exit 2
     }
-    Write-Output "sync PR opened: $newUrl"
+    Write-Output "sync PR opened: $prUrl"
   }
 
   # Close deferred to here, after the PR is open and its URL printed, not
@@ -550,6 +761,41 @@ try {
   if ($closeStandingIssueAfterShip) {
     Close-StandingStructureIssue -Gh $gh -Reason 'Governance sync shipped with nothing withheld; closing the standing structure issue.'
   }
+
+  Sync-DivergentPathsIssue -Gh $gh -ParentSha $parentSha -UnacknowledgedPaths $unacknowledgedDivergent
+
+  # Issue #15 AC5: sweep every other open sync PR before arming this one, so no older
+  # whole-file snapshot can merge over this run's newer one. A sweep failure
+  # skips arming entirely (warn, leave every sync PR open for hand-merge): a
+  # surviving older armed PR is the one failure arming would make worse.
+  $sweep = Invoke-SupersededSyncSweep -Gh $gh -KeepBranch $branchName
+  if ($sweep.Success -and $sweep.ClosedCount -gt 0) {
+    Write-Output ($SweepClosedMessageFormat -f $sweep.ClosedCount)
+  }
+  if (-not $sweep.Success) {
+    [Console]::Error.WriteLine("$SweepFailureWarning; leaving every sync PR open for hand-merge")
+  } elseif ($NoAutoMerge) {
+    Write-Output 'auto-merge: -NoAutoMerge passed; leaving the PR open for hand-merge'
+  } else {
+    # Issue #15 AC1/AC2: the only merge command anywhere in this file. Wrapped so any
+    # failure at any step here is a warning, never a non-zero exit (issue #15 AC2).
+    try {
+      $gate = Get-CiGateStatus -Gh $gh -DefaultBranch $defaultBranch -CiCheckNames $ciCheckNames
+      if (-not $gate.Armed) {
+        [Console]::Error.WriteLine("governance-sync: warning: auto-merge not armed ($($gate.Reason)); leaving the PR open for hand-merge")
+      } else {
+        & $gh pr merge --auto --merge $prUrl | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+          [Console]::Error.WriteLine("governance-sync: warning: gh pr merge --auto failed for $prUrl (exit $LASTEXITCODE); leaving the PR open for hand-merge")
+        } else {
+          Write-Output "auto-merge armed: $prUrl"
+        }
+      }
+    } catch {
+      [Console]::Error.WriteLine("governance-sync: warning: could not arm auto-merge ($($_.Exception.Message)); leaving the PR open for hand-merge")
+    }
+  }
+
   exit 0
 } catch {
   # Routes every unhandled exception, including Resolve-SharedSet's
