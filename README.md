@@ -53,8 +53,11 @@ If `format:check` fails, `npm run format` rewrites the flagged files in place.
   rest). Schema documented in `DESIGN.md`.
 - `governance-manifest.json`: the declared set of files a child repo receives on sync, and any
   retired tombstones. Schema documented in `DESIGN.md`.
-- `tools/governance-sync.ps1`: pulls this repo's declared shared governance into a child as a
-  small PR. The contradiction review a child's reviewer runs on that PR: `standards/governance-sync.md`.
+- `tools/governance-sync.ps1`: pulls this repo's declared shared governance into a child, and
+  classifies what it finds as content or structure against `governance-manifest.json`. A
+  content-classed change ships as a small PR; a structure-classed change ships no PR and opens a
+  standing issue in the child instead, for a human to sequence by hand. The contradiction review a
+  child's reviewer runs on a content PR: `standards/governance-sync.md`.
 - `DESIGN.md`: architecture decisions and rationale, including the founding ADR for this repo.
 - `standards/`, `agents/`, `.claude/`, `.githooks/`, `tools/`, `scripts/`: the governance layer
   itself.

@@ -212,9 +212,9 @@ does not inspect its runtime behavior.
 records each `sharedPaths` entry's steady-state class, `"content"` or `"structure"`, per
 `standards/ownership-map.md`'s two class-definition sentences; a narrower key not itself a
 `sharedPaths` entry overrides the entry it resolves under, for a path needing a different class
-than its enumerated parent. `classesDefault` (string, literally `"structure"`): the fallback for
-any path `classes` does not name, the safe side, since JSON carries no comment a reader could put
-a default in instead. `arrivesAsStructure` (array of strings): paths whose first delivery into a
+than its enumerated parent. `classesDefault` (string): the fallback class for any path `classes`
+does not name; the rule is stated once in `standards/governance-sync.md` § "What a sync is".
+`arrivesAsStructure` (array of strings): paths whose first delivery into a
 child is structural even though their steady-state class is `"content"`.
 `standards/ownership-map.md`'s "Change classes" section owns both that criterion and how a
 consumer applies it; this entry states the sidecar's shape and a one-line gloss of its contents.
@@ -522,15 +522,44 @@ here with write access to every child. A child opts in by declaring `governanceH
 `excludedPaths`), so there is nothing here for this repo to register or track per child.
 
 **Exit-code contract and its no-stuck-state property (non-dry-run runs).** `0` covers every
-outcome where nothing needed doing, or work was handed off cleanly to a PR; `1` is a
-configuration error caught before any clone or network access; `2` covers every operational
+outcome where nothing needed doing, or work was handed off cleanly to a PR or a child issue; `1` is
+a configuration error caught before any clone or network access; `2` covers every operational
 failure, including any unhandled exception, via a `try`/`catch`/`finally` that removes the temp
-clone and any sync worktree on every exit path. Outside `-DryRun`, every exit-0 outcome ends in
-exactly one of two states: nothing to do, or a sync PR open with its URL printed. There is no
-non-dry-run exit-0 state where a sync is pending but no PR exists to carry the decision: a killed
-or interrupted run leaves, at worst, a stale local branch or worktree registration the next run
-cleans up (the branch-rebuild step and the try/finally cleanup in `tools/governance-sync.ps1`),
-never a plan that silently vanishes.
+clone and any sync worktree on every exit path. Outside `-DryRun`, every exit-0 outcome ends in one
+of four states, decided by the rule checker (`Get-SyncClassification` in
+`tools/governance-sync-core.ps1`; full rule set: `standards/governance-sync.md` § "What a sync
+is"): nothing to do (the plan is empty; this path also makes a best-effort attempt to close a
+stale standing structure issue, per its own note below, but never lets that attempt affect the exit
+code); a sync PR open with its URL printed and no withheld path (marker: `sync PR opened`/`sync PR
+open`); a sync PR open carrying only what was not withheld, alongside the child's standing
+structure issue naming the withheld paths (marker: `structure change: partial withhold`); or no PR
+at all, with only the child's standing structure issue open (marker: `structure change: no sync
+PR`). There is no non-dry-run exit-0 state where a sync is pending but neither a PR nor a structure
+issue exists to carry the decision: a killed or interrupted run leaves, at worst, a stale local
+branch or worktree registration the next run cleans up (the branch-rebuild step and the
+try/finally cleanup in `tools/governance-sync.ps1`), never a plan that silently vanishes. The
+whole-manifest comparison that drives the structure verdict (never an enumerated subset of fields)
+is deliberate: `classes`, `classesDefault`, `arrivesAsStructure`, `repoProfileFields`, and
+`shelfRoots` each change what a receiving child must itself do when they move, and a field added to
+the manifest later is something nobody has judged yet, so comparing the whole file withholds it by
+default instead of shipping it blind.
+
+**The empty-plan close is best-effort, never load-bearing.** The nothing-to-do path (above) also
+closes a stale standing structure issue when a human has adopted a structure change by hand since
+the last run, so the row does not stay open forever; but resolving and calling `gh` for that
+cleanup must never be able to turn "nothing to sync," the tool's single most common outcome, into a
+failure. `tools/governance-sync.ps1` wraps both the `gh` resolution and the close call in one
+`try`/`catch` on this path: any failure there (`gh` unresolvable, not authenticated, offline) is
+written to stderr as a warning and the run still prints `in sync with <sha>` and exits `0`.
+
+**The `classes` lookup: precedence.** This paragraph is the one home for the precedence rule
+alone: when more than one `classes` key matches a path (an exact key and one or more `prefix/**`
+keys can all match the same path), an exact key always wins over any `prefix/**` key, and among
+matching `prefix/**` keys the longest prefix wins. Neither `standards/ownership-map.md` nor
+`standards/governance-sync.md` states this ordering, so `tools/governance-sync-core.ps1`'s code
+comments point here rather than to either. The `classesDefault` rule itself, what a path no
+`classes` key matches falls to, is stated once in `standards/governance-sync.md` § "What a sync
+is", the synced document a child actually receives; this file does not restate it.
 
 **The same-tree invariant.** The plan a real (non-`-DryRun`) run applies is computed against a
 detached worktree at the child's `origin/<defaultBranch>`, created fresh after a `git fetch`, not
@@ -581,6 +610,13 @@ consumer (the Step 3 rule-checker, governance #14) can read `classes` and `arriv
 without the parent hand-copying the map into every child separately. Unlike the
 `WHAT-IT-CHECKS.md` relocation above, this file states no fact specific to any one repo's own
 build, so an unconditional sync overwrite carries no risk of clobbering a child's own true copy.
+
+The rule checker (above) made this delivery path unreachable in practice, though: any run where
+the parent's and child's manifests differ is itself a structure verdict, so a manifest update is
+never machine-merged. `governance-manifest.json` still reaches a child on that child's first
+delivery (no installed copy is no diff), and it is named among the withheld paths in the standing
+structure issue when it is part of the plan and differs, for a human to apply by hand; it is never
+carried by an ordinary content PR once a child already has a copy that differs from the parent's.
 
 **The `.githooks/` executable-bit repair.** `tools/governance-sync.ps1` restages the whole
 `.githooks/` set found in the sync worktree with `--chmod=+x` on every run that has anything else

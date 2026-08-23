@@ -22,6 +22,138 @@ param(
 . (Join-Path $PSScriptRoot 'governance-sync-core.ps1')
 . (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
 
+# The standing structure issue: standards/governance-sync.md § "The
+# standing-issue rule". One open issue per child; the constant title lets
+# Find-StandingStructureIssue match it exactly, never via gh's own
+# partial-match --search.
+$StructureIssueTitle = 'governance sync: structure change pending adoption'
+
+# Find-StandingStructureIssue -- the open issue in the CURRENT working
+# directory's repo (gh resolves its target repo from cwd; callers push
+# $ChildRoot first) whose title exactly equals $StructureIssueTitle, or $null.
+# --search is never used: its index is partial-match and lags issue creation,
+# which would let a freshly-created issue go unfound and accumulate a
+# duplicate on every run. The 1000 cap is a recorded limitation: a child
+# holding more than 1000 open issues can miss the match and open a duplicate.
+function Find-StandingStructureIssue {
+  param([Parameter(Mandatory = $true)] [string]$Gh)
+  $listOut = & $Gh issue list --state open --limit 1000 --json number,title,url
+  if ($LASTEXITCODE -ne 0) {
+    throw "governance-sync: gh issue list failed (exit $LASTEXITCODE)"
+  }
+  $parsed = ($listOut -join "`n") | ConvertFrom-Json
+  if ($null -eq $parsed) {
+    return $null
+  }
+  foreach ($i in @($parsed)) {
+    if ($i.title -eq $StructureIssueTitle) {
+      return $i
+    }
+  }
+  return $null
+}
+
+# Set-StandingStructureIssue -- creates the standing structure issue, or
+# refreshes it in place when one is already open, so a run that keeps finding
+# the same structure change never accumulates one issue per parent commit.
+# Body shape: standards/governance-sync.md § "The standing-issue rule".
+function Set-StandingStructureIssue {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$ParentSha,
+    [Parameter(Mandatory = $true)] [string]$RunReason,
+    [string[]]$WithheldPaths
+  )
+  $existing = Find-StandingStructureIssue -Gh $Gh
+  $bodyLines = New-Object System.Collections.Generic.List[string]
+  $bodyLines.Add("Governance sync from parent sha $ParentSha.")
+  $bodyLines.Add('')
+  $bodyLines.Add("Reason: $RunReason")
+  $bodyLines.Add('')
+  $bodyLines.Add('Withheld paths:')
+  foreach ($p in @($WithheldPaths)) { $bodyLines.Add("- $p") }
+  $bodyPath = Join-Path ([System.IO.Path]::GetTempPath()) ('governance-structure-issue-' + [guid]::NewGuid().ToString('N') + '.md')
+  Set-Content -LiteralPath $bodyPath -Value ($bodyLines -join "`n") -NoNewline
+  try {
+    if ($null -ne $existing) {
+      & $Gh issue edit $existing.number --body-file $bodyPath | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        throw "governance-sync: gh issue edit failed for issue $($existing.number) (exit $LASTEXITCODE)"
+      }
+      return $existing.url
+    }
+    $createOut = & $Gh issue create --title $StructureIssueTitle --body-file $bodyPath
+    if ($LASTEXITCODE -ne 0) {
+      throw "governance-sync: gh issue create failed (exit $LASTEXITCODE)"
+    }
+    $url = @($createOut) | Where-Object { $_ -match '^https?://' } | Select-Object -Last 1
+    if (-not $url) {
+      $refetched = Find-StandingStructureIssue -Gh $Gh
+      if ($null -ne $refetched) { $url = $refetched.url }
+    }
+    if (-not $url) {
+      throw 'governance-sync: gh issue create exited 0 but no issue URL could be captured from its output or recovered via gh issue list'
+    }
+    return $url
+  } finally {
+    if (Test-Path -LiteralPath $bodyPath) {
+      Remove-Item -LiteralPath $bodyPath -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
+
+# Close-StandingStructureIssue -- a run that ships a PR with nothing withheld,
+# or an empty plan, closes any open standing structure issue instead, so a
+# child that has adopted the change does not keep a false open row.
+function Close-StandingStructureIssue {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Gh,
+    [Parameter(Mandatory = $true)] [string]$Reason
+  )
+  $existing = Find-StandingStructureIssue -Gh $Gh
+  if ($null -ne $existing) {
+    & $Gh issue close $existing.number --comment $Reason | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      throw "governance-sync: gh issue close failed for issue $($existing.number) (exit $LASTEXITCODE)"
+    }
+  }
+}
+
+# Get-Classification -- reads the child manifest from $ChildTreeRoot and
+# returns Get-SyncClassification's result. Read half of the classify/print
+# pair; Write-ClassificationLines below is the print half, kept separate so
+# printing never has to fight a caller assigning this one's return value.
+function Get-Classification {
+  param(
+    [Parameter(Mandatory = $true)] $ParentManifest,
+    [Parameter(Mandatory = $true)] [string]$ChildTreeRoot,
+    [Parameter(Mandatory = $true)] $Plan,
+    [Parameter(Mandatory = $true)] [string]$ParentRoot
+  )
+  $childManifestPath = Join-Path $ChildTreeRoot 'governance-manifest.json'
+  $childManifest = $null
+  if (Test-Path -LiteralPath $childManifestPath -PathType Leaf) {
+    try {
+      $childManifest = (Get-Content -LiteralPath $childManifestPath -Raw) | ConvertFrom-Json
+    } catch {
+      throw "governance-sync: could not parse child manifest at $childManifestPath ($($_.Exception.Message))"
+    }
+  }
+  return Get-SyncClassification -ParentManifest $ParentManifest -ChildManifest $childManifest -Plan $Plan -ParentRoot $ParentRoot
+}
+
+# Write-ClassificationLines -- prints the AC5 contract for $Classification:
+# one `classify <class>: <path> (<reason>)` line per plan path, then one
+# `classify RUN <content|structure>: <reason>` line (`.claude/commands/build.md`
+# step 0b branches on that marker). The one call both the dry-run and
+# real-run branches make, so the printed contract can never drift between
+# the two.
+function Write-ClassificationLines {
+  param([Parameter(Mandatory = $true)] $Classification)
+  foreach ($f in $Classification.Files) { Write-Output "classify $($f.Class): $($f.Path) ($($f.Reason))" }
+  Write-Output "classify RUN $($Classification.RunClass): $($Classification.RunReason)"
+}
+
 # -ProfilePath's default is derived from -ChildRoot, never independently, so
 # pointing this tool at a child always reads that child's own profile.
 if (-not $ProfilePath) {
@@ -118,6 +250,12 @@ try {
     foreach ($p in $plan.Updates) { Write-Output "update: $p" }
     foreach ($p in $plan.Prunes) { Write-Output "prune: $p" }
     foreach ($p in $plan.RetainedDivergent) { Write-Output "WARNING retained divergent: $p" }
+
+    # Classify against the invoking tree (the dry-run preview's own tree, per
+    # the same-tree invariant above). Preview only: opens no issue, touches no
+    # branch.
+    $classificationDry = Get-Classification -ParentManifest $parentManifest -ChildTreeRoot $ChildRoot -Plan $plan -ParentRoot $tempCloneDir
+    Write-ClassificationLines -Classification $classificationDry
     exit 0
   }
 
@@ -151,15 +289,66 @@ try {
 
   $isEmpty = ($plan.Adds.Count -eq 0) -and ($plan.Updates.Count -eq 0) -and ($plan.Prunes.Count -eq 0)
   if ($isEmpty) {
+    # Best-effort only (standards/governance-sync.md § "The standing-issue
+    # rule"): a human can adopt a structure change by hand, leaving a stale
+    # open issue this cleans up, but "nothing to sync" must still print and
+    # exit 0 even when gh cannot be resolved or reached.
+    try {
+      $gh = Resolve-GhPath -ProfileGhPath $profileGhPath
+      if (-not $pushedLocation) {
+        Push-Location $ChildRoot
+        $pushedLocation = $true
+      }
+      Close-StandingStructureIssue -Gh $gh -Reason 'Governance sync found nothing pending; closing the standing structure issue.'
+    } catch {
+      [Console]::Error.WriteLine("governance-sync: warning: could not close a stale standing structure issue ($($_.Exception.Message))")
+    }
     # Retained-divergent entries alone never open a PR: there is no diff to
     # merge, and their WARNING lines above are the whole surface.
     Write-Output "in sync with $parentSha"
     exit 0
   }
 
+  # Classify against the DETACHED WORKTREE (the same-tree invariant applies
+  # to classification too), never the invoking checkout. Placed after the
+  # isEmpty early exit: an empty plan has nothing to classify, and printing
+  # above the exit would put a run-level line in front of the routine
+  # "in sync with <sha>" message on every child build.
+  $classification = Get-Classification -ParentManifest $parentManifest -ChildTreeRoot $syncWorktreeDir -Plan $plan -ParentRoot $tempCloneDir
+  Write-ClassificationLines -Classification $classification
+
   # Step h: resolve gh before any mutation -- nothing exists yet to orphan if
   # this fails.
   $gh = Resolve-GhPath -ProfileGhPath $profileGhPath
+
+  # gh resolves its target repo from the current directory, so push
+  # $ChildRoot once, guarded, shared with step j's own gh calls below.
+  if (-not $pushedLocation) {
+    Push-Location $ChildRoot
+    $pushedLocation = $true
+  }
+
+  $closeStandingIssueAfterShip = $false
+  if (-not $classification.OpensPr) {
+    $issueUrl = Set-StandingStructureIssue -Gh $gh -ParentSha $parentSha -RunReason $classification.RunReason -WithheldPaths $classification.Withheld
+    Write-Output "structure change: no sync PR ($($classification.RunReason)); child issue: $issueUrl"
+    exit 0
+  }
+  if ($classification.Withheld.Count -gt 0) {
+    $issueUrl = Set-StandingStructureIssue -Gh $gh -ParentSha $parentSha -RunReason $classification.RunReason -WithheldPaths $classification.Withheld
+    Write-Output "structure change: partial withhold ($($classification.RunReason)); child issue: $issueUrl"
+    # Ship from Shipped, the classifier's own answer, rather than re-filtering
+    # against Withheld. $plan.Prunes needs no such filter: rule 0
+    # (standards/ownership-map.md § "Change classes") classifies every Prune
+    # content, so a Prune never appears in Withheld.
+    $shippedSet = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($p in @($classification.Shipped)) { [void]$shippedSet.Add($p) }
+    $plan.Adds = @($plan.Adds | Where-Object { $shippedSet.Contains($_) })
+    $plan.Updates = @($plan.Updates | Where-Object { $shippedSet.Contains($_) })
+  } else {
+    $closeStandingIssueAfterShip = $true
+  }
+
   $branchName = New-SyncBranchName -SyncIssue $syncIssue -ShortSha $shortSha
 
   & git -C $ChildRoot show-ref --verify --quiet "refs/heads/$branchName"
@@ -293,8 +482,10 @@ try {
   $prBodyPath = Join-Path $tempRoot ('governance-sync-prbody-' + [guid]::NewGuid().ToString('N') + '.md')
   Set-Content -LiteralPath $prBodyPath -Value ($bodyLines -join "`n") -NoNewline
 
-  Push-Location $ChildRoot
-  $pushedLocation = $true
+  if (-not $pushedLocation) {
+    Push-Location $ChildRoot
+    $pushedLocation = $true
+  }
   $listOut = & $gh pr list --head $branchName --state open --json url
   if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("governance-sync: gh pr list failed (exit $LASTEXITCODE)")
@@ -350,6 +541,14 @@ try {
       exit 2
     }
     Write-Output "sync PR opened: $newUrl"
+  }
+
+  # Close deferred to here, after the PR is open and its URL printed, not
+  # before the branch is built: closing earlier would leave the child with
+  # neither an open PR nor a standing issue if the push or `gh pr create`
+  # below it failed.
+  if ($closeStandingIssueAfterShip) {
+    Close-StandingStructureIssue -Gh $gh -Reason 'Governance sync shipped with nothing withheld; closing the standing structure issue.'
   }
   exit 0
 } catch {

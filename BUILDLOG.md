@@ -11,16 +11,20 @@
 - 2026-08-22: [HALT] #14 rule-checker (classify every planned sync file as content or structure).
   Halted at the impasse rule (`agents/orchestrator.md` § "Stop condition"): the design-philosophy
   gate FAILed three consecutive re-review rounds on one major finding, and the rule allows two. The
-  work is not committed; it stands in the worktree
+  work was not committed at the halt; it stood in the worktree
   `governance-issue-14-rule-checker` on branch `issue-14-rule-checker`. A halt is not an
-  acceptance.
+  acceptance. **Resolved after the halt, on owner direction:** the owner reviewed the finding, kept
+  the existing behavior (an unlabeled path stays structure, withheld for a human), and directed the
+  single-home fix. A fourth round then returned PASS. The ship's own record is the fragment
+  `buildlog/14-<PR>.md`; this entry stands as the halt's record, not as the final state.
 
   **The unresolved finding.** The `classesDefault` rule (what a path no `classes` key names falls
   to) must have exactly one stated home. Round 3 found it in three homes pointing at each other in
   a circle; round 4 found the map restating it under a DESIGN.md claim of single ownership; round 5
   found `DESIGN.md:215-217` restating it while `DESIGN.md:559-561`, in the same file, declares the
   rule is stated only in `standards/governance-sync.md`. `DESIGN.md:215` was named in rounds 4 and
-  5 both. Each fix moved the duplication rather than removing it.
+  5 both. Each fix through round 5 moved the duplication rather than removing it; the post-halt fix
+  made that schema entry a pointer stating no rule, which closed it.
 
   **What did pass.** The PR reviewer returned PASS on round 4, verifying all 8 acceptance criteria
   with traced input-to-output evidence, and the briefing audit returned PASS on every round with
