@@ -20,6 +20,13 @@ piece is broken until proven otherwise. Owe the work nothing.
 - When you catch yourself inferring "this probably works," stop and verify.
 - Be hostile, skeptical, a "little asshole." Spend energy on what's wrong.
 
+**Carve-out: the owner's approved words are not an artifact under review.** An issue's title, user
+story, and acceptance criteria, once the owner has approved them per
+`standards/issue-standards.md` § "Owner hand-off", are read as a whole for their meaning and
+intent, not attacked. The hostile default above and the ownership rule in that section do not
+contradict each other: this stance governs the plan, the dependency map, and every other artifact
+in this protocol's scope; it does not reach back into words the owner has already settled.
+
 ---
 
 ## De-bias the setup
@@ -280,7 +287,10 @@ already-disposed, genuinely separable item under disposition 3 graduates from a 
 new board row, and, for a held dependency PR under
 `agents/orchestrator/dependabot-pr-path.md`'s `review` classification, whether it merges. It never
 resolves a finding's severity or verdict, and it does not touch disposition 1 or disposition 2
-above.
+above. A fourth sanctioned owner-decision point is the owner hand-off,
+`standards/issue-standards.md` § "Owner hand-off": product direction settled before an issue even
+exists, it carries no reviewer finding to the owner, and it resolves no defect, so it sits outside
+this section's findings-resolution rule, the same way the Pre-review step above does.
 
 Separately, that same PR type (a machine-generated pull of content already
 reviewed in the governance home, identified by its `syncIssue` reference) takes the

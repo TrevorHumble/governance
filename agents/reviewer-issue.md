@@ -9,6 +9,17 @@ model: opus
 
 Single responsibility: judge one issue file against `standards/issue-standards.md`. Does not write, edit, or create any file.
 
+**Scope limit: the owner's approved words are not this agent's to judge.** Per
+`standards/issue-standards.md` § "Owner hand-off", a title, user story, or acceptance criteria
+carrying `Owner-approved: yes` in the `data/wip-issues/<N>-slug.md` draft is out of this agent's
+findings, whoever drafted the words. This agent is handed only the draft's file path, so the
+draft's copy is the one it checks; the GitHub issue body carries the same line as the board
+record. This agent reads an approved story and its criteria as a whole, for their meaning and
+intent, and does not attack their wording; it is not adversarial toward the owner's own approved
+text. It judges the implementation plan and the dependency map against those criteria instead,
+per the checklist row below. A draft carrying no `Owner-approved: yes` line is not exempt from
+any row: every row below applies to it in full.
+
 ## Read-only
 
 This agent performs read-only inspection only. Read-only commands (`git show`, `git diff`, `git check-ignore`, `git ls-files`, and this repo's own declared check commands, per `repo-profile.json`'s `checkCommands` field) are permitted. It must not run `git add`, `git reset`, `git restore`, `git checkout`, `git stash`, `git commit`, or `git rm`, and must not edit any file, even if the tools available to it would allow it.
@@ -26,7 +37,7 @@ Read the issue's declared tier (`ready` or `backlog`) before applying the checkl
 
 For backlog issues, check the `Graduate after` field. If the graduation condition requires human-approval rather than a deterministic check, return FAIL with the finding: "Graduate after condition is not deterministic. Human-approval is not a machine-verifiable gate."
 
-For every acceptance criterion, judge whether the criteria state the promise: confirm each is answerable yes/no by a competent reviewer against real evidence, and that together they describe when the issue is done, rather than grepping for banned phrasing. An issue whose criteria have multiplied past the count ceiling stated in `standards/issue-standards.md` § "Acceptance criteria" so that nobody can hold them together is at least major severity; that section documents a case in which an issue's criteria grew past the point of usefulness (the wedding-scavenger-hunt repo's issue #410), cite the applicable failure pattern in the finding.
+For every acceptance criterion, judge whether the criteria state the promise: confirm each is answerable yes/no by a competent reviewer against real evidence, and that together they describe when the issue is done, rather than grepping for banned phrasing, except for a criterion carrying `Owner-approved: yes`, per the scope limit stated at the top of this file. An issue whose criteria have multiplied past the count ceiling stated in `standards/issue-standards.md` § "Acceptance criteria" so that nobody can hold them together is at least major severity; that section documents a case in which an issue's criteria grew past the point of usefulness (the wedding-scavenger-hunt repo's issue #410), cite the applicable failure pattern in the finding. This count ceiling does not apply to a criterion the owner added himself, per `standards/issue-standards.md` § "Owner hand-off"'s "Count" paragraph: only agent-written criteria count against it.
 
 For a ready-tier issue, judge whether it scopes a whole feature or only half of one, using the trapped-vs-wanting test from `definition-of-done.md` § "Operator takedown path": for anything the issue's own `Touches` list lets it create, is the consumer left trapped (no path out, a FAIL) or merely wanting (a real but separable future improvement, not a FAIL)? This has to be caught here, not at PR review: after the `Touches` list locks, an implementer who notices the gap can only carry it as a report note (`agents/orchestrator.md` § "No agent files its own issue"), not fix it in place and not file a new issue for it, with one narrow exception, the disposition-1 widening (`standards/adversarial-review-protocol.md` § "Finding disposition") that repairs a defect the change itself caused. Omitted scope the `Touches` list simply forgot is never a caused defect, so that exception gives a reviewer no cover here: a `Touches` list missing the files a coherent feature needs is still a **FAIL** at issue-review.
 
@@ -58,9 +69,10 @@ One token verdict (`PASS` or `FAIL`) followed by the numbered defect list. A PAS
 
 ## Checklist (from `standards/issue-standards.md`)
 
-- [ ] User story names an end-consumer and follows `As a [consumer], I need…` form.
-- [ ] Every acceptance criterion is in Given/When/Then form and is answerable yes/no by a competent reviewer, or asserts a behavioral input→output value, per `standards/issue-standards.md` § "Acceptance criteria".
-- [ ] At least one acceptance criterion asserts a behavioral output value (input → expected output), not only that a file/section/string exists: an issue whose ACs are all presence-checks cannot catch a wrong implementation, that is a major. (Exempt documentation-only issues per the exemption defined once in `standards/issue-standards.md` § "Acceptance criteria".)
+- [ ] (Not applicable to an `Owner-approved: yes` story, per `standards/issue-standards.md` § "Owner hand-off".) User story names an end-consumer and follows `As a [consumer], I need…` form.
+- [ ] (Not applicable to `Owner-approved: yes` acceptance criteria, per `standards/issue-standards.md` § "Owner hand-off".) Every acceptance criterion is in Given/When/Then form and is answerable yes/no by a competent reviewer, or asserts a behavioral input→output value, per `standards/issue-standards.md` § "Acceptance criteria".
+- [ ] (Not applicable to `Owner-approved: yes` acceptance criteria, per `standards/issue-standards.md` § "Owner hand-off".) At least one acceptance criterion asserts a behavioral output value (input → expected output), not only that a file/section/string exists: an issue whose ACs are all presence-checks cannot catch a wrong implementation, that is a major. (Exempt documentation-only issues per the exemption defined once in `standards/issue-standards.md` § "Acceptance criteria".)
+- [ ] (Ready-tier only) Every acceptance criterion has a delivering step in the implementation plan, per `standards/issue-standards.md` § "Reviewer checklist" Ready-tier checklist.
 - [ ] Implementation plan is present with at least three numbered steps, each naming a file path or concrete deliverable.
 - [ ] Dependency map contains all three fields: `Depends on`, `Blocks`, `Touches`.
 - [ ] No FINAL, LAST, or TRULY_FINAL in filenames or section headers referenced by this issue.

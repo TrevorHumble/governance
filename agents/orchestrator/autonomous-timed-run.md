@@ -55,6 +55,11 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   the arming step above) so the loop-gate hook's existing "no active run, allow" branch releases the
   turn on its own: the hook is not taught to read queue state, it only ever watches for the file's
   absence, which this WRAP now produces directly.
+- **Owner hand-off never stalls the run.** The hand-off defined in `standards/issue-standards.md`
+  § "Owner hand-off" is sent for a new item the same as any other run, but the timed run does not
+  wait on it. With no approval in hand, no issue is created and no implementer is spawned for that
+  item's work: the drafted message is carried into the end-of-run report and the run moves on to
+  independent work instead. The hand-off is never on the must-stop list above and never joins it.
 - **Watch CI to green before the increment counts as done.** Each increment that reaches the default branch
   (directly, or via a merged PR, per `repo-profile.json`'s `shipMode`) is not complete until its CI run is
   watched to completion and confirmed green: same guarantee as the Commit step. The default branch is never

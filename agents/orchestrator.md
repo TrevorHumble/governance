@@ -74,13 +74,23 @@ the end of the session, carrying every note every segment collected.
    `preReview` field, for example a live visual-approval loop, or `"none"`), it runs **before**
    the issue is drafted, before it is reviewed, and before an implementer is ever spawned for the
    declared pre-review surface (`repo-profile.json`'s `surfaceGlobs`): the orchestrator settles
-   the artifact live against the owner, freezes it, and only then does step 3 draft the
-   now-transcribed issue and step 5's implementation get written. Before the owner approves, only
+   the artifact live against the owner, freezes it, and only then does step 2b run the owner
+   hand-off, followed by step 3 drafting the now-transcribed issue and step 5's implementation
+   getting written. Before the owner approves, only
    the paths named in `surfaceGlobs` may be edited; routes, services, and non-surface logic must
    not be written during this step. A repo declaring `preReview: "none"` skips this step entirely
-   and proceeds straight from step 1 to step 3. No shared doc here names which pre-review process
+   and proceeds to 2b, then step 3. No shared doc here names which pre-review process
    any particular repo uses; each repo's own `repo-profile.json` and its named process file (if
    any) are the source of truth.
+
+**2b. Owner hand-off.** Before `gh issue create` runs, send the owner the hand-off message
+defined in `standards/issue-standards.md` § "Owner hand-off" (title, user story, acceptance
+criteria, in that order, nothing else) and wait for approval. Sizing note: "small" here means one
+agent session, and an agent's own estimate of what fits in a session runs low, so a story is not
+split merely because it feels large. The approval is recorded at step 3 per that section.
+**Return path:** owned by `standards/issue-standards.md` § "Owner hand-off"'s
+"Return path" paragraph, not restated here.
+
 3. **Issue**: read an existing issue, or create a new one per `standards/issue-standards.md`. For a new issue,
    **open its GitHub issue first** (`gh issue create --label needs-issue-review`, plus any tier label),
    capture the assigned number `N`, then write the local draft as `data/wip-issues/<N>-slug.md`, so the board

@@ -33,9 +33,15 @@ When it exits non-zero, report the failure in the session and continue the build
 
 **2: Pre-review (if declared).** Before issue-drafting, run this repo's declared Pre-review step (see `repo-profile.json`'s `preReview` field, a repo may name its own pre-review process file, such as a live visual-approval loop, or declare `none`; `surfaceGlobs` names the pre-review surface when one is declared). No shared command doc here asserts which pre-review process any particular repo uses.
 
-When `preReview` is `none`, or the work falls outside `surfaceGlobs`, skip this step entirely and go straight to step 3. Otherwise, follow the declared process file for its own edit-scope, approval, and hand-off rules: this shared pipeline doc does not restate them here.
+When `preReview` is `none`, or the work falls outside `surfaceGlobs`, skip this step entirely and go straight to 2b, then step 3. Otherwise, follow the declared process file for its own edit-scope, approval, and hand-off rules: this shared pipeline doc does not restate them here.
 
-Only once that declared process reports approval does step 3 (issue) draft the transcribed criteria and step 5 (implement) spawn an implementer for the remaining work, per `standards/issue-standards.md` for how an approved pre-review result becomes an acceptance criterion.
+Only once that declared process reports approval does step 2b run the owner hand-off, then step 3 (issue) draft the transcribed criteria and step 5 (implement) spawn an implementer for the remaining work, per `standards/issue-standards.md` for how an approved pre-review result becomes an acceptance criterion.
+
+**2b: Owner hand-off.** Before `gh issue create` runs, send the owner the hand-off message defined
+in `standards/issue-standards.md` § "Owner hand-off" (title, user story, acceptance criteria, in
+that order, nothing else) and wait for approval. The approval is recorded at step 3 per that
+section. Mechanics, including the return path for a post-approval change, are owned there, not
+restated here.
 
 **3: Issue.** Create the GitHub issue first (`gh issue create --label needs-issue-review`, labelled by tier, using the gh CLI at the path declared in `repo-profile.json`'s `ghPath` field, default `gh` on PATH; a machine where gh lives elsewhere records the absolute path in that machine's own `CLAUDE.local.md`, never committed), and capture the assigned number `N`. Then write the draft as `data/wip-issues/<N>-slug.md` per `standards/issue-standards.md`. GitHub is the single source of truth: the board reflects the task from creation.
 

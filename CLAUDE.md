@@ -55,6 +55,10 @@ and do not skip steps.
 before the issue is drafted; full mechanics are owned by `agents/orchestrator.md` § "Pre-review
 step", not restated here. This repo's own profile declares `"preReview": "none"`.
 
+**Owner hand-off.** Before step 1 files the issue, the owner receives the title, the user story,
+and the acceptance criteria as one short message and approves them; full mechanics are owned by
+`standards/issue-standards.md` § "Owner hand-off", not restated here.
+
 ## Model policy
 
 Every spawned agent sets its `model` explicitly; never rely on a default that may escalate
