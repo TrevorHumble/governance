@@ -63,6 +63,13 @@ skill, or agent artifacts. It is never used to commit or self-approve.
 4. **Conform to repo standards:**
    - Naming: no FINAL/LAST/TRULY_FINAL; no trailing numerals that imply finality.
    - Comments: meet the keep test in `standards/design-philosophy.md`'s "Obvious code" principle.
+   - Right-sizing: that standard covers the whole change, not the keep test alone, and covers code,
+     documentation, and dependency changes alike. Before writing, answer the three right-sizing
+     questions on your own change (they live in `standards/adversarial-review-protocol.md` §
+     "Right-sizing: should this be here, what does it cost, is this the smallest shape"): what
+     breaks if this is not here, what it will cost to carry, and whether a simpler shape delivers
+     the same outcome. Build the shape that survives them, and expect the reviewer to cite
+     `unforced complexity` or `ghost gate` where it does not.
    - Prose: no AI-slop voice (no "I'll now", "Let me", "Certainly", "comprehensive", "seamless").
    - Frontmatter: `name`, `description`, `model`, `tools` present and correct per
      `standards/agent-standards.md` or `standards/skill-standards.md` as applicable.

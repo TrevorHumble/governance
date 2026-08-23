@@ -481,7 +481,9 @@ Size overall: enough to understand, not one word more. Too short and the owner c
 long and the owner skims, which is worse than not writing it.
 
 **Check for ghosts.** Before proposing any new gate, ask whether the failure it stops has ever
-happened. A gate that stops nothing still taxes every issue, forever.
+happened. A gate that stops nothing still taxes every issue, forever. The same question is a named
+red flag reviewers cite at PR time, `ghost gate` in `standards/design-philosophy.md` § "Red flags";
+this paragraph is the report-writing moment of it, not a second rule.
 
 **Go look before you ask.** If a percentage needs a fact the agent does not have, it goes and finds
 it. Asking is allowed. Looking is better. Say which one happened.

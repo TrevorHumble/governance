@@ -1,6 +1,8 @@
 # Design Philosophy Standard
 
-**Scope:** every implementation artifact in this repo: skills, agents, standards docs, code.
+**Scope:** every change in this repo, whatever its subject: code, documentation, skills, agents,
+standards docs, and a change that adds, replaces, or removes a dependency. Not only changes to the
+governance machinery, and not only issues about that machinery.
 **Consumer:** `reviewer-design-philosophy`, implementation agents, and the orchestrator.
 
 Source: Ousterhout, _A Philosophy of Software Design_, and Nielsen Norman Group, "10 Usability
@@ -60,11 +62,25 @@ Apply these when judging any artifact:
 5. Can a reader understand what each piece does without reading the surrounding context?
 6. Are there error conditions that could be eliminated by reframing the interface?
 
+Six questions asking whether the thing is built well. Three more ask whether it should be here at
+all, and at this size, necessity, cost of carry, and sizing. They live in
+`standards/adversarial-review-protocol.md` § "Right-sizing: should this be here, what does it cost,
+is this the smallest shape", the one home every reviewer already reads; they are cited here, not
+copied.
+
+The Scope line above says what this standard covers, not which reviewer applies it. Coverage
+reaches a change through whichever reviewer the dispatch table in
+`standards/adversarial-review-protocol.md` § "Which reviews does this change need?" sends, not
+through the design-philosophy gate alone: a doc-only change skips that gate per § "Reviewer count
+by artifact" of that file and is reviewed by the PR reviewer, which reads the protocol and so
+applies the three right-sizing questions that live there. The rest of this standard reaches only
+the reviewers whose input contracts name this file.
+
 ---
 
 ## Red flags
 
-The following patterns are defects, not style preferences. A finding that matches any named red flag is at least major and must be fixed before PASS (never dismissed as style).
+The following patterns are defects, not style preferences. A finding that matches any named red flag is at least major and must be fixed before PASS (never dismissed as style), except for the two judgment rows named in "Judgment rows: `unforced complexity` and `ghost gate`" below.
 
 | Pattern                  | What it signals                                                                                                                                                                 |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -74,6 +90,33 @@ The following patterns are defects, not style preferences. A finding that matche
 | `pass-through`           | A module that does nothing but forward arguments to the layer below: no abstraction added.                                                                                      |
 | `vague name`             | A name that does not communicate what the thing is or does, e.g., `tmp`, a variable name so generic it forces the reader to trace the data flow to understand it.               |
 | `redundant encoding`     | The same fact is rendered through more than one simultaneous representation on one user-facing surface: a count, a progress bar, and an explainer paragraph for the same value. |
+| `unforced complexity`    | The change carries complexity the problem did not force: a simpler shape delivers the same outcome.                                                                             |
+| `ghost gate`             | A guard against a failure with no recorded instance and no dated future trigger.                                                                                                |
+
+### Judgment rows: `unforced complexity` and `ghost gate`
+
+These two rows alone are exempt from the precedence carve-out that
+`standards/adversarial-review-protocol.md` § "Calibration: adversarial is not fabrication" grants a
+red-flag match. That file owns the rule; it is not restated here. The six rows above are
+structural, and a reader confirms a match by looking at the artifact. Necessity and sizing are
+judgment calls, which is why these two rows are exempt. Without this exemption the two rows would
+be an automatic, non-downgradable major that the reviewer owes no evidence for, which is the
+failure these rows exist to stop, reproduced by the fix.
+
+**The YAGNI limit.** What it puts out of reach of both rows, its Fowler source, and the rule
+itself live in `standards/adversarial-review-protocol.md` § "Right-sizing: should this be here,
+what does it cost, is this the smallest shape", the one home every reviewer already reads. Cited
+here, not copied.
+
+### Cost of carry: where a close call goes
+
+A cost-of-carry weighing the reviewer cannot settle, where the cost in later bugs and follow-up
+work is close enough to what the change buys that either answer is defensible, is carried as a
+report note per `agents/orchestrator.md` § "No agent files its own issue". It reaches the owner in
+the end-of-run report with its four priced options. A reviewer with no `Report notes:` block
+routes the same observation per `standards/agent-standards.md` § "Input / output contract". No
+new channel exists for this: the existing ones carry it, and a reviewer never files an issue for
+it on its own initiative.
 
 ### Information leakage: duplicated ownership of a formula, filter, or status rule
 

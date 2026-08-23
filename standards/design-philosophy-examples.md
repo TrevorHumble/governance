@@ -174,3 +174,71 @@ where the color alone would fail colorblind users). The guard excuses the bar on
 is the sole representation: pair that same bar with the count text above, as the Flag block does,
 and it is back in Flag territory; an accessible name never excuses a second representation that
 sits beside visible text already showing the same value.
+
+---
+
+### unforced complexity
+
+Flag: a registry, a strategy interface, and three hooks, where the repo has exactly one exporter
+and no second one is planned:
+
+```js
+// hypothetical exporters/index.js
+const EXPORTERS = new Map();
+function registerExporter(name, impl) {
+  EXPORTERS.set(name, impl);
+}
+function exportAs(name, rows, opts = {}) {
+  const impl = EXPORTERS.get(name);
+  if (!impl) throw new Error(`No exporter: ${name}`);
+  return impl.write(impl.transform(rows, opts), opts);
+}
+registerExporter('csv', csvExporter); // the only registration in the repo
+```
+
+Clean: the one thing the repo actually does, named for what it does:
+
+```js
+function exportCsv(rows) {
+  return writeCsv(toCsvRows(rows));
+}
+```
+
+Not a finding: complexity the problem forces is not unforced. A second exporter already in the
+repo, or a dated commitment to one, makes the registry the right shape. Neither is work that buys
+future change findable here: per `standards/adversarial-review-protocol.md` § "Right-sizing:
+should this be here, what does it cost, is this the smallest shape", the YAGNI limit puts a
+refactor, a rename, a simplification, or a test outside this row. The flag needs a named simpler
+shape that delivers the same outcome, not a preference for less code.
+
+---
+
+### ghost gate
+
+Flag: a workflow added to catch a failure nobody can point to an instance of, with no dated trigger
+that would make it start happening:
+
+```yaml
+# hypothetical .github/workflows/issue-guard.yml
+on: [issues]
+jobs:
+  guard:
+    steps:
+      - run: gh issue view "$N" --json labels | grep -q needs-issue-review || gh issue comment "$N" --body "Missing review label"
+```
+
+Clean: the check runs where the failure has a record. This repo's real case, 2026-08-22: nineteen
+of nineteen issues carried `needs-issue-review` at creation, checked against the timeline API, and
+the guard's only firing across fifty-one issues in two repos was a standing sync-anchor issue a
+human waves through. The clean shape is no workflow, and the two lines of evidence recorded in
+place of it.
+
+Not a finding: a guard whose failure has a recorded instance, even one, is not a ghost, and neither
+is a guard for a failure with a dated future trigger (a dependency's announced breaking release, a
+migration cutover date). An instance counts wherever it is recorded: upstream in the governance
+repo, or in any other repo this tree feeds, not only in the repo under review. The evidence above
+spans two repos for that reason, and a young repo with no history of its own is judged against
+what those records show rather than against its own empty log. Where it is unclear whether an
+instance exists, go and look before raising this, per
+`standards/adversarial-review-protocol.md` § "Right-sizing: should this be here, what does it
+cost, is this the smallest shape"; "I could not find one" without having looked is not evidence.
