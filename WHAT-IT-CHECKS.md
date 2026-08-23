@@ -73,11 +73,34 @@ and is separate from the CI step.
 
 **Checks this repo does not currently have.** A prior repo this checklist is ported from also ran
 a mutation-testing report, a smoke test against a running instance, a coverage threshold, a
-container-build check, and GitHub-native CodeQL and Dependabot scanning. None of those run in this
-repo as of this writing: there is no mutation job, no smoke job, no coverage gate on the test run,
-no Docker build step, and no CodeQL or Dependabot workflow configured. If any of these get added
-later, this file should be updated to describe them rather than left describing checks that do not
-run.
+container-build check, and GitHub-native CodeQL scanning. None of those run in this repo as of
+this writing: there is no mutation job, no smoke job, no coverage gate on the test run, no Docker
+build step, and no CodeQL workflow configured. If any of these get added later, this file should
+be updated to describe them rather than left describing checks that do not run.
+
+---
+
+## What runs automatically but is not part of a green build
+
+Two things in this repo run on their own schedule or trigger, outside the `build` job. A green
+checkmark says nothing about either, so they are kept out of the section above.
+
+**An issue opened without the `needs-issue-review` label is flagged, not blocked.**
+`.github/workflows/issue-guard.yml` runs on every `issues: opened` event, not on a build. If the
+new issue already carries `needs-issue-review`, the sanctioned birth state applied by
+`gh issue create --label`, it does nothing. If not, it adds a comment explaining the gap and the
+`unverified-issue` label, for visibility only: the issue is not closed and nothing else is
+blocked. Because it fires on issue creation, it can only ever run from the copy of the file on
+the default branch.
+
+**Dependabot opens its own pull requests for outdated dependencies.**
+`.github/dependabot.yml` configures GitHub-native Dependabot, which runs on GitHub's weekly
+schedule, on two ecosystems: `github-actions` and `npm`, both at directory `/`. Most bumps arrive
+grouped rather than one pull request per package: all GitHub Actions bumps together, and npm
+development bumps together. Npm production bumps are grouped only for minor and patch versions, so
+a production major bump arrives as its own ungrouped pull request. Those pull requests still have
+to pass the same `build` job, and their tier for merge is decided by `.claude/rules/dependencies.md`
+and `tools/classify-dep-pr.ps1`, not by this file.
 
 ---
 

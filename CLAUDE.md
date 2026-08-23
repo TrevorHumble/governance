@@ -109,11 +109,16 @@ This repo is the global source of truth for governance. The rules, settled by th
 - **Config is central.** Repo-specific values live in `repo-profile.json`; a shared file that
   needs one defers to it rather than asserting its own value. Do not hardcode a path, branch
   name, check command, or dependency list elsewhere.
-- **Pipeline labels.** The ported standards and pipeline require eight GitHub labels on this
+- **Pipeline labels.** The ported standards and pipeline require nine GitHub labels on this
   repo: `needs-issue-review`, `ready`, `backlog`, `spawned-in-run`, `sonnet-only`,
-  `severity:blocker`, `severity:major`, `severity:minor`. `gh label create` provisions any that
-  are missing before the pipeline's first `gh issue create --label` or `gh issue edit
---add-label` call needs them.
+  `severity:blocker`, `severity:major`, `severity:minor`, `unverified-issue`. `gh label create`
+  provisions all nine, and for the first eight it must run before the pipeline's first
+  `gh issue create --label` or `gh issue edit --add-label` call needs them. `unverified-issue` is
+  the exception on the applying side, not the creating side: no pipeline call ever applies it;
+  `.github/workflows/issue-guard.yml` applies it at runtime, to an issue opened without
+  `needs-issue-review`. Dependabot separately auto-creates `dependencies`, `javascript`, and
+  `github_actions` on its first pull request; those are not pipeline labels and are not counted in
+  the nine.
 - **Local governance convention.** Every child repo (and this repo itself, on any given machine)
   keeps its own gitignored `CLAUDE.local.md` for per-machine notes only (a local gh path, other
   machine-specific values); it is never a governance-override home. For the tracked override
