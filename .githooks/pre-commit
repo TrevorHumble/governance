@@ -1,0 +1,158 @@
+#!/bin/sh
+# pre-commit: block a commit that stages a parent-owned governance path in a
+# child repo. Fails CLOSED, except when the wall is not armed at all (no
+# repo-profile.json) or this tree IS the governance home (governanceHome:
+# "self"). One cheap check, no evidence machinery.
+#
+# Delegates staged-path reading to tools/ownership-core.ps1 (PowerShell) for
+# the same NUL-splitting reason .githooks/commit-msg delegates to
+# tools/issue-core.ps1 (see that hook's header comment).
+#
+# repo-profile.json is tested as a raw file for presence and parseability,
+# not read through Get-RepoProfileValue: that reader returns the same
+# default for a missing file and a parse failure alike, and this hook must
+# tell those two states apart (absent: exit 0, the wall is off; unparseable:
+# exit 1, fail closed).
+#
+# A blocked commit belongs in the governance home repo instead, per
+# standards/ownership-map.md "The redirect rule".
+# --no-verify bypasses this hook. This file syncs to every child repo verbatim, so it cannot
+# assert whether a CI job backstops it here: that is a per-repo fact. Check your own repo's
+# honest-description doc, if it has one, for whether CI backstops this hook locally.
+set -e
+
+# sq -- single-quote-escape a value for interpolation into a PowerShell
+# single-quoted literal (double every embedded '). Applied to every path and
+# every branch name this hook interpolates below: a repo checked out under a
+# path holding an apostrophe, or a branch name holding one, must not break
+# the PowerShell command string it is embedded in.
+sq() {
+  printf '%s' "$1" | sed "s/'/''/g"
+}
+
+root="$(git rev-parse --show-toplevel)"
+root_escaped="$(sq "$root")"
+profile="$root/repo-profile.json"
+profile_escaped="$(sq "$profile")"
+
+if [ ! -f "$profile" ]; then
+  # No repo-profile.json: this repo has not declared itself a child. The
+  # wall is off, not silently passing while claiming to be armed. Pure sh,
+  # no PowerShell needed, so this check runs before the launcher is required.
+  exit 0
+fi
+
+# Require a PowerShell launcher before any check below: every one of them
+# calls into PowerShell.
+_ps="$(command -v powershell 2>/dev/null || command -v pwsh 2>/dev/null)" || _ps=""
+if [ -z "$_ps" ]; then
+  echo "pre-commit (BLOCKED): neither 'powershell' nor 'pwsh' found on PATH. Cannot verify governance ownership. Failing closed." >&2
+  exit 1
+fi
+
+# Parse the profile once and report which of three states it's in, so the
+# raw-file absent/unparseable distinction above is never collapsed into one
+# default the way Get-RepoProfileValue's contract would.
+profile_state="$("$_ps" -NoProfile -ExecutionPolicy Bypass -Command "
+  try {
+    \$p = (Get-Content -LiteralPath '$profile_escaped' -Raw) | ConvertFrom-Json
+  } catch {
+    Write-Output 'PARSE_ERROR'
+    exit 0
+  }
+  \$homeProp = \$p.PSObject.Properties['governanceHome']
+  if (\$null -ne \$homeProp -and \$homeProp.Value -eq 'self') {
+    Write-Output 'SELF'
+  } else {
+    Write-Output 'CHILD'
+  }
+" 2>/dev/null)" || profile_state=""
+profile_state="$(printf '%s' "$profile_state" | tr -d '[:space:]')"
+
+if [ "$profile_state" != "SELF" ] && [ "$profile_state" != "CHILD" ]; then
+  echo "pre-commit (BLOCKED): repo-profile.json exists but could not be parsed. Failing closed." >&2
+  exit 1
+fi
+
+if [ "$profile_state" = "SELF" ]; then
+  # This tree IS the governance home: never reads the manifest for this case.
+  exit 0
+fi
+
+branch="$(git symbolic-ref --short HEAD 2>/dev/null)" || branch=""
+branch_escaped="$(sq "$branch")"
+
+is_sync_branch="$("$_ps" -NoProfile -ExecutionPolicy Bypass -Command "
+  . '$root_escaped/tools/ownership-core.ps1'
+  if (Test-IsSyncBranch -Branch '$branch_escaped') { 'YES' } else { 'NO' }
+" 2>/dev/null)" || is_sync_branch=""
+is_sync_branch="$(printf '%s' "$is_sync_branch" | tr -d '[:space:]')"
+
+if [ "$is_sync_branch" = "YES" ]; then
+  exit 0
+fi
+
+manifest="$root/governance-manifest.json"
+manifest_escaped="$(sq "$manifest")"
+if [ ! -f "$manifest" ]; then
+  echo "pre-commit (BLOCKED): governance-manifest.json is missing. Failing closed." >&2
+  exit 1
+fi
+
+# OWNERSHIP_SCAN_OK is an explicit success sentinel, written as the LAST
+# statement of every non-throwing path through the script below. Empty
+# output is produced by both "nothing parent-owned is staged" and "the scan
+# never ran" (a missing/unloadable tools/ownership-core.ps1, or
+# Get-StagedParentOwnedPath throwing on a corrupt manifest); without a
+# sentinel those two are indistinguishable and an empty capture would read
+# as clean either way. The sentinel is stripped from $staged below before
+# any real path in it is read.
+#
+# $ErrorActionPreference = 'Stop' matters here beyond style: a missing dot-
+# sourced file, or a call to a function that dot-source never defined,
+# raises a NON-terminating error by default, one PowerShell writes to the
+# error stream and then keeps going past -- which would print the sentinel
+# anyway and defeat the whole point of it. Promoting every error to
+# terminating is what makes "the scan did not run" actually halt the script
+# before the sentinel line.
+staged="$("$_ps" -NoProfile -ExecutionPolicy Bypass -Command "
+  \$ErrorActionPreference = 'Stop'
+  . '$root_escaped/tools/ownership-core.ps1'
+  \$sentinel = 'OWNERSHIP_SCAN_OK'
+  try {
+    \$m = (Get-Content -LiteralPath '$manifest_escaped' -Raw) | ConvertFrom-Json
+  } catch {
+    Write-Output 'PARSE_ERROR'
+    Write-Output \$sentinel
+    exit 0
+  }
+  \$paths = Get-StagedParentOwnedPath -Manifest \$m
+  foreach (\$path in \$paths) { Write-Output \$path }
+  Write-Output \$sentinel
+" 2>/dev/null)" || staged=""
+
+last_line="$(printf '%s\n' "$staged" | tail -n 1)"
+if [ "$last_line" != "OWNERSHIP_SCAN_OK" ]; then
+  echo "pre-commit (BLOCKED): the ownership scan did not complete (tools/ownership-core.ps1 missing, unloadable, or erroring on governance-manifest.json). Failing closed." >&2
+  exit 1
+fi
+staged="$(printf '%s\n' "$staged" | sed '$d')"
+
+first_line="$(printf '%s\n' "$staged" | head -n 1)"
+if [ "$first_line" = "PARSE_ERROR" ]; then
+  echo "pre-commit (BLOCKED): governance-manifest.json exists but could not be parsed. Failing closed." >&2
+  exit 1
+fi
+
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+echo "pre-commit (BLOCKED): this commit stages a parent-owned governance path:" >&2
+printf '%s\n' "$staged" | while IFS= read -r p; do
+  if [ -n "$p" ]; then
+    echo "  $p" >&2
+  fi
+done
+echo "  Per standards/ownership-map.md \"The redirect rule\": a change to a path you do not own belongs in the governance home repo, never a local edit." >&2
+exit 1

@@ -56,10 +56,13 @@ repo may declare (not only this repo's own choice):
 - `criticalDependencies` (array of strings). Allowed: any list of npm package names, or `[]`;
   package names whose bump is held for review regardless of semver, per
   `.claude/rules/dependencies.md`.
-- `criticalPaths` (array of strings). Allowed: any list of path globs, or `[]`; a repo's own
-  critical paths (join/auth, payment, moderation, export-core equivalents), consumed by
-  `standards/issue-standards.md` § "Sonnet tier eligibility" gate (b): an issue touching a
-  critical path is denied the `sonnet-only` award.
+- `criticalPaths` (array of strings). Allowed: any list of path globs or named critical
+  behaviors, or `[]`; a repo's own critical paths (join/auth, payment, moderation, export-core
+  equivalents) or critical behaviors no glob can name, consumed by `standards/issue-standards.md`
+  § "Sonnet tier eligibility" gate (b): an issue touching a critical path or critical behavior is
+  denied the `sonnet-only` award. A mechanized consumer of this field treats a non-glob entry as
+  unmatched-and-critical, never unmatched-and-safe: fail closed rather than silently ignore an
+  entry it cannot pattern-match.
 - `ciCheckNames` (array of strings). Allowed: any list of real, observed CI check-run names
   required on the default branch before merge, consumed by `tools/apply-branch-protection.ps1`.
 - `docCurrencyPaths` (array of strings). Allowed: any list of source paths, or `[]`; paths whose
@@ -107,8 +110,10 @@ PowerShell tool that reads the profile (`tools/check-freshness.ps1`,
 carrying its own copy. This file was
 added during the PR-review fix round on this issue's implementation, after the review found the
 same profile-reading logic duplicated across four tools with two different resolution strategies;
-it widens this issue's `Touches` beyond the originally-filed set (`tools/**` already covers it, so
-no manifest change was needed). `scripts/check-emdash.js` is the one deliberate exception: a
+it widens this issue's `Touches` beyond the originally-filed set. The then-current `tools/**` glob
+covered it, so no manifest change was needed at the time; issue #11 replaced that glob with an
+enumerated list, so a new `tools/` file now needs its own `sharedPaths` entry.
+`scripts/check-emdash.js` is the one deliberate exception: a
 Node script cannot dot-source a `.ps1` file, so it keeps its own small JS reader, with a comment
 naming this file as the PowerShell-side owner.
 
@@ -203,6 +208,45 @@ fast, not crash unrecoverably. `tools/governance-sync.ps1` treats this as accept
 sync defect: it copies the file unconditionally, the same as any other `sharedPaths` entry, and
 does not inspect its runtime behavior.
 
+**Five ownership sidecars, added by issue #11.** `classes` (object, keyed by path):
+records each `sharedPaths` entry's steady-state class, `"content"` or `"structure"`, per
+`standards/ownership-map.md`'s two class-definition sentences; a narrower key not itself a
+`sharedPaths` entry overrides the entry it resolves under, for a path needing a different class
+than its enumerated parent. `classesDefault` (string, literally `"structure"`): the fallback for
+any path `classes` does not name, the safe side, since JSON carries no comment a reader could put
+a default in instead. `arrivesAsStructure` (array of strings): paths whose first delivery into a
+child is structural even though their steady-state class is `"content"`.
+`standards/ownership-map.md`'s "Change classes" section owns both that criterion and how a
+consumer applies it; this entry states the sidecar's shape and a one-line gloss of its contents.
+`repoProfileFields` (array of `{name, type}` objects): one entry per
+field in this file's § "repo-profile.json schema" above, parsed and compared by
+`tests/governance-manifest.test.js` rather than hand-copied, so the two lists cannot drift.
+`shelfRoots` (array of strings): the four shelf roots `standards/ownership-map.md` names, also
+compared both ways by the same test.
+
+**`tests/governance-manifest.test.js` parser quirks and rationale, recorded here rather than
+inline.** `extractShelfRoots` keeps only backticked tokens ending in `/`: the "Standard shelves"
+section also names the repo-root profile slot, `repo-profile.json`, which carries no trailing
+slash and would otherwise be mistaken for a fifth shelf root. It scans the whole section, not one
+line, so a later editor rewrapping the shelf sentence cannot turn the check red for no visible
+reason, and it de-duplicates, since the section's prose may name a root twice (for example, a
+sentence explaining that `skills/` needs no manifest entry still contains the word `skills/`).
+`extractClaudeMdSectionCitations` matches a `CLAUDE.md` section citation in either token order:
+`standards/governance-sync.md` is the one `sharedPaths` file that writes the heading before the
+filename ("a line under `` `## Governance overrides` `` in the child's own `` `CLAUDE.md` ``"), so
+both orders must be caught.
+
+`docSectionCitationPatterns` is the single owner of the three citation-regex forms (double-quote,
+single-quote, and §-omitted), used by both the `DESIGN.md` and `CLAUDE.md` scanners, so the two
+cannot drift the way two hand-copies of the same regex could. `extractSection` throws, naming the
+missing heading, instead of returning empty text: every AC5 parser below depends on that failure
+being loud, not silently readable as "this section has nothing to check."
+`extractSplitOwnershipDirs` is the single owner of the ownership map's four split-ownership
+directory bullets, so the exactly-one-of check that reads it cannot drift from what the map itself
+states. The `classes`-values check (AC4) exists because the sharedPaths/classes coverage checks
+above it only confirm a key is present, not that its value is one of the two allowed literals; a
+typo'd value would otherwise ship silently.
+
 ---
 
 ## definition-of-done.md clause retitles
@@ -264,9 +308,13 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
    `powershell` or `pwsh` on PATH, in that order, and fails closed with an explicit message if
    neither is found, rather than assuming `powershell` specifically exists. Not resolved: some
    PowerShell launcher is still required; a host with neither on PATH cannot commit code without
-   `--no-verify`, and there is still no non-PowerShell classification path for non-Windows CI. A
-   future issue on the sync backlog can address a cross-platform commit-msg gate if that becomes
-   load-bearing. This entry now matches the tree.
+   `--no-verify`, and there is still no non-PowerShell classification path for non-Windows CI. The
+   same launcher dependency applies to `.githooks/pre-commit`, the ownership-map wall issue #11
+   adds: it dot-sources `tools/ownership-core.ps1` (itself dot-sourcing
+   `tools/governance-sync-core.ps1`) and fails closed the same way when no launcher is found. A
+   future issue on the sync backlog can address a cross-platform commit-msg/pre-commit gate if
+   that becomes load-bearing. This entry matches the tree for both `commit-msg` and `pre-commit`
+   as of this change.
 8. **`reviewer-architecture.md` naming `.agents/skills/` as an externally-managed excluded
    directory a repo without it would carry as a dangling exclusion** (the source hazard also named
    a periodic-audit section in `orchestrator.md`; that section WAS ported, at
@@ -524,6 +572,27 @@ job this repo has never heard of), so an unconditional sync overwrite would repl
 owner-facing doc with this repo's false one. No `retired` entry accompanies the move: a tombstone
 would prune or permanently flag a child's own, still-current copy as retained-divergent, exactly
 the outcome this relocation exists to avoid.
+
+**The `governance-manifest.json` relocation.** Moved from `excludedPaths` to `sharedPaths` by
+issue #11: every child now receives the ownership manifest itself, read-only, so a child-side
+consumer (the Step 3 rule-checker, governance #14) can read `classes` and `arrivesAsStructure`
+without the parent hand-copying the map into every child separately. Unlike the
+`WHAT-IT-CHECKS.md` relocation above, this file states no fact specific to any one repo's own
+build, so an unconditional sync overwrite carries no risk of clobbering a child's own true copy.
+
+**The `.githooks/` executable-bit repair.** `tools/governance-sync.ps1` restages the whole
+`.githooks/` set found in the sync worktree with `--chmod=+x` on every run that has anything else
+to sync, not just the files that classified as an Add or an Update by content. `core.fileMode` is
+`false` on the Windows machine that authors this repo, so a hook file whose content already
+matches the parent can still be tracked at `100644` in a child that synced before this repair
+shipped, since a plain `Copy-Item` never carried the mode across; content-based classification is
+blind to mode entirely, so such a file is neither an Add nor an Update on any later run and would
+otherwise never be restaged, leaving the hook silently skipped by git forever. The tradeoff: every
+run that has something else to sync now re-adds every `.githooks/` file's mode, including files
+whose content is untouched, rather than touching only what the plan actually changed. The
+remaining limitation: a run with nothing else to sync is still suppressed as empty (the sync
+wrapper's own `isEmpty` check), so a mode-only repair is not itself grounds to open a sync PR; it
+rides the next sync that carries any other change.
 
 **The child `CLAUDE.md` governing-artifact-surface warning.** `CLAUDE.md` itself stays out of
 `sharedPaths` (an unconditional overwrite would clobber a child's local rules), but every child

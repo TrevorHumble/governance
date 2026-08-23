@@ -65,6 +65,16 @@ standing GitHub issue tracking governance syncs. Every sync commit the tool make
 that issue number (`(#<N>)` in the commit message), satisfying the child's own
 `.githooks/commit-msg` gate, which blocks a code commit naming no issue.
 
+Every sync commit also passes the child's own `.githooks/pre-commit` ownership wall (see
+`standards/ownership-map.md`) when a PowerShell launcher is on the child's `PATH`, and only
+because the branch the tool builds (`issue-<N>-governance-sync-<shortsha>`, § "Superseded syncs"
+above) is exactly the shape `Test-IsSyncBranch` in `tools/governance-sync-core.ps1` exempts, even
+though the commit stages paths the wall would otherwise block. A change to that branch-naming
+scheme has to keep matching what the wall's exemption recognizes, or every child's sync commits
+start failing closed. In a child with neither `powershell` nor `pwsh` on `PATH`, the wall blocks
+the sync commit before it ever reaches the branch check: the launcher probe runs first and fails
+closed on its own, so the branch exemption is never consulted.
+
 ## Superseded syncs
 
 A sync branch is named for the parent commit it carries (`issue-<N>-governance-sync-<shortsha>`).

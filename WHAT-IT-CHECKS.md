@@ -50,6 +50,19 @@ names no GitHub issue: `(#N)` in the message, a GitHub closing keyword (`Closes 
 `Resolves #N`), or a branch named `feat/issue-N`. This proves the change is tied to a tracked
 piece of work. It does not prove that work was reviewed; see the honest limit below.
 
+**A child repo commit cannot stage a parent-owned governance path.** A second cheap local check
+(`.githooks/pre-commit`) blocks a commit that stages a path `governance-manifest.json`'s
+`sharedPaths` names, except on a governance-sync branch; see `standards/ownership-map.md` for what
+"parent-owned" means and its § "The redirect rule" for where such a change belongs instead. It
+exits cleanly in any repo that has not declared `repo-profile.json`, with no PowerShell launcher
+needed for that case; every other clean exit, including the governance-sync-branch exemption and
+the governance home itself, runs only once a PowerShell launcher is found and the profile parses,
+since both checks happen first. The blocked exits do not share that guarantee: no launcher found,
+and a `repo-profile.json` that exists but fails to parse, are each themselves a blocking exit
+reached before the profile has parsed. Like the commit-msg check, it is local and bypassable with
+`--no-verify`, and no CI job backstops it yet; a child repo also needs a CI guard job for this,
+which this repo does not yet ship.
+
 **A PR containing a lint or formatting violation cannot merge.** `npm run lint` (`eslint . --max-warnings=0`)
 and `npm run format:check` (`prettier --check .`) both run in CI on every push to `main` and every
 pull request, in the same required `build` job as the test suite. This exists so the parent never

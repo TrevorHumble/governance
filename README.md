@@ -42,7 +42,7 @@ npm run check:emdash
 
 If `format:check` fails, `npm run format` rewrites the flagged files in place.
 
-`tools/setup-hooks.ps1` wires the local `.githooks/commit-msg` gate into a fresh clone.
+`tools/setup-hooks.ps1` wires the local `.githooks/` gates, `commit-msg` and `pre-commit`, into a fresh clone.
 
 ## Where things live
 

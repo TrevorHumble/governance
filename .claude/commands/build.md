@@ -47,7 +47,7 @@ Only once that declared process reports approval does step 3 (issue) draft the t
 git switch -c <descriptive-branch-name>
 ```
 
-Then confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1` first). Then `git commit -F data/commitmsg-*.txt` with `(#N)` in the message. **One hook runs at commit time:** `commit-msg` checks that a code commit's message names a GitHub issue (`(#N)`, a closing keyword, or an `issue-N` branch); a doc-only commit is exempt. If it blocks, add the missing reference. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
+Then confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1` first). Then `git commit -F data/commitmsg-*.txt` with `(#N)` in the message. **Two hooks run at commit time:** `commit-msg` checks that a code commit's message names a GitHub issue (`(#N)`, a closing keyword, or an `issue-N` branch); a doc-only commit is exempt. If it blocks, add the missing reference. `pre-commit` checks that the commit stages no parent-owned governance path (see `standards/ownership-map.md`); once the launcher probe and the profile parse both succeed, it exits cleanly on a governance-sync branch (the exemption that applies in a child, since `governanceHome` is never `self` there) or in the governance home itself. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
 
 **8: Ship.** How a passing change reaches the default branch defers to `repo-profile.json`'s
 `shipMode` field; no step here asserts which mode is operative.
