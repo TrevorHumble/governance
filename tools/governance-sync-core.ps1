@@ -248,3 +248,306 @@ function Resolve-GhPath {
 
   throw "Resolve-GhPath: could not resolve gh. Probed: profile value '$ProfileGhPath' (Get-Command), `$env:GH_PATH ('$($env:GH_PATH)'), and the vendor default install location under `$env:ProgramFiles. Set GH_PATH to the gh executable's path."
 }
+
+# ConvertTo-CanonicalValue -- recursively sorts a PSCustomObject's property
+# names alphabetically; array elements are canonicalized in place but their
+# own order is left untouched, since a manifest array (sharedPaths, retired,
+# arrivesAsStructure) is order-sensitive content, not an order-free set. The
+# one recursive step Get-CanonicalJson needs so two manifests that differ only
+# in JSON key order never read as a diff.
+function ConvertTo-CanonicalValue {
+  param($Value)
+  if ($null -eq $Value) {
+    return $null
+  }
+  if ($Value -is [System.Management.Automation.PSCustomObject]) {
+    $sorted = [ordered]@{}
+    foreach ($name in ($Value.PSObject.Properties.Name | Sort-Object)) {
+      $sorted[$name] = ConvertTo-CanonicalValue -Value $Value.PSObject.Properties[$name].Value
+    }
+    return [PSCustomObject]$sorted
+  }
+  if (($Value -is [System.Collections.IEnumerable]) -and -not ($Value -is [string])) {
+    $list = New-Object System.Collections.Generic.List[object]
+    foreach ($item in $Value) {
+      $list.Add((ConvertTo-CanonicalValue -Value $item))
+    }
+    # .ToArray(), never @($list): wrapping a List[object] directly with the
+    # array-subexpression operator throws ArgumentException on some Windows
+    # PowerShell 5.1 builds (reproduced on this repo's own dev machine); a
+    # piped array (List[string], or any list run through Select-Object/
+    # Where-Object first) is unaffected, so this is the one direct-wrap site.
+    return $list.ToArray()
+  }
+  return $Value
+}
+
+# Get-CanonicalJson -- compact JSON of $Value with recursively sorted object
+# keys. Two calls producing equal strings means equal content; unequal means a
+# real difference, never a key-order artifact.
+function Get-CanonicalJson {
+  param($Value)
+  $canon = ConvertTo-CanonicalValue -Value $Value
+  return (ConvertTo-Json -InputObject $canon -Depth 12 -Compress)
+}
+
+# Get-ManifestDiffFields -- the top-level field names where $ParentManifest
+# and $ChildManifest disagree (by canonical JSON of that field's value alone),
+# sorted alphabetically for a deterministic printed line. A field present on
+# only one side counts as differing (the missing side reads as $null).
+function Get-ManifestDiffFields {
+  param(
+    [Parameter(Mandatory = $true)] $ParentManifest,
+    [Parameter(Mandatory = $true)] $ChildManifest
+  )
+  $names = New-Object System.Collections.Generic.List[string]
+  $seen = @{}
+  foreach ($m in @($ParentManifest, $ChildManifest)) {
+    foreach ($n in $m.PSObject.Properties.Name) {
+      if (-not $seen.ContainsKey($n)) {
+        $seen[$n] = $true
+        $names.Add($n)
+      }
+    }
+  }
+  $diffs = New-Object System.Collections.Generic.List[string]
+  foreach ($n in ($names | Sort-Object)) {
+    $pProp = $ParentManifest.PSObject.Properties[$n]
+    $cProp = $ChildManifest.PSObject.Properties[$n]
+    $pVal = $null
+    if ($null -ne $pProp) { $pVal = $pProp.Value }
+    $cVal = $null
+    if ($null -ne $cProp) { $cVal = $cProp.Value }
+    if ((Get-CanonicalJson -Value $pVal) -ne (Get-CanonicalJson -Value $cVal)) {
+      $diffs.Add($n)
+    }
+  }
+  return @($diffs)
+}
+
+# Get-ManifestClassMatch -- the manifest.classes entry that decides $Path: an
+# exact key wins over a "prefix/**" key, and among "prefix/**" keys the
+# longest prefix wins (the governance repo's DESIGN.md § "Governance sync"
+# ("The classes lookup: precedence")). Matched is $null when nothing
+# matches.
+function Get-ManifestClassMatch {
+  param(
+    [Parameter(Mandatory = $true)] $Manifest,
+    [Parameter(Mandatory = $true)] [string]$Path
+  )
+  $classesProp = $Manifest.PSObject.Properties['classes']
+  $exactEntry = $null
+  $globCandidates = New-Object System.Collections.Generic.List[object]
+  if ($null -ne $classesProp -and $null -ne $classesProp.Value) {
+    foreach ($entryProp in $classesProp.Value.PSObject.Properties) {
+      $entry = $entryProp.Name
+      if (Test-MatchesManifestEntry -Path $Path -Entry $entry) {
+        $prefix = Get-ManifestEntryPrefix -Entry $entry
+        if ($null -eq $prefix) {
+          $exactEntry = $entry
+        } else {
+          $globCandidates.Add([PSCustomObject]@{ Entry = $entry; PrefixLength = $prefix.Length })
+        }
+      }
+    }
+  }
+  if ($null -ne $exactEntry) {
+    return [PSCustomObject]@{
+      Matched = $exactEntry
+      Value   = $classesProp.Value.PSObject.Properties[$exactEntry].Value
+    }
+  }
+  if ($globCandidates.Count -gt 0) {
+    $best = ($globCandidates | Sort-Object -Property PrefixLength -Descending)[0]
+    return [PSCustomObject]@{
+      Matched = $best.Entry
+      Value   = $classesProp.Value.PSObject.Properties[$best.Entry].Value
+    }
+  }
+  return [PSCustomObject]@{ Matched = $null; Value = $null }
+}
+
+# Test-IsContentLiteral -- true only when $Value is the exact string
+# "content", case-sensitive. Guards every classes/classesDefault comparison:
+# PowerShell's -ceq against a collection filters and returns matching
+# elements rather than a boolean, so an off-schema JSON array value like
+# ["content"] would otherwise read as truthy and ship as content.
+function Test-IsContentLiteral {
+  param($Value)
+  return ($Value -is [string]) -and ($Value -ceq 'content')
+}
+
+# Get-PlanPathClassification -- classifies one plan path content or
+# structure: the prune rule, the first-delivery (arrivesAsStructure) rule,
+# and the classes-match rule are standards/ownership-map.md § "Change
+# classes"; the final-default (classesDefault) rule is
+# standards/governance-sync.md § "What a sync is".
+function Get-PlanPathClassification {
+  param(
+    [Parameter(Mandatory = $true)] $Manifest,
+    [Parameter(Mandatory = $true)] [string]$Path,
+    [Parameter(Mandatory = $true)] [bool]$IsPrune,
+    [Parameter(Mandatory = $true)] [bool]$IsAdd
+  )
+  if ($IsPrune) {
+    return [PSCustomObject]@{
+      Class  = 'content'
+      Reason = 'prune: a retirement the manifest already judged by hash, never reclassified'
+    }
+  }
+  if ($IsAdd) {
+    $arrivesProp = $Manifest.PSObject.Properties['arrivesAsStructure']
+    $arrivesList = @()
+    if ($null -ne $arrivesProp -and $null -ne $arrivesProp.Value) {
+      $arrivesList = @($arrivesProp.Value)
+    }
+    if ($arrivesList -contains $Path) {
+      return [PSCustomObject]@{
+        Class  = 'structure'
+        Reason = 'first delivery: arrivesAsStructure names this path and the child does not have it yet'
+      }
+    }
+  }
+  $match = Get-ManifestClassMatch -Manifest $Manifest -Path $Path
+  if ($null -ne $match.Matched) {
+    if (Test-IsContentLiteral -Value $match.Value) {
+      return [PSCustomObject]@{
+        Class  = 'content'
+        Reason = "classes entry '$($match.Matched)' is content"
+      }
+    }
+    return [PSCustomObject]@{
+      Class  = 'structure'
+      Reason = "classes entry '$($match.Matched)' is '$($match.Value)', not content"
+    }
+  }
+  $classesDefaultProp = $Manifest.PSObject.Properties['classesDefault']
+  if ($null -ne $classesDefaultProp) {
+    $defaultValue = $classesDefaultProp.Value
+    if (Test-IsContentLiteral -Value $defaultValue) {
+      return [PSCustomObject]@{
+        Class  = 'content'
+        Reason = 'no classes entry matches; classesDefault is content'
+      }
+    }
+    return [PSCustomObject]@{
+      Class  = 'structure'
+      Reason = "no classes entry matches; classesDefault is '$defaultValue', not content"
+    }
+  }
+  return [PSCustomObject]@{
+    Class  = 'structure'
+    Reason = 'no classes entry matches and no classesDefault declared; an unclassified path defaults to structure'
+  }
+}
+
+# Get-SyncClassification -- classifies every path in a Get-SyncPlan result as
+# content or structure and returns the run-level verdict. Full rule set:
+# standards/governance-sync.md § "What a sync is"; rationale is recorded in
+# the governance repo's DESIGN.md § "Governance sync".
+#
+# A structure RunClass withholds every plan path regardless of its own
+# per-file class, and the consistency rule does the same when a shipped Add
+# or Update cites a withheld path.
+function Get-SyncClassification {
+  param(
+    [Parameter(Mandatory = $true)] $ParentManifest,
+    $ChildManifest,
+    [Parameter(Mandatory = $true)] $Plan,
+    [Parameter(Mandatory = $true)] [string]$ParentRoot
+  )
+  $addSet = New-Object 'System.Collections.Generic.HashSet[string]'
+  foreach ($p in @($Plan.Adds)) { [void]$addSet.Add($p) }
+  $pruneSet = New-Object 'System.Collections.Generic.HashSet[string]'
+  foreach ($p in @($Plan.Prunes)) { [void]$pruneSet.Add($p) }
+
+  $orderedPaths = @(@($Plan.Adds) + @($Plan.Updates) + @($Plan.Prunes))
+
+  $files = New-Object System.Collections.Generic.List[object]
+  foreach ($p in $orderedPaths) {
+    $decision = Get-PlanPathClassification -Manifest $ParentManifest -Path $p `
+      -IsPrune $pruneSet.Contains($p) -IsAdd $addSet.Contains($p)
+    $files.Add([PSCustomObject]@{ Path = $p; Class = $decision.Class; Reason = $decision.Reason })
+  }
+
+  $runIsStructure = $false
+  $runReason = $null
+  if ($null -ne $ChildManifest) {
+    if ((Get-CanonicalJson -Value $ParentManifest) -ne (Get-CanonicalJson -Value $ChildManifest)) {
+      $runIsStructure = $true
+      $diffFields = Get-ManifestDiffFields -ParentManifest $ParentManifest -ChildManifest $ChildManifest
+      $runReason = "manifest fields differ: $($diffFields -join ', ')"
+    }
+  }
+
+  $consistencyBroken = $false
+
+  if ($runIsStructure) {
+    $withheld = @($files | ForEach-Object { $_.Path })
+    $shipped = @()
+  } else {
+    $withheld = @($files | Where-Object { $_.Class -eq 'structure' } | ForEach-Object { $_.Path })
+    $shipped = @($files | Where-Object { $_.Class -eq 'content' } | ForEach-Object { $_.Path })
+
+    if ($withheld.Count -gt 0) {
+      $addUpdateSet = New-Object 'System.Collections.Generic.HashSet[string]'
+      foreach ($p in @($Plan.Adds)) { [void]$addUpdateSet.Add($p) }
+      foreach ($p in @($Plan.Updates)) { [void]$addUpdateSet.Add($p) }
+      $citingPath = $null
+      $citedPath = $null
+      foreach ($shipPath in $shipped) {
+        if (-not $addUpdateSet.Contains($shipPath)) { continue }
+        $fullPath = Join-Path $ParentRoot ($shipPath -replace '/', [IO.Path]::DirectorySeparatorChar)
+        if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) { continue }
+        $text = Get-Content -LiteralPath $fullPath -Raw
+        if ($null -eq $text) { continue }
+        foreach ($w in $withheld) {
+          if ($text.Contains($w)) {
+            $citingPath = $shipPath
+            $citedPath = $w
+            break
+          }
+        }
+        if ($null -ne $citingPath) { break }
+      }
+      if ($null -ne $citingPath) {
+        $consistencyBroken = $true
+        $withheld = @($files | ForEach-Object { $_.Path })
+        $shipped = @()
+        $runReason = "shipped file $citingPath cites withheld path $citedPath"
+      }
+    }
+
+    if (-not $consistencyBroken) {
+      if ($files.Count -eq 0) {
+        $runReason = 'the plan is empty; nothing to classify'
+      } elseif ($shipped.Count -eq 0) {
+        $runReason = 'every planned file was withheld'
+      } elseif ($withheld.Count -eq 0) {
+        $runReason = 'all planned files ship'
+      } else {
+        $runReason = "withheld $($withheld.Count) of $($files.Count) planned files: $($withheld -join ', ')"
+      }
+    }
+  }
+
+  $runClass = 'content'
+  if ($runIsStructure) { $runClass = 'structure' }
+
+  return [PSCustomObject]@{
+    # .ToArray(), not @($files): see ConvertTo-CanonicalValue's comment on the
+    # same array-subexpression-vs-List[object] issue. RunIsStructure and
+    # ConsistencyBroken stay local ($runIsStructure, $consistencyBroken
+    # above): no caller reads them once RunClass and OpensPr exist to answer
+    # what they were for.
+    Files     = $files.ToArray()
+    RunClass  = $runClass
+    RunReason = $runReason
+    Withheld  = @($withheld)
+    Shipped   = @($shipped)
+    # The wrapper's one ship/no-ship test: true exactly when $shipped is
+    # non-empty, which every no-PR case above (including an empty plan) sets
+    # to empty first.
+    OpensPr   = ($shipped.Count -gt 0)
+  }
+}

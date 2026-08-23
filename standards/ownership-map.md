@@ -141,8 +141,10 @@ what any repo must itself do.
 A **structure** change moves ownership, moves a path, or requires the receiving repo to change
 something the parent does not own.
 
-A path the manifest's `classes` sidecar does not name is treated as structure, never as content:
-the safe side, since an unclassified path is one nobody has judged.
+A path the manifest's `classes` sidecar does not name falls to the manifest's own
+`classesDefault` field, the safe side since an unclassified path is one nobody has judged. The
+operative rule and the `classesDefault` mechanics: `standards/governance-sync.md` § "What a sync
+is".
 
 A class is a property of a change, but `classes` is keyed by path, and those two things come apart
 on a path's first delivery into a child: arriving obliges that child to do something the parent

@@ -12,9 +12,26 @@ adoption fields and the operative merge rule; do not restate its wording elsewhe
 
 A pull, not a push: at build start, a child runs `tools/governance-sync.ps1` against the
 governance home (its declared `governanceHome`). The tool clones the governance home, diffs
-its declared `sharedPaths` against the child's own tree, and, when there is anything to sync, opens (or
-refreshes) a small pull request in the child carrying exactly that diff. Nothing merges
-automatically: the PR sits until a contradiction review disposes of it, per this standard.
+its declared `sharedPaths` against the child's own tree, classifies every planned path as content
+or structure against the shipped `governance-manifest.json`'s `classes`, `classesDefault`, and
+`arrivesAsStructure` fields (`standards/ownership-map.md` § "Change classes" is the rule's prose
+source; `tools/governance-sync-core.ps1`'s `Get-SyncClassification` is the one code home of the
+rules those sidecars can derive. One rule in that same prose source is not: an edit to the map's
+own "Parent-owned paths inside split-ownership directories" list is structural too, but no sidecar
+encodes it, so the checker cannot see it and returns content for it), and, when anything
+content-classed remains, opens (or refreshes) a small pull request in the child carrying exactly
+that diff. A path no `classes` entry names is judged by the manifest's own `classesDefault` field:
+structure, the safe side, unless that field names the literal string `content` (a manifest
+declaring no `classesDefault` field at all is also structure). Nothing merges automatically: the
+PR sits until a contradiction review disposes of it, per this standard.
+
+A structure change is withheld from the PR, never merged silently. A run that still ships
+something after withholding prints the marker `structure change: partial withhold` and opens the
+PR carrying only what was not withheld. A run where the whole plan classifies as structure (the
+parent's manifest differs from the child's installed copy at all, a shipped file's text cites a
+withheld path, or nothing is left to ship after withholding) prints `structure change: no sync PR`
+and opens no PR at all. Either way the withheld paths are named in the child's standing structure
+issue (§ "The standing-issue rule" below) instead, for a human to sequence by hand.
 
 ## The contradiction review
 
@@ -65,6 +82,21 @@ standing GitHub issue tracking governance syncs. Every sync commit the tool make
 that issue number (`(#<N>)` in the commit message), satisfying the child's own
 `.githooks/commit-msg` gate, which blocks a code commit naming no issue.
 
+**The standing structure issue.** A separate standing issue tracks a structure verdict: at most
+one per child, titled exactly `governance sync: structure change pending adoption`, found by an
+exact title match (never `gh issue list --search`, whose index lags issue creation and would let a
+freshly-created issue go unfound). Its body names the parent sha, the classification's run reason,
+and every withheld path. A run that finds this issue already open refreshes its body in place
+rather than opening a second one; both a run that ships a PR with nothing withheld, and a run whose
+plan is empty (nothing left to sync at all, most often because a human already adopted the
+structure change by hand since the last run), close it instead, so a child that has adopted the
+change does not keep a false open row. On the empty-plan path this close is best-effort only: `gh`
+being unresolvable or unreachable there is a warning, never a failure of the run (the governance
+repo's DESIGN.md § "Governance sync", "The empty-plan close is best-effort, never load-bearing").
+This issue takes no commit reference and is not `syncIssue`: `syncIssue` stays the commit-reference
+target every ordinary sync commit names, and a structure-only run commits nothing, so it never
+touches `syncIssue` at all.
+
 Every sync commit also passes the child's own `.githooks/pre-commit` ownership wall (see
 `standards/ownership-map.md`) when a PowerShell launcher is on the child's `PATH`, and only
 because the branch the tool builds (`issue-<N>-governance-sync-<shortsha>`, § "Superseded syncs"
@@ -110,6 +142,12 @@ orchestrator disposes of it by hand, the same two ways as § "The retained-diver
 above: deleting the file ends the warning next run, and keeping it under
 `## Governance overrides` leaves it standing by design.
 
+A structure verdict is a second, distinct no-PR outcome, disposed of differently: no PR opens, and
+the tool prints the literal marker `structure change: no sync PR` naming the run reason, with every
+withheld path carried by the standing structure issue (§ "The standing-issue rule" above), not by a
+sync PR body or a bare warning line. `.claude/commands/build.md` step 0b's structure branch reports
+that issue in the session and continues the build on the governance already in the tree.
+
 ## Reconciliation with the review protocol
 
 The escalation outcome above ("multiple ways to fix: stop and ask the owner") is cross-repo
@@ -132,11 +170,14 @@ continuing the build: the pull just changed the governance tree that worktree wa
 
 ## What the tool mechanizes and what it cannot force
 
-`tools/governance-sync.ps1` mechanizes the diff and the PR: it computes the plan, opens (or
-refreshes) the sync PR, and prunes a retired path only when the child's copy still matches the
-last-shipped hash. It cannot force a child to run it at all, force an opened sync PR to merge, or
-force the contradiction review above to happen with rigor rather than a rubber stamp: none of
-that is detectable from the governance home. A child may keep its own `WHAT-IT-CHECKS.md`
-describing that child's own CI and coverage; the governance home's own `governance-manifest.json`
-never lists it in `sharedPaths`, so this tool neither creates nor maintains one, and it carries no
-promise about what any given child's build actually checks.
+`tools/governance-sync.ps1` mechanizes the diff, the classification, and the PR: it computes the
+plan, classifies every planned path as content or structure, opens (or refreshes) the sync PR when
+anything content-classed remains, opens (or refreshes, or closes) the standing structure issue as
+the classification calls for, and prunes a retired path only when the child's copy still matches
+the last-shipped hash. It cannot force a child to run it at all, force an opened sync PR to merge,
+force a human to act on an open structure issue, or force the contradiction review above to happen
+with rigor rather than a rubber stamp: none of that is detectable from the governance home. A
+child may keep its own `WHAT-IT-CHECKS.md` describing that child's own CI and coverage; the
+governance home's own `governance-manifest.json` never lists it in `sharedPaths`, so this tool
+neither creates nor maintains one, and it carries no promise about what any given child's build
+actually checks.

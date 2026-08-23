@@ -921,9 +921,10 @@ describe('CLAUDE.md section citations from sharedPaths files appear in the owner
   });
 });
 
-// AC4: every classes value is exactly "content" or "structure", and
-// classesDefault is exactly "structure"; see DESIGN.md's governance-manifest
-// semantics section.
+// AC4: every classes value is exactly "content" or "structure" (see
+// DESIGN.md's governance-manifest semantics section), and classesDefault is
+// exactly "structure" in the live manifest, the safe-side value per the
+// classesDefault rule in standards/governance-sync.md § "What a sync is".
 describe('classes values and classesDefault hold only their allowed literals (AC4)', () => {
   /** `classes` entries whose value is not "content" or "structure", as "key: value" strings. */
   function invalidClassesValues(classes) {

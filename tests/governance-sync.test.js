@@ -309,10 +309,27 @@ maybeDescribe('governance-sync.ps1 configuration handling (AC 2)', () => {
 
 // ---- wrapper: end-to-end fixture family (AC 6) ---------------------------
 
+// makeGhStub -- a fake `gh` that logs every invocation (args, plus any
+// --body-file content, base64-encoded) to gh-log.txt for readGhLog below to
+// parse. `pr *` arms are env-driven by STUB_OPEN_PR; `issue *` arms (see
+// standards/governance-sync.md § "The standing-issue rule") by
+// STUB_OPEN_STRUCTURE_ISSUE_JSON.
 function makeGhStub(dir) {
   const stubPath = path.join(dir, 'gh-stub.ps1');
+  const logPath = path.join(dir, 'gh-log.txt');
+  const logPathLiteral = logPath.replace(/'/g, "''");
   const lines = [
     '$a = $args',
+    `Add-Content -LiteralPath '${logPathLiteral}' -Value ($a -join ' ')`,
+    "$bodyFileIndex = [Array]::IndexOf($a, '--body-file')",
+    'if ($bodyFileIndex -ge 0 -and ($bodyFileIndex + 1) -lt $a.Count) {',
+    '  $bodyFilePath = $a[$bodyFileIndex + 1]',
+    '  if (Test-Path -LiteralPath $bodyFilePath) {',
+    '    $bodyBytes = [System.IO.File]::ReadAllBytes($bodyFilePath)',
+    '    $bodyB64 = [Convert]::ToBase64String($bodyBytes)',
+    `    Add-Content -LiteralPath '${logPathLiteral}' -Value ('BODY-FILE-BASE64: ' + $bodyB64)`,
+    '  }',
+    '}',
     "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'list') {",
     '  if ($env:STUB_OPEN_PR) {',
     '    Write-Output (\'[{"url":"\' + $env:STUB_OPEN_PR + \'"}]\')',
@@ -328,10 +345,53 @@ function makeGhStub(dir) {
     "if ($a.Count -ge 2 -and $a[0] -eq 'pr' -and $a[1] -eq 'edit') {",
     '  exit 0',
     '}',
+    "if ($a.Count -ge 2 -and $a[0] -eq 'issue' -and $a[1] -eq 'list') {",
+    '  if ($env:STUB_OPEN_STRUCTURE_ISSUE_JSON) {',
+    '    Write-Output $env:STUB_OPEN_STRUCTURE_ISSUE_JSON',
+    '  } else {',
+    "    Write-Output '[]'",
+    '  }',
+    '  exit 0',
+    '}',
+    "if ($a.Count -ge 2 -and $a[0] -eq 'issue' -and $a[1] -eq 'create') {",
+    "  Write-Output 'https://github.invalid/owner/repo/issues/501'",
+    '  exit 0',
+    '}',
+    "if ($a.Count -ge 2 -and $a[0] -eq 'issue' -and $a[1] -eq 'edit') {",
+    '  exit 0',
+    '}',
+    "if ($a.Count -ge 2 -and $a[0] -eq 'issue' -and $a[1] -eq 'close') {",
+    '  exit 0',
+    '}',
     'exit 1',
   ];
   fs.writeFileSync(stubPath, lines.join('\n') + '\n');
-  return stubPath;
+  return { stubPath, logPath };
+}
+
+// readGhLog -- parses gh-log.txt into one entry per gh invocation: `args`
+// (the joined argument line) and `body` (the decoded --body-file content, or
+// null when that call carried none). Relies on makeGhStub's ordering: a
+// BODY-FILE-BASE64 line, when present, always immediately follows the args
+// line for the same call.
+function readGhLog(logPath) {
+  if (!fs.existsSync(logPath)) return [];
+  const lines = fs
+    .readFileSync(logPath, 'utf8')
+    .split(/\r?\n/)
+    .filter((l) => l.length > 0);
+  const calls = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('BODY-FILE-BASE64:')) continue;
+    let body = null;
+    if (lines[i + 1] && lines[i + 1].startsWith('BODY-FILE-BASE64:')) {
+      const b64 = lines[i + 1].slice('BODY-FILE-BASE64:'.length).trim();
+      body = Buffer.from(b64, 'base64').toString('utf8');
+    }
+    calls.push({ args: line, body });
+  }
+  return calls;
 }
 
 const PRISTINE_LEGACY = 'pristine legacy content\n';
@@ -348,6 +408,9 @@ function baseManifest() {
     // add a file under it and exercise a real end-to-end run.
     sharedPaths: ['shared/**', '.githooks/**'],
     excludedPaths: ['repo-profile.json', 'CLAUDE.md'],
+    classes: { 'shared/**': 'content', '.githooks/**': 'content' },
+    classesDefault: 'content',
+    arrivesAsStructure: [],
   };
 }
 
@@ -369,14 +432,24 @@ function makeE2EFixture(opts) {
   const originDir = path.join(root, 'origin.git');
   const seedChildDir = path.join(root, 'seed-child');
   const childDir = path.join(root, 'child');
-  const ghStubPath = makeGhStub(root);
+  const ghStub = makeGhStub(root);
+  const ghStubPath = ghStub.stubPath;
+  const ghLogPath = ghStub.logPath;
   const syncIssue = opts.syncIssue || 42;
 
   fs.mkdirSync(parentDir);
   git(parentDir, ['init', '-q']);
   git(parentDir, ['config', 'user.name', 'test']);
   git(parentDir, ['config', 'user.email', 'test@example.invalid']);
-  writeFile(parentDir, 'governance-manifest.json', JSON.stringify(baseManifest(), null, 2));
+  // Governance #14: the parent's manifest defaults to baseManifest(), and the
+  // child's own copy (seeded below) defaults to that SAME object (identical
+  // content, no diff), so a fixture that does not opt into a manifest
+  // difference still describes a content-classed run. opts.parentManifest
+  // and opts.childManifest (the latter may be `null`, meaning no child
+  // manifest file at all) let a case declare either independently.
+  const parentManifestObj =
+    opts.parentManifest !== undefined ? opts.parentManifest : baseManifest();
+  writeFile(parentDir, 'governance-manifest.json', JSON.stringify(parentManifestObj, null, 2));
   writeFile(
     parentDir,
     'shared/hello.txt',
@@ -411,6 +484,11 @@ function makeE2EFixture(opts) {
     'CLAUDE.md',
     '# CLAUDE.md\n\n## Governing-artifact surface\n\nsome list\n'
   );
+  const childManifestObj =
+    opts.childManifest !== undefined ? opts.childManifest : parentManifestObj;
+  if (childManifestObj !== null) {
+    writeFile(seedChildDir, 'governance-manifest.json', JSON.stringify(childManifestObj, null, 2));
+  }
   writeFile(seedChildDir, 'shared/hello.txt', 'v1\n');
   if (opts.childLegacy !== undefined) {
     writeFile(seedChildDir, 'legacy/old.txt', opts.childLegacy);
@@ -443,6 +521,7 @@ function makeE2EFixture(opts) {
     seedChildDir,
     childDir,
     ghStubPath,
+    ghLogPath,
     syncIssue,
     parentSha,
     shortSha,
@@ -663,6 +742,7 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
 
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('update: shared/hello.txt');
+    expect(r.stdout).toMatch(/^classify RUN content: .+$/m);
     expect(afterBranches).toBe(beforeBranches);
     expect(afterStatus).toBe(beforeStatus);
   });
@@ -713,5 +793,177 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
     const worktrees = git(fx.childDir, ['worktree', 'list']).trim().split('\n');
     expect(worktrees).toHaveLength(1);
     expect(leftover).toEqual([]);
+  });
+
+  // ---- governance #14: the rule checker's wrapper-level criteria ---------
+
+  it('AC1: a manifest-diff run exits 0, prints structure change: no sync PR, pushes no branch, and calls neither pr create nor pr edit', () => {
+    const childManifest = Object.assign({}, baseManifest(), { classesDefault: 'structure' });
+    const fx = makeE2EFixture({ childManifest });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+    const parentSha = git(fx.parentDir, ['rev-parse', 'HEAD']).trim();
+    const shortSha = parentSha.substring(0, 8);
+    const branchName = `issue-${fx.syncIssue}-governance-sync-${shortSha}`;
+
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('structure change: no sync PR');
+    expect(r.stdout).toContain('manifest fields differ:');
+    expect(r.stdout).not.toContain('sync PR opened');
+    expect(r.stdout).not.toContain('sync PR open:');
+
+    // AC5's printed contract (per-file `classify <class>: <path> (<reason>)`
+    // plus one `classify RUN <content|structure>: <reason>` line): asserted
+    // here so deleting Write-ClassificationLines turns this red.
+    expect(r.stdout).toMatch(/^classify content: shared\/hello\.txt \(.+\)$/m);
+    expect(r.stdout).toMatch(/^classify RUN structure: .+$/m);
+
+    const branchList = git(fx.originDir, ['branch', '--list', branchName]);
+    expect(branchList.trim()).toBe('');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr create'))).toBe(false);
+    expect(calls.some((c) => c.args.startsWith('pr edit'))).toBe(false);
+    expect(calls.filter((c) => c.args.startsWith('issue create'))).toHaveLength(1);
+  });
+
+  it('AC1 dedupe: a repeat run against an already-open standing issue calls issue edit, not issue create', () => {
+    const childManifest = Object.assign({}, baseManifest(), { classesDefault: 'structure' });
+    const fx = makeE2EFixture({ childManifest });
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const openIssueJson = JSON.stringify([
+      {
+        number: 77,
+        title: 'governance sync: structure change pending adoption',
+        url: 'https://github.invalid/owner/repo/issues/77',
+      },
+    ]);
+    const r = runE2EWrapper(fx, [], { STUB_OPEN_STRUCTURE_ISSUE_JSON: openIssueJson });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('structure change: no sync PR');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('issue create'))).toBe(false);
+    expect(calls.filter((c) => c.args.startsWith('issue edit 77'))).toHaveLength(1);
+  });
+
+  it('AC4: a withheld path cited by a shipped file opens no PR, and the standing issue covers the whole run', () => {
+    const manifest = Object.assign({}, baseManifest(), {
+      sharedPaths: ['shared/**', '.githooks/**', 'tools/withheld-thing.ps1'],
+      classes: {
+        'shared/**': 'content',
+        '.githooks/**': 'content',
+        'tools/withheld-thing.ps1': 'structure',
+      },
+    });
+    const fx = makeE2EFixture({ parentManifest: manifest });
+    writeFile(fx.parentDir, 'tools/withheld-thing.ps1', '#!/usr/bin/env pwsh\nexit 0\n');
+    writeFile(fx.parentDir, 'shared/citer.txt', 'see tools/withheld-thing.ps1 for details\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'add withheld path and a file citing it']);
+    const parentSha = git(fx.parentDir, ['rev-parse', 'HEAD']).trim();
+    const shortSha = parentSha.substring(0, 8);
+    const branchName = `issue-${fx.syncIssue}-governance-sync-${shortSha}`;
+
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('structure change: no sync PR');
+    expect(r.stdout).toContain('cites withheld path tools/withheld-thing.ps1');
+    expect(r.stdout).not.toContain('sync PR opened');
+
+    const branchList = git(fx.originDir, ['branch', '--list', branchName]);
+    expect(branchList.trim()).toBe('');
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.some((c) => c.args.startsWith('pr create'))).toBe(false);
+  });
+
+  it('AC8: a withheld path no shipped file cites opens a PR whose body omits it, while the standing issue names it', () => {
+    const manifest = Object.assign({}, baseManifest(), {
+      sharedPaths: ['shared/**', '.githooks/**', 'tools/withheld-standalone.ps1'],
+      classes: {
+        'shared/**': 'content',
+        '.githooks/**': 'content',
+        'tools/withheld-standalone.ps1': 'structure',
+      },
+    });
+    const fx = makeE2EFixture({ parentManifest: manifest });
+    writeFile(fx.parentDir, 'tools/withheld-standalone.ps1', '#!/usr/bin/env pwsh\nexit 0\n');
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'add withheld path and update hello']);
+
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('structure change: partial withhold');
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+
+    const calls = readGhLog(fx.ghLogPath);
+    const prCreateCall = calls.find((c) => c.args.startsWith('pr create'));
+    expect(prCreateCall).toBeDefined();
+    expect(prCreateCall.body).not.toContain('tools/withheld-standalone.ps1');
+
+    const issueCall = calls.find(
+      (c) => c.args.startsWith('issue create') || c.args.startsWith('issue edit')
+    );
+    expect(issueCall).toBeDefined();
+    expect(issueCall.body).toContain('tools/withheld-standalone.ps1');
+  });
+
+  it('AC2: a fully content run with an already-open standing issue calls issue close', () => {
+    const fx = makeE2EFixture({});
+    writeFile(fx.parentDir, 'shared/hello.txt', 'v2\n');
+    git(fx.parentDir, ['add', '-A']);
+    git(fx.parentDir, ['commit', '-q', '-m', 'update hello']);
+
+    const openIssueJson = JSON.stringify([
+      {
+        number: 88,
+        title: 'governance sync: structure change pending adoption',
+        url: 'https://github.invalid/owner/repo/issues/88',
+      },
+    ]);
+    const r = runE2EWrapper(fx, [], { STUB_OPEN_STRUCTURE_ISSUE_JSON: openIssueJson });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+    expect(r.stdout).not.toContain('structure change');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.filter((c) => c.args.startsWith('issue close 88'))).toHaveLength(1);
+  });
+
+  it('M3: an empty plan (nothing to sync) with an already-open standing issue still closes it, per a hand-adopted structure change', () => {
+    const fx = makeE2EFixture({});
+    // No parent change at all: the plan is empty (the isEmpty early exit),
+    // simulating a human having already adopted a structure change by hand.
+    const openIssueJson = JSON.stringify([
+      {
+        number: 99,
+        title: 'governance sync: structure change pending adoption',
+        url: 'https://github.invalid/owner/repo/issues/99',
+      },
+    ]);
+    const r = runE2EWrapper(fx, [], { STUB_OPEN_STRUCTURE_ISSUE_JSON: openIssueJson });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('in sync with');
+
+    const calls = readGhLog(fx.ghLogPath);
+    expect(calls.filter((c) => c.args.startsWith('issue close 99'))).toHaveLength(1);
+  });
+
+  it('A regression: an in-sync run still prints "in sync with" and exits 0 even when gh itself fails', () => {
+    const fx = makeE2EFixture({});
+    // No parent change: the plan is empty. A gh that resolves but fails every
+    // call must never affect the exit code or suppress "in sync with".
+    const brokenGhPath = path.join(fx.root, 'gh-broken.ps1');
+    fs.writeFileSync(brokenGhPath, ["Write-Error 'gh: not authenticated'", 'exit 1'].join('\n'));
+    const r = runE2EWrapper(fx, [], { GH_PATH: brokenGhPath });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('in sync with');
+    expect(r.stderr).toContain('warning');
   });
 });
