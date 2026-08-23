@@ -1266,6 +1266,10 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
       },
     ]);
     const r = runE2EWrapper(fx, [], { STUB_OPEN_DIVERGENT_ISSUE_JSON: openIssueJson });
+    // TEMP DIAGNOSTIC (issue #15 CI red investigation, removed before final commit)
+    console.log('TEMP-DIAG stdout:', JSON.stringify(r.stdout));
+    console.log('TEMP-DIAG stderr:', JSON.stringify(r.stderr));
+    console.log('TEMP-DIAG gh-log:', JSON.stringify(fs.readFileSync(fx.ghLogPath, 'utf8')));
     expect(r.status).toBe(0);
 
     const calls = readGhLog(fx.ghLogPath);
