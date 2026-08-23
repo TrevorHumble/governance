@@ -198,6 +198,7 @@ function Sync-DivergentPathsIssue {
     [string[]]$UnacknowledgedPaths
   )
   try {
+    [Console]::Error.WriteLine("TEMP-DIAG Sync-DivergentPathsIssue: IsNull=$($null -eq $UnacknowledgedPaths) RawCount=$(if ($null -eq $UnacknowledgedPaths) { 'n/a' } else { $UnacknowledgedPaths.Count }) WrappedCount=$(@($UnacknowledgedPaths).Count) TypeName=$(if ($null -eq $UnacknowledgedPaths) { 'null' } else { $UnacknowledgedPaths.GetType().FullName })")
     if (@($UnacknowledgedPaths).Count -gt 0) {
       Set-DivergentPathsIssue -Gh $Gh -ParentSha $ParentSha -Paths $UnacknowledgedPaths | Out-Null
     } else {
@@ -470,6 +471,7 @@ try {
   $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $syncWorktreeDir -Manifest $parentManifest
   foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
   $unacknowledgedDivergent = Get-UnacknowledgedDivergent -Plan $plan -Acknowledged $acknowledgedDivergentPaths
+  [Console]::Error.WriteLine("TEMP-DIAG after-assign: IsNull=$($null -eq $unacknowledgedDivergent) RawCount=$(if ($null -eq $unacknowledgedDivergent) { 'n/a' } else { $unacknowledgedDivergent.Count }) RetainedDivergent=$($plan.RetainedDivergent -join ',') Acknowledged=$($acknowledgedDivergentPaths -join ',')")
   foreach ($p in $unacknowledgedDivergent) { Write-Output "WARNING retained divergent: $p" }
 
   $isEmpty = ($plan.Adds.Count -eq 0) -and ($plan.Updates.Count -eq 0) -and ($plan.Prunes.Count -eq 0)
