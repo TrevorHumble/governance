@@ -8,6 +8,12 @@
 
 Written from the end-consumer POV: the agent, human, or system that will use the produced artifact. Format: `As a [consumer], I need... so that....` If you cannot name a consumer, the issue has no purpose.
 
+Name whoever feels it if the thing disappears. Do not name a product owner, a developer, or an AI unless the thing is genuinely built for them; when a builder is named, say why no end user further down the chain fits better.
+
+The `so that` clause is the test that catches a story naming a fix instead of an outcome: if the `so that` names a technical mechanism rather than something the consumer feels, the story is written in the language of the fix. The wedding-scavenger-hunt repo's issue #1262 is the worked case: the outcome wanted was two agents working at once without either handing back a fake failure, and the story instead asked for tests against a throwaway repository, a fix, not that outcome. The story names the outcome, never the mechanism.
+
+This one-line form is the story as it lives in the issue body. § "Owner hand-off" below states the three-line written form the same story takes in the message sent to the owner; the two are not competing formats.
+
 ---
 
 ## Acceptance criteria
@@ -16,15 +22,17 @@ Written as Given/When/Then criteria testable by an agent. **An acceptance criter
 
 A criterion need only be answerable yes/no by a competent reviewer against real evidence: that bar does not move, but the old requirement that answering it involve no judgment is dropped. In practice, two reviewers may disagree on the same criterion, and that is accepted knowingly. The alternative is criteria shredded into dozens of greppable strings that nobody could hold in the first place.
 
-**Write 1-6 criteria; 8 is the ceiling, not a target.** More criteria are not more safety; past the ceiling, nobody can hold them, and a reviewer ends up picking one, citing it, and missing the rest. Blowing the ceiling is at least major severity (the wedding-scavenger-hunt repo's issue #410 carried 34 criteria, and its review spent itself on one of them while the real question went unasked).
+**Write 1-6 criteria, two to four typical; 8 is the ceiling, not a target.** More criteria are not more safety; past the ceiling, nobody can hold them, and a reviewer ends up picking one, citing it, and missing the rest. Blowing the ceiling is at least major severity, except for a criterion the owner added himself, per § "Owner hand-off"'s "Count" paragraph below (the wedding-scavenger-hunt repo's issue #410 carried 34 criteria, and its review spent itself on one of them while the real question went unasked).
 
-**A ready-tier issue's criteria must include at least one that asserts a behavioral output value** (input to expected output), so the criteria can catch a wrong implementation. An issue whose criteria are all presence/structural checks cannot, since a broken implementation can satisfy every "file contains X" check.
+**A ready-tier issue's criteria must include at least one that asserts a behavioral output value** (input to expected output), so the criteria can catch a wrong implementation, except for acceptance criteria carrying `Owner-approved: yes`, per § "Owner hand-off"'s "Behavioral value" paragraph below. An issue whose criteria are all presence/structural checks cannot, since a broken implementation can satisfy every "file contains X" check.
 
-**Documentation-only issues** (those whose `Touches` paths are all docs, `.md` or under `docs/`) are exempt from the behavioral-value requirement above and may use purely structural criteria. (Backlog-tier issues capture intent before implementation and need only one such criterion, answerable yes/no by a competent reviewer; see Issue tiers.)
+**Documentation-only issues** (those whose `Touches` paths are all docs, `.md` or under `docs/`) are exempt from the behavioral-value requirement above and may use purely structural criteria. A structural criterion is still written about the outcome, not the implementation: the file path a criterion checks against lives in the implementation plan, not in the criterion itself. (Backlog-tier issues capture intent before implementation and need only one such criterion, answerable yes/no by a competent reviewer; see Issue tiers.)
+
+**Readable without the code.** A criterion is written so the owner can check it without reading code, file paths, or tool names, and it states the outcome for the end user rather than the implementation detail or technical change that delivers it. § "Owner hand-off" below states the written form the owner receives; this paragraph states what makes a criterion fit for that form in the first place.
 
 **For a declared Pre-review surface only, the approved artifact is the acceptance criterion.** Taste is discovered, not specified: nobody knows a decoration is clutter until they see it. So for work on the surface named in `repo-profile.json`'s `surfaceGlobs` that goes through the phase-1 live pre-review loop (`agents/orchestrator.md` § "Pre-review step"), the written criteria **transcribe** what the owner already approved on the seeded preview, rather than **defining** it up front the way every other criterion in this standard does. Any behavior phase 1 faked to settle the shape (for example a hard-coded count just to see the layout) becomes real, specified work in the phase-2 criteria: the faked shortcut is not shipped as-is. **This transcription rule applies only to a declared Pre-review surface.** Logic, data, and tests, everything that is not the approved artifact itself, still take spec-first, adversarial criteria written before implementation, exactly as the rest of this standard describes; a criterion that is not about how the pre-reviewed artifact looks or reads does not get to claim this exemption.
 
-No criterion of the form "an agent can understand X": that is unfalsifiable and is a FAIL. Every AC that says "an agent can answer X" is unfalsifiable; rewrite as "the file contains the phrase `X`" or a behavioral input-to-output assertion.
+No criterion of the form "an agent can understand X": that is unfalsifiable and is a FAIL. Every AC that says "an agent can answer X" is unfalsifiable; rewrite it as a behavioral input-to-output assertion. A file path or a literal string belongs in the implementation plan, never in a criterion the owner has to read.
 
 ---
 
@@ -46,6 +54,12 @@ widened file rests on the widening being recorded, not on tooling that ran befor
 
 Example: an issue touching one service file may be amended to also validate a field's format inside that same file, with owner + reviewer sign-off. It may not be amended to also touch an unrelated admin route to add a moderation control: that is a new, separately-reviewed issue, even if the owner wants it done "at the same time."
 
+A change to the title, the user story, or an acceptance criterion after the owner has approved it
+is not this section's amendment: it re-triggers the owner hand-off's approval step instead, per §
+"Owner hand-off" below. This section's `Touches` bound still binds any implementation work the
+amended text creates; its owner-plus-reviewer sign-off does not apply to the owner's own approved
+words.
+
 ---
 
 ## The Haiku bar
@@ -57,6 +71,104 @@ If a step says "do the thing," rewrite it. Each step names what to create, read,
 **Example plan step, before:** "2. Update the input handling to reject bad values."
 **After:** "2. In the input-validation module, in the field-filter function, reject any value whose type is not a key of `ALLOWED_TYPES` by calling the callback with an error whose message names the rejected type."
 The before step forces the implementer to decide which file, which mechanism, and what "bad" means; the after step decides all three.
+
+---
+
+## Owner hand-off
+
+Before an issue exists, the owner receives one short message: the title, the user story, and the
+acceptance criteria, in that order, and nothing else. The implementation plan, the dependency map,
+the context, and the prior-art list are never part of it; they still belong in the GitHub issue
+body. The message is sent **before** `gh issue create` runs. No issue is created, and no issue's
+title, story, or acceptance criteria is changed, until the owner has approved. An objection
+rewrites the whole message, title included, in chat, and it is re-sent; nothing is recorded until
+he approves. Neither the GitHub issue nor the `data/wip-issues/<N>-slug.md` draft exists yet at
+that point, so the approval carries forward: once both are created (`agents/orchestrator.md` §
+"Pipeline (ordered)" step 3), the agent records `Owner-approved: yes` on its own line, immediately
+after the `**Type:**` line, in the GitHub issue body and in the draft, carrying the approval given
+at hand-off. The GitHub issue body's copy is the board record; the draft's copy is the one a reviewer
+checks, per § "Reviewer checklist" below and `agents/reviewer-issue.md`, since that agent is handed
+only the draft's file path and cannot read the GitHub issue body.
+
+**Return path.** If the title, the user story, or any acceptance criterion changes at all after
+the owner approved it, for any reason and at any point in the issue's life, before implementation
+or mid-flight, the `Owner-approved: yes` line is removed from the GitHub issue body and the draft
+the moment the changed text is written, so the marker never certifies text the owner has not seen.
+The hand-off message is re-sent with the changed text, and the line is recorded again only once
+the owner approves that re-sent message. A change confined to the implementation plan, the
+dependency map, or the context does not re-trigger this. `agents/orchestrator.md` and
+`.claude/commands/build.md` point at this paragraph rather than restating it; so does §
+"Acceptance-criteria amendment" above for the mid-flight case.
+
+**Written format.** The line breaks below are part of the format. The wording is a suggested
+shape, not a character-exact template: "As a / I need / so that" is convenience, not doctrine
+(Ron Jeffries, https://ronjeffries.com/xprog/blog/how-should-user-stories-be-written/, checked
+2026-08-22).
+
+- **Title:** one line, plain language, naming what is needed, not how it is built.
+- **User story:** three lines, each on its own line:
+  ```
+  **As a** [persona],
+  **I need** [thing],
+  **so that** [outcome].
+  ```
+- **Acceptance criteria:** one fenced block holding one or more scenarios. Each scenario opens
+  with `Scenario <n>: <short description>` on its own line, followed by `GIVEN`, `WHEN`, `THEN`
+  each on its own line, with optional `AND` lines after any of them. Keywords in capitals, one
+  keyword per line, a blank line between scenarios.
+
+Filled example:
+
+> **Title:** Every rider sees their own trip, not the whole schedule
+>
+> **As a** rider,
+> **I need** my trip list to show only the trips I booked,
+> **so that** I never wonder whose trip is whose.
+>
+> ```
+> Scenario 1: I see my own trip
+> GIVEN I have booked a trip
+> WHEN I open my trip list
+> THEN my trip is there
+>
+> Scenario 2: I do not see another rider's trip
+> GIVEN another rider has booked a trip
+> WHEN I open my trip list
+> THEN their trip is not there
+> ```
+
+**Count.** § "Acceptance criteria" above binds what an agent writes; this section restates none of
+that count. A criterion the owner adds himself is not bounded by it and is not counted against
+that ceiling. The hand-off message carries every criterion the issue holds, agent-written and
+owner-added alike; none is dropped.
+
+**Behavioral value.** § "Acceptance criteria" above's requirement that a ready-tier issue include
+at least one criterion asserting a behavioral output value does not apply to a criterion carrying
+`Owner-approved: yes`: the owner's own approved wording is not judged against that bar, per §
+"Reviewer checklist" below's Ready-tier checklist.
+
+**Ownership.** The owner owns the title, the user story, and the acceptance criteria. The agents
+own the implementation plan and the dependency map. A reviewer's findings address the plan, the
+dependency map, and the tier fields. A reviewer does not reword, rewrite, or fail an approved
+story or an approved acceptance criterion, and does not re-open wording the owner has already
+settled. Only the owner changes them, and he changes them in chat.
+
+**Not a gate.** No bot, hook, CI check, or script enforces any of the above. It holds by
+instruction alone.
+
+**Grandfather clause.** An issue created before this section merged is judged against the standard
+as it stood, and is neither blocked nor reworked for this shape. This clause covers an issue
+drafted before this section merged but picked up waves later. The in-flight-sibling case, a
+sibling issue still open when a new rule lands, is already owned by
+`standards/adversarial-review-protocol.md` § "Wave governance: grandfathering, owner-invoked wave
+review, doc-currency step".
+
+**No row enforces the hand-off itself.** Neither § "Reviewer checklist" below nor
+`agents/reviewer-issue.md` carries a row that checks whether the hand-off happened; the hand-off is
+deliberately unmechanized, and a reviewer does not fail an issue for it. `agents/reviewer-issue.md`
+does carry one row from this hand-off, judging the implementation plan against the criteria the
+owner approved; the rule and its tier scope are owned by § "Reviewer checklist" below's
+Ready-tier checklist, not restated here.
 
 ---
 
@@ -165,19 +277,30 @@ A `spawned-in-run` issue missing the block, or with any of the four fields empty
 
 ## Reviewer checklist
 
+The story and acceptance-criteria rows below, in both checklists, test **approval state, never
+authorship**: an agent drafts the story and the criteria, the owner then approves the same text,
+and it is the approval, not who typed it, that takes a row out of scope. A story or acceptance
+criteria carrying `Owner-approved: yes` in the `data/wip-issues/<N>-slug.md` draft, per § "Owner
+hand-off" above (whose GitHub issue body copy is the board record), is out of scope for these rows
+regardless of who drafted the words; the absence of that line in the draft is what makes them
+apply. § "Acceptance criteria" above's count ceiling is qualified the same way: a criterion the
+owner added past the ceiling, per § "Owner hand-off"'s "Count" paragraph, is not a severity
+finding.
+
 ### Ready-tier checklist
 
-- [ ] PASS/FAIL - User story names an end-consumer (not the author) and follows `As a [consumer], I need...` form.
-- [ ] PASS/FAIL - Every acceptance criterion is in Given/When/Then form and is answerable yes/no by a competent reviewer, or asserts a behavioral input-to-output value.
-- [ ] PASS/FAIL - At least one acceptance criterion asserts a behavioral output value (input to expected output), not only presence/structural checks, except documentation-only issues, per the exemption defined in § "Acceptance criteria" above. An all-presence-check issue a wrong implementation could pass is a FAIL.
+- [ ] PASS/FAIL - (Not applicable to an `Owner-approved: yes` story.) User story names an end-consumer (not the author) and follows `As a [consumer], I need...` form.
+- [ ] PASS/FAIL - (Not applicable to `Owner-approved: yes` acceptance criteria.) Every acceptance criterion is in Given/When/Then form and is answerable yes/no by a competent reviewer, or asserts a behavioral input-to-output value.
+- [ ] PASS/FAIL - (Not applicable to `Owner-approved: yes` acceptance criteria.) At least one acceptance criterion asserts a behavioral output value (input to expected output), not only presence/structural checks, except documentation-only issues, per the exemption defined in § "Acceptance criteria" above. An all-presence-check issue a wrong implementation could pass is a FAIL.
+- [ ] PASS/FAIL - Every acceptance criterion has a delivering step in the implementation plan: a criterion with no step in the plan that produces it is a blocking FAIL. This row is Ready-tier only: a backlog issue has no full implementation plan by design (§ "Issue tiers" above) and is not subject to it. Where it applies, it applies regardless of whether the story or criteria carry `Owner-approved: yes`; it judges the plan, not the owner's words.
 - [ ] PASS/FAIL - Implementation plan is present and contains at least three numbered steps, each naming a file path or a concrete deliverable.
 - [ ] PASS/FAIL - Dependency map contains all three fields: `Depends on`, `Blocks`, `Touches`.
 - [ ] PASS/FAIL - No FINAL, LAST, or TRULY_FINAL in filenames or section headers referenced by this issue.
 
 ### Backlog-tier checklist
 
-- [ ] PASS/FAIL - User story is written from the consumer POV and follows `As a [consumer], I need...` form.
-- [ ] PASS/FAIL - At least one acceptance criterion names a testable desired outcome, answerable yes/no by a competent reviewer.
+- [ ] PASS/FAIL - (Not applicable to an `Owner-approved: yes` story.) User story is written from the consumer POV and follows `As a [consumer], I need...` form.
+- [ ] PASS/FAIL - (Not applicable to `Owner-approved: yes` acceptance criteria.) At least one acceptance criterion names a testable desired outcome, answerable yes/no by a competent reviewer.
 - [ ] PASS/FAIL - `Depends on` field is present.
 - [ ] PASS/FAIL - `Graduate after` field is present and states a deterministic condition (not a human approval).
 - [ ] PASS/FAIL - Tier is declared as `backlog` in the `**Type:**` line.
