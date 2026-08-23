@@ -198,9 +198,17 @@ function Sync-DivergentPathsIssue {
     [string[]]$UnacknowledgedPaths
   )
   try {
-    [Console]::Error.WriteLine("TEMP-DIAG Sync-DivergentPathsIssue: IsNull=$($null -eq $UnacknowledgedPaths) RawCount=$(if ($null -eq $UnacknowledgedPaths) { 'n/a' } else { $UnacknowledgedPaths.Count }) WrappedCount=$(@($UnacknowledgedPaths).Count) TypeName=$(if ($null -eq $UnacknowledgedPaths) { 'null' } else { $UnacknowledgedPaths.GetType().FullName })")
-    if (@($UnacknowledgedPaths).Count -gt 0) {
-      Set-DivergentPathsIssue -Gh $Gh -ParentSha $ParentSha -Paths $UnacknowledgedPaths | Out-Null
+    # An empty pipeline result collapses to $null, and @($null) is a one-element
+    # array holding $null, not an empty one, so $null must be special-cased
+    # before the @() wrap and count check or a fully-acknowledged run would
+    # misread as one unacknowledged path and call Set-DivergentPathsIssue with
+    # a $null -Paths, whose Mandatory binding throws.
+    $realPaths = @()
+    if ($null -ne $UnacknowledgedPaths) {
+      $realPaths = @($UnacknowledgedPaths | Where-Object { $null -ne $_ })
+    }
+    if ($realPaths.Count -gt 0) {
+      Set-DivergentPathsIssue -Gh $Gh -ParentSha $ParentSha -Paths $realPaths | Out-Null
     } else {
       Close-DivergentPathsIssue -Gh $Gh -Reason 'Governance sync found no unacknowledged retained-divergent paths; closing.'
     }
@@ -471,7 +479,6 @@ try {
   $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $syncWorktreeDir -Manifest $parentManifest
   foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
   $unacknowledgedDivergent = Get-UnacknowledgedDivergent -Plan $plan -Acknowledged $acknowledgedDivergentPaths
-  [Console]::Error.WriteLine("TEMP-DIAG after-assign: IsNull=$($null -eq $unacknowledgedDivergent) RawCount=$(if ($null -eq $unacknowledgedDivergent) { 'n/a' } else { $unacknowledgedDivergent.Count }) RetainedDivergent=$($plan.RetainedDivergent -join ',') Acknowledged=$($acknowledgedDivergentPaths -join ',')")
   foreach ($p in $unacknowledgedDivergent) { Write-Output "WARNING retained divergent: $p" }
 
   $isEmpty = ($plan.Adds.Count -eq 0) -and ($plan.Updates.Count -eq 0) -and ($plan.Prunes.Count -eq 0)

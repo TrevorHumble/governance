@@ -268,6 +268,56 @@ maybeDescribe('Get-UnacknowledgedDivergent (AC 7)', () => {
   });
 });
 
+// ---- Get-UnacknowledgedDivergent: raw return value is never $null (issue #15
+// CI red) -------------------------------------------------------------------
+//
+// The tests above wrap the call site in @($r) before inspecting it, which
+// itself hides the trap that broke CI: an empty array returned bare from a
+// PowerShell function unrolls onto the pipeline as zero objects, and the
+// caller's assignment collapses that back to $null (Get-SyncPlan does
+// `$unacknowledgedDivergent = Get-UnacknowledgedDivergent ...` with no @()
+// wrap of its own). These tests inspect the assigned variable directly, with
+// no @() at the call site, so a regression of that unrolling would fail them
+// the same way it failed the real caller.
+
+function runGetUnacknowledgedDivergentRaw(retainedDivergentJsonFragment, acknowledged) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-unack-raw-'));
+  const planPath = path.join(dir, 'plan.json');
+  fs.writeFileSync(planPath, `{"RetainedDivergent":${retainedDivergentJsonFragment}}`);
+  const ackArg = (acknowledged || []).map((p) => `'${String(p).replace(/'/g, "''")}'`).join(',');
+  const cmd =
+    `. '${CORE_SCRIPT}'; ` +
+    `$pl = (Get-Content -Raw '${planPath}') | ConvertFrom-Json; ` +
+    `try { $r = Get-UnacknowledgedDivergent -Plan $pl -Acknowledged @(${ackArg}); ` +
+    `Write-Output "IsNull=$($null -eq $r)|Count=$(@($r).Count)" ` +
+    `} catch { [Console]::Error.WriteLine($_.Exception.Message); exit 9 }`;
+  const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], {
+    encoding: 'utf8',
+  });
+  fs.rmSync(dir, { recursive: true, force: true });
+  return r;
+}
+
+maybeDescribe('Get-UnacknowledgedDivergent raw return value (issue #15 CI red)', () => {
+  it('every retained-divergent path acknowledged: assigned variable is an array of count 0, not null', () => {
+    const r = runGetUnacknowledgedDivergentRaw('["legacy/old.txt"]', ['legacy/old.txt']);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe('IsNull=False|Count=0');
+  });
+
+  it('an empty RetainedDivergent: assigned variable is an array of count 0, not null', () => {
+    const r = runGetUnacknowledgedDivergentRaw('[]', []);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe('IsNull=False|Count=0');
+  });
+
+  it('a $null RetainedDivergent: assigned variable is an array of count 0, not null', () => {
+    const r = runGetUnacknowledgedDivergentRaw('null', []);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe('IsNull=False|Count=0');
+  });
+});
+
 // ---- wrapper: configuration handling (AC 2) ------------------------------
 
 function runWrapper(args, envExtra) {
@@ -1266,10 +1316,6 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
       },
     ]);
     const r = runE2EWrapper(fx, [], { STUB_OPEN_DIVERGENT_ISSUE_JSON: openIssueJson });
-    // TEMP DIAGNOSTIC (issue #15 CI red investigation, removed before final commit)
-    console.log('TEMP-DIAG stdout:', JSON.stringify(r.stdout));
-    console.log('TEMP-DIAG stderr:', JSON.stringify(r.stderr));
-    console.log('TEMP-DIAG gh-log:', JSON.stringify(fs.readFileSync(fx.ghLogPath, 'utf8')));
     expect(r.status).toBe(0);
 
     const calls = readGhLog(fx.ghLogPath);
