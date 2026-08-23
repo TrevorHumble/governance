@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    groups:
+      actions-all:
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    groups:
+      prod-deps:
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+        # No exclude-patterns, because repo-profile.json's
+        # criticalDependencies is currently []. The trap: Dependabot cannot
+        # read that file, so a future non-empty list has to be mirrored here
+        # by hand or a critical package bumps unguarded. See DESIGN.md
+        # hazard 3.
+      dev-deps:
+        dependency-type: 'development'

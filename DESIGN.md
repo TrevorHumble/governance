@@ -282,11 +282,13 @@ silently if copied unfixed. Each is resolved, not copied, as follows:
 3. **Critical-dependency list duplicated in three places, drift-guarded by a test.** Resolved by
    removing the duplication rather than re-guarding it: the list now lives in exactly one place,
    `repo-profile.json`'s `criticalDependencies` field; `.claude/rules/dependencies.md` and
-   `tools/classify-dep-pr-core.ps1` both defer to it instead of each declaring a copy. This
-   repo does not port `.github/dependabot.yml` at all (not in its Touches list), so the
-   third historical copy has no equivalent here to drift. `tests/classify-dep-pr.test.js` was
-   rewritten to prove the profile-supplied-list mechanism itself, including this repo's own
-   empty list, rather than cross-checking three string copies.
+   `tools/classify-dep-pr-core.ps1` both defer to it instead of each declaring a copy.
+   `.github/dependabot.yml` (governance#28) is the third historical copy's equivalent here, and it
+   carries no `exclude-patterns` today because `criticalDependencies` is `[]`: Dependabot cannot
+   read `repo-profile.json`, so a future non-empty list would have to be mirrored into
+   `dependabot.yml`'s `exclude-patterns` by hand, the same way a child repo already must.
+   `tests/classify-dep-pr.test.js` was rewritten to prove the profile-supplied-list mechanism
+   itself, including this repo's own empty list, rather than cross-checking three string copies.
 4. **`$VISUAL_SURFACE_GLOBS` hardcoded in `visual-surface.ps1`.** Resolved by non-porting:
    `tools/visual-surface.ps1`, `tools/check-visual-approval.ps1`,
    `tools/persist-visual-approval.ps1`, and `.claude/rules/visual-surface.md` are not part of

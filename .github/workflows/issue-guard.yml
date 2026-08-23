@@ -1,0 +1,70 @@
+name: Issue creation guard
+
+# Makes an issue opened outside the sanctioned flow conspicuous rather than
+# silently accepted, and flags without blocking: no close, no lock, nothing a
+# maintainer has to undo. The label lifecycle it enforces is stated in
+# CLAUDE.md, "Issue lifecycle marker".
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flag issues missing the needs-issue-review marker
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const labels = context.payload.issue.labels.map((label) => label.name);
+            const hasReviewMarker = labels.includes('needs-issue-review');
+
+            if (hasReviewMarker) {
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.issue.number;
+
+            // Attempt both calls even if the first throws. Otherwise a
+            // transient API error on the label leaves the issue carrying
+            // neither the label nor the comment explaining why it is flagged,
+            // which is the one outcome this workflow exists to prevent.
+            const failures = [];
+
+            try {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: ['unverified-issue'],
+              });
+            } catch (error) {
+              failures.push(error);
+            }
+
+            try {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body:
+                  'This issue was opened without the `needs-issue-review` label. ' +
+                  'Every sanctioned issue in this repo is born carrying that label ' +
+                  '(applied at `gh issue create` time) and it is cleared only after ' +
+                  'a recorded issue-review PASS. This issue lacked the marker, so it ' +
+                  'has been labelled `unverified-issue` for visibility. Route it ' +
+                  'through the review flow before treating it as ready work.',
+              });
+            } catch (error) {
+              failures.push(error);
+            }
+
+            if (failures.length > 0) {
+              throw failures[0];
+            }
