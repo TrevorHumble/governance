@@ -71,7 +71,7 @@ Maximum suspicion without a truth-guard produces confident garbage.
 - **Retract your own over-flags.** A false positive left standing is itself a failure.
   Unsupported praise and unsupported criticism are equally worthless.
 
-**Finding-quality bar.** Every blocker or major finding states a **concrete failure scenario**: a specific input or state, and the specific wrong outcome it produces. A blocker/major that names no failure scenario is downgraded to minor/nit until its author supplies one. **Precedence carve-out:** a finding that matches a named red flag in `standards/design-philosophy.md` (cited with the pattern name and quoted evidence, per that standard) is never downgraded below major: the pattern match is its failure scenario; that standard's never-downgrade rule governs. Symmetrically, a PASS is not a bare token: it cites evidence per checklist item (the check performed and what it showed).
+**Finding-quality bar.** Every blocker or major finding states a **concrete failure scenario**: a specific input or state, and the specific wrong outcome it produces. A blocker/major that names no failure scenario is downgraded to minor/nit until its author supplies one. **Precedence carve-out:** a finding that matches a named red flag in `standards/design-philosophy.md` (cited with the pattern name and quoted evidence, per that standard) is never downgraded below major: the pattern match is its failure scenario; that standard's never-downgrade rule governs, except for the rows that standard marks exempt (see § "Right-sizing: should this be here, what does it cost, is this the smallest shape" below). Symmetrically, a PASS is not a bare token: it cites evidence per checklist item (the check performed and what it showed).
 
 Worked example (a real finding): "The example plan step cites a file path that does not exist in this repo: an issue author copying the pattern sends the implementer to a phantom file." Scenario stated: who acts on it, and what goes wrong.
 
@@ -87,6 +87,54 @@ spawner must never" #5 below is the reader-side check on receipt. Neither half
 substitutes for the other. Both halves are judgment calls made by the people running the
 review, not a mechanized gate: there is no tooling that rejects an out-of-range citation
 before a verdict is recorded.
+
+---
+
+## Right-sizing: should this be here, what does it cost, is this the smallest shape
+
+Every review question in `standards/design-philosophy.md` asks whether a thing is built well.
+These three ask whether it should be here at all, and at this size. Apply them to every artifact
+in this protocol's scope, alongside the existing checks. Word the finding as a diagnosis, not a
+prosecution: an oversize change usually means the problem was not understood yet, not that someone
+was padding.
+
+**Necessity.** What breaks if this is not here? Name a thing that breaks, not a thing that might:
+"when X ships, Y breaks", never "someday someone might". Where it is unclear whether that evidence
+exists, go and look before raising the finding, and say which you did, looked or asked, the same
+duty `agents/orchestrator.md` § "How to write the report" places on the orchestrator. If the look
+turns up no instance, drop the finding rather than raising it hedged.
+
+**Cost of carry.** What will this cost in later bugs and follow-up work, weighed against what it
+buys? State both sides in the finding, not the cost alone. Source: Martin Fowler, "Yagni",
+https://martinfowler.com/bliki/Yagni.html, checked 2026-08-22, which names the four costs of a
+presumptive feature: build, delay, carry, repair. A close call the reviewer cannot settle goes
+where `standards/design-philosophy.md` § "Cost of carry: where a close call goes" sends it.
+
+**Sizing.** Would a simpler shape deliver the same outcome, and does the size of this change say
+the problem was understood? Name the simpler shape; a sizing finding without one is an opinion.
+
+**What bounds these three.**
+
+- A PASS with no findings is a valid outcome for a right-sized artifact. A reviewer that
+  manufactures a finding to look busy has failed this protocol, not satisfied it.
+- This lens adds a direction to attack in, never a reason to attack less. No finding reachable
+  before it is unreachable after, and review does not get faster, softer, or quicker to agree.
+- A finding citing `unforced complexity` or `ghost gate`, the two rows
+  `standards/design-philosophy.md` § "Red flags" carries for this lens, does **not** take the
+  precedence carve-out in § "Calibration: adversarial is not fabrication" above. It states a
+  concrete failure scenario like any other finding and is downgraded without one.
+- **The YAGNI limit.** None of these three questions, and neither of those two rows, reaches work
+  that makes the software easier to change. Martin Fowler, "Yagni",
+  https://martinfowler.com/bliki/Yagni.html, checked 2026-08-22: the principle "only applies to
+  capabilities built into the software to support a presumptive feature, it does not apply to
+  effort to make the software easier to modify." A refactor, a rename, a simplification, or a test
+  that buys future change is never findable under these questions or under either row. This
+  protocol is the home of that limit; `standards/design-philosophy.md` points here for it rather
+  than carrying its own copy.
+- Worked `Flag` / `Clean` pairs for both rows, each with a `Not a finding:` over-flag guard, live
+  in `standards/design-philosophy-examples.md` § "unforced complexity" and § "ghost gate". A
+  reviewer whose input contract lets it open that file reads the matching pair before classifying
+  a finding on either row.
 
 ---
 

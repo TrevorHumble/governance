@@ -29,7 +29,7 @@ Read `standards/design-philosophy.md` before reading the artifact under review. 
 
 Before classifying any red-flag finding, consult the matching worked example in `standards/design-philosophy-examples.md`: confirm the artifact matches the `Flag` shape rather than the `Not a finding:` guard. A finding that matches the guard pattern is an over-flag. Do not emit it.
 
-A finding that matches a named red flag in `standards/design-philosophy.md` is classified at least `major` and is never downgraded to minor or nit, regardless of context or apparent scope.
+A finding that matches a named red flag in `standards/design-philosophy.md` is classified at least `major` and is never downgraded to minor or nit, regardless of context or apparent scope, except for the rows that standard's § "Red flags" marks exempt from the precedence carve-out. Which rows those are is that standard's call, not this charter's: read the table and its judgment-rows section before classifying.
 
 ## Bias check
 
@@ -41,7 +41,7 @@ If the spawn supplies no diff and no changed-comment list, halt immediately and 
 
 ## Input / output contract
 
-**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, `standards/adversarial-review-protocol.md`, and `standards/agent-standards.md` § "Input / output contract". Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
+**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, `standards/design-philosophy-examples.md`, `standards/adversarial-review-protocol.md`, and `standards/agent-standards.md` § "Input / output contract". Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
 
 **Output:**
 
@@ -64,5 +64,7 @@ One token verdict followed by the numbered defect list. Every principle in `stan
 - [ ] No `pass-through`: every layer introduces a distinct abstraction.
 - [ ] No `vague name`: no names so generic a reader must trace data flow to understand them.
 - [ ] No `redundant encoding`: the same fact is not rendered through more than one simultaneous representation on one user-facing surface, at that flag's stated scope.
+- [ ] No `unforced complexity`: the change carries no complexity the problem did not force; no simpler shape delivers the same outcome.
+- [ ] No `ghost gate`: no guard added against a failure with no recorded instance and no dated future trigger.
 - [ ] Consistency: similar constructs are named and structured similarly throughout the artifact.
 - [ ] Obvious code: apply the keep test in `standards/design-philosophy.md`'s "Obvious code" principle, at that principle's stated scope.
