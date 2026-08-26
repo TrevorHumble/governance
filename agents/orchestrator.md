@@ -276,7 +276,9 @@ stop rule"; full mechanics live there, not restated here.
   releases its files. **When the halt ends the session** (a single-segment run, or the last segment still
   standing), the `[HALT]` entry carries the session's end-of-run report, in § "Report template"'s
   shape, folding in every note this worktree collected across every segment the session ran; it is
-  not a bare halt notice. **When the halt is per-segment inside a run that keeps going**
+  not a bare halt notice, and it is written only after the late-note pass has run when its
+  trigger holds (§ "No agent files its own issue" rule 4): a halt hands the owner no
+  unchallenged note either. **When the halt is per-segment inside a run that keeps going**
   (`agents/orchestrator/autonomous-timed-run.md` § "A halt is per-segment, never a run exit"), the
   `[HALT]` entry logs the halt only; the session continues with its next segment inside the same
   worktree, and the end-of-run report is not emitted until the session itself ends, per rule 4
@@ -426,11 +428,32 @@ When an agent hits a problem mid-run:
    working. Finish the assigned issue. The problem does not stop the run and does not reach the
    board on the way. A spawned agent returns its notes to the orchestrator in its handoff (the
    route every agent spec's contract must state per `standards/agent-standards.md` § "Input /
-   output contract"); the orchestrator holds them until the run ends. The orchestrator appends the
+   output contract"); the orchestrator holds them until the run ends.
+   **Three pre-checks before a note may exist at all.** Before writing any note, the
+   orchestrator checks, in order: the `## Notes` section already on the current issue (a
+   duplicate points at the existing entry, no fresh text); the recorded declines in the
+   `owner-declines.md` of the repo the note belongs to (a recorded decline suppresses the note
+   entirely, per rule 4 below; `tools/note-check-core.ps1` mechanizes the match); and the open
+   issues of that repo, which may be the parent governance repo rather than the repo being
+   worked in, in one `gh issue list --state open --limit 100 --json number,title,labels,body`
+   call; a result of exactly the limit's row count may be truncated, so re-run with a higher
+   `--limit` until the count comes back below it, never treating a full page as complete (an
+   open issue already
+   covering it means the report points at that issue instead of raising it fresh).
+   **A note is written in two places.** The orchestrator appends the
    note to `.run_state/notes.md` in the worktree it is running in, the moment it takes or receives
    one. Nothing in the file is ever truncated or deleted. A note held only in the orchestrator's
    own context does not survive a compaction, so persisting it immediately, not at report time, is
-   what makes it survive one.
+   what makes it survive one. It also appends the note to the current GitHub issue's body under a
+   `## Notes` heading (`gh issue edit --body-file`), in the same breath, carrying the note's
+   normalized one-line substance and the agent's written justification for setting it aside: why
+   it is not a caused defect (disposition 1), why the size rule's branches do not permit it
+   (branch 4, or not a file edit), and, when the agent judges it, a stated confidence that the
+   right answer is do-nothing. The gitignored file is the crash-safe record; the issue body is
+   the reviewed one: every later review round's briefing carries it (the notes-under-challenge
+   briefing field, `standards/adversarial-review-protocol.md` § "De-bias the setup"), each
+   gating reviewer rules on it, and any
+   reviewer can overrule the deferral per that protocol's § "Finding disposition".
    **The unit is the session, not the issue.** The pipeline creates one worktree per session
    (§ "Isolation precondition" above; `.claude/commands/build.md` Step 0 cuts it once, and a Step
    0b governance sync never re-cuts it, per `standards/governance-sync.md` § "After merge": a
@@ -442,7 +465,33 @@ When an agent hits a problem mid-run:
    four-option shape below. This is the old `fix-now` case: a defect that stops the current task's
    correctness or safety and cannot be worked around. The run halts, the halt is logged per §
    "Stop condition" above, and the owner decides. A blocked agent is never trapped and never files.
-4. **At the end of the session,** report every note with all four options, each a percentage, the four
+4. **At the end of the session,** first run the late-note pass, then report.
+   **Late-note pass.** When the trigger owned by `standards/adversarial-review-protocol.md`
+   § "Reviewer count by artifact"'s Late-note pass bullet holds, dispatch `agents/reviewer-notes.md` (one instance,
+   over the notes only) before writing the report; the bullet also owns the pass's exemptions,
+   not restated here. Its rulings dispose exactly as an in-round challenge does: overruled means
+   handled now; agreed-drop means gone; upheld means reported. An `OVERRULE` ruled after this
+   session already shipped is still handled in this session, in this worktree: the fix commits
+   referencing the same issue, takes a scoped re-check, and ships through the same mode, unless
+   the re-checked facts confirm the size rule's branch 4 or not-a-file-edit, in which case the
+   classification-contest bound resolves it to wait-or-report.
+   **Confident drop.** A note whose own justification states over-70-percent confidence in
+   do-nothing is dropped entirely, never appearing in the report, when the reviewer that saw it
+   (in-round or in the late-note pass) agrees. The agent alone may not drop it: an agent silently
+   dropping its own findings is the same unaudited exit this rule exists to close. A dropped
+   note stays in `.run_state/notes.md` and the issue's `## Notes` section as the audit trail.
+   **Recording a decline.** When the owner answers a report note with leave-it-alone, the
+   orchestrator appends one line to the `owner-declines.md` of the repo the note belongs to: the
+   date, the note's normalized one-line substance verbatim, and the owner's answer. Only the
+   owner's answer puts a line there; no agent adds one on its own initiative. An item recorded
+   there is never raised again (pre-check 2 in rule 2 above). **Across the wall:** a session
+   working in one repo reads another repo's declines without a checkout, via
+   `gh api repos/<owner>/<repo>/contents/owner-declines.md`; a missing or unreadable file reads
+   as zero declines, failing toward asking rather than suppressing. A decline belonging to a
+   repo this session cannot commit to is recorded by that repo's own next run; until then it
+   lives only in the owner's answer, so he may be asked once more, never twice by the same
+   repo.
+   **The report.** Report every surviving note with all four options, each a percentage, the four
    summing to 100:
    - **Nothing:** no fix; knowing what does not matter is the best answer available and is right
      more often than the other three.

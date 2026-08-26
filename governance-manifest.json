@@ -26,6 +26,7 @@
     "tools/governance-sync.ps1",
     "tools/issue-core.ps1",
     "tools/new-agent-worktree.ps1",
+    "tools/note-check-core.ps1",
     "tools/ownership-core.ps1",
     "tools/repo-profile-core.ps1",
     "tools/setup-hooks.ps1",
@@ -59,7 +60,8 @@
     "CLAUDE.md",
     "CLAUDE.local.md",
     "DESIGN.md",
-    ".claude/settings.json"
+    ".claude/settings.json",
+    "owner-declines.md"
   ],
   "classes": {
     "standards/**": "content",
@@ -87,6 +89,7 @@
     "tools/governance-sync.ps1": "content",
     "tools/issue-core.ps1": "content",
     "tools/new-agent-worktree.ps1": "content",
+    "tools/note-check-core.ps1": "content",
     "tools/ownership-core.ps1": "content",
     "tools/repo-profile-core.ps1": "content",
     "tools/setup-hooks.ps1": "content",

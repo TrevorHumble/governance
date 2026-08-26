@@ -121,6 +121,17 @@ protect, and was retired. Review practice continued; only the machinery that tri
 happened was removed. This repo starts from that lesson already learned rather than repeating the
 experiment: review practice is real, only the "prove it happened" layer is deliberately absent.
 
+**Note challenging is judgment, mostly unmechanized.** Every end-of-run note is meant to be
+challenged by a reviewer other than the agent that wrote it (`agents/orchestrator.md` § "No agent
+files its own issue"; `standards/adversarial-review-protocol.md` § "Finding disposition",
+"Challenging a deferral"; `agents/reviewer-notes.md`). What is mechanized and tested is only the
+exact-match layer: a recorded decline in `owner-declines.md` suppressing a note, and an open
+issue's title or `Touches` line covering one, both on the normalized one-line substance key
+(`tools/note-check-core.ps1`, pinned by `tests/note-check.test.js`). Whether a justification
+holds, whether the late-note pass was actually dispatched, and whether a confident drop was
+agreed to are reviewer and orchestrator judgment, instruction-enforced like the rest of review
+practice above; no gate proves they happened.
+
 ---
 
 ## What the checks cannot answer, where you are the eye after the fact

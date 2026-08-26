@@ -793,3 +793,42 @@ issue number yields) rather than prevented, which would need a real lock service
 offer. The claim protocol itself is instruction-enforced, unmechanized (`WHAT-IT-CHECKS.md`
 posture); only the decisions are mechanized, in `tools/file-claim-core.ps1`, so tests can pin
 them.
+
+## Note challenging (issue #46)
+
+`agents/orchestrator.md` § "No agent files its own issue" owns the mechanics; this section
+records why they are built this way.
+
+**The problem.** An owner-supplied post-mortem from another repo diagnosed the notes list as the
+one disposition nothing audits: a fix is reviewed, a widening is checked, a filed issue must
+justify itself, and a note reaches the owner unread by anyone. In a pipeline this instrumented,
+the unaudited exit is the one work drains out of. #45 shrank what may become a note (a fix the
+size rule permits is made); this puts a reader on everything that still leaves.
+
+**Why the challenger rides in briefings rather than as a separate stage.** A dedicated note-review
+stage would be one more round to skip under time pressure, and its reviewer would see notes cold.
+The round reviewers are already reading the artifact the note was set aside from, so the note and
+its justification travel as the notes-under-challenge briefing field, every gating reviewer
+rules on each note (silence is not a challenge), and any of them can overrule; a
+separate stage exists only for the tail case (the late-note pass) where no ruling arrived.
+
+**Why the late-note pass is exempt from round counting and the size bound.** Its trigger is
+exactly "the run already finished reviewing": counting it as a round would make the runs that most
+need it (long ones, with late notes) the ones entitled to skip it, and its input is notes, not a
+staged diff, so the 400-line shortstat bound has nothing to measure.
+
+**Why declines live in a tracked root file.** A memory file is invisible to review and lost to a
+fresh worktree; a tracked `owner-declines.md` is diffable, reviewable, and synced nowhere
+(per-repo state, excluded from sync by the governance manifest), and only the owner's answer
+appends to it. The match key is the note's normalized one-line substance. Suppression fires
+before any reviewer sees the note, so the decline lookup and the title match compare exactly:
+containment would let one decline or one issue title silently swallow every note whose substance
+is a fragment of it. The one sanctioned containment is the Touches-line match, which fires only
+when the whole substance is a fragment of that line, the substance-names-only-the-file case.
+Anything beyond these is left to reviewer judgment.
+
+**Accepted costs.** Reviewer judgment of a justification, the late-note dispatch, and the
+confident-drop agreement are instruction-enforced, unmechanized (`WHAT-IT-CHECKS.md` posture).
+The 70-percent confident-drop bar is the owner's own number; a reviewer's agreement is what makes
+a drop legitimate, because an agent silently dropping its own findings is the same unaudited exit
+this design closes.
