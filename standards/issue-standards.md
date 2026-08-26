@@ -97,8 +97,9 @@ live hold.
 The orchestrator applies the label the moment issue review passes (the same moment
 `needs-issue-review` is cleared), and checks the board for competing claims before implementation
 starts: `gh issue list --state open --limit 100 --json number,labels,body` returns every open
-issue's number, labels, and `Touches:` line in one call. A result of exactly 100 rows may be
-truncated: page until the listing is exhausted before treating any file as free.
+issue's number, labels, and `Touches:` line in one call. A result of exactly the limit's row
+count may be truncated: re-run with a higher `--limit` until the count comes back below it,
+never treating a full page as complete, before treating any file as free.
 
 ### The release rule
 
