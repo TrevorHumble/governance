@@ -48,10 +48,13 @@ HOUSE RULES (the few things we do need held firm)
 
 - Tag the tree wave-$ARGUMENTS before you begin: our rollback point and your
   diff anchor.
-- This session doesn't change source code. What you find becomes report notes, priced per
-  agents/orchestrator.md's "No agent files its own issue" report shape, not GitHub issues filed on
-  your own initiative; that includes documentation rot. The owner decides from your priced options
-  which notes graduate onto the board, milestoned into our batch schedule.
+- This session doesn't change source code, deliberately: it is a read-only audit with no issue,
+  no `Touches` list, and no claim, so the size rule (standards/issue-standards.md § "The file
+  claim and the size rule") does not open its fix-it doors here. What you find becomes report
+  notes, priced per agents/orchestrator.md's "No agent files its own issue" report shape, not
+  GitHub issues filed on your own initiative; that includes documentation rot. The owner decides
+  from your priced options which notes graduate onto the board, milestoned into our batch
+  schedule.
 - Where you assert something, we'd like to see the run that showed it to you.
 
 THE REPORT

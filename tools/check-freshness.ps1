@@ -117,6 +117,9 @@ if ($MyInvocation.InvocationName -ne '.') {
   $mergeBase = "$(& git merge-base $RemoteDefault HEAD 2>$null)".Trim()
   $explicitTouches = @()
   if ($Touches) {
+    # A richer Touches parse (backtick/annotation stripping, canonical-form
+    # normalization) lives in tools/file-claim-core.ps1's
+    # ConvertFrom-TouchesLine; a change to either parse belongs in both.
     $explicitTouches = @($Touches -split ',\s*' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
   }
   # NOTE: capture git's line-per-file output directly as an array (no

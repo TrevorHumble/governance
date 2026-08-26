@@ -98,12 +98,23 @@ split merely because it feels large. The approval is recorded at step 3 per that
    (see `.claude/skills/github-write/SKILL.md`). After the issue-review PASSes, clear the marker:
    `gh issue edit <N> --remove-label needs-issue-review`.
 4. **Issue review**: spawn exactly **one** `agents/reviewer-issue.md` (Opus) per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Issues always use a single reviewer, never a panel. Fix every blocking defect. Re-review with a fresh reviewer instance. A FAIL is fixed, never overridden.
+   On PASS, apply the file claim per `standards/issue-standards.md` § "The file claim and the
+   size rule": stamp the issue's `active-<N>-*` claim label (shape owned by that section) in the
+   same breath as clearing
+   `needs-issue-review`, then check the board for competing claims on this issue's `Touches`
+   files. If another run's live claim holds any of them, this build has already banked its issue
+   review; it waits for the hold to release (or clears a stale one, per that section's release
+   rule) rather than starting implementation into a collision.
 5. **Implementation**: spawn `agents/implementation-agent.md` (Sonnet) with full handoff: the
    passing issue and all prior-art file paths.
-6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per § "Model policy" below. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "One-round stop rule". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same one-round stop rule. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated.
+6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per § "Model policy" below. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "One-round stop rule". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same one-round stop rule. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated. Dispatching a review round is a claim re-stamp event: refresh the issue's `active-<N>-*` label per `standards/issue-standards.md` § "The file claim and the size rule" release rule.
 7. **Commit**: once per run, before the first commit, confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1`; never proceed assuming a gate that isn't on; an unconfigured clone enforces nothing). On the reviewers' PASS (and, for a blocker/major finding, once it is fixed and confirmed per the one-round stop rule), `git commit` with a short message that includes `(#N)` referencing the issue. **`commit-msg` checks that the commit message names a GitHub issue**: a code commit with no `(#N)`, closing keyword, or `issue-N` branch is blocked; a doc-only (`*.md`) commit is exempt. **`pre-commit` checks that the commit stages no parent-owned governance path**, per `standards/ownership-map.md`; once the launcher probe and the profile parse both succeed, it exits cleanly on a governance-sync branch (the exemption that applies in a child, since `governanceHome` is never `self` there) or in the governance home itself. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
+   Committing and pushing are both claim re-stamp events: refresh the issue's `active-<N>-*`
+   label at each, per `standards/issue-standards.md` § "The file claim and the size rule".
    Then **close the GitHub issue** for this work (`gh issue close`, referencing the commit) so the board
-   matches reality. The board is kept current at every transition: issue created, `gh issue` opened;
+   matches reality, and delete the issue's `active-<N>-*` label per that same section's release
+   rule (clear on ship or close; a halt clears it too, per § "Stop condition"). The board is kept
+   current at every transition: issue created, `gh issue` opened;
    committed to the default branch, `gh issue` closed.
    - **Ship flow: defers to `repo-profile.json`'s `shipMode` field; no step here asserts which
      mode is operative.** In `shipMode: "pr"`, push the branch and run `gh pr create` to open a
@@ -260,7 +271,9 @@ stop rule"; full mechanics live there, not restated here.
   "Finding disposition" for what counts as in-scope-fixable vs. taste vs. genuinely separable.
 - **Impasse.** If a segment cannot reach PASS after two full re-review rounds on the same blocker/major
   finding, halt the segment and log it in `BUILDLOG.md`: a halt is not an acceptance; the work is not
-  committed. **When the halt ends the session** (a single-segment run, or the last segment still
+  committed. A halt also clears the halted issue's `active-<N>-*` claim label, per
+  `standards/issue-standards.md` § "The file claim and the size rule" release rule: a stopped run
+  releases its files. **When the halt ends the session** (a single-segment run, or the last segment still
   standing), the `[HALT]` entry carries the session's end-of-run report, in § "Report template"'s
   shape, folding in every note this worktree collected across every segment the session ran; it is
   not a bare halt notice. **When the halt is per-segment inside a run that keeps going**
@@ -281,8 +294,8 @@ or comment this run's own diff just falsified is a direct consequence of the cha
 `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's widening, not
 routed to a new issue, and recorded on the `Touches` lines per that section. A defect in the
 repo's own machinery that this run merely encountered, not caused by its diff, is a different
-trigger and is routed through § "No agent files its own issue" below: a report note, not a new
-issue.
+trigger and is routed through § "No agent files its own issue" below, which tries the size rule's
+fix-it doors before any note exists: a fix in this run or a report note, never a new issue.
 
 ---
 
@@ -398,13 +411,18 @@ points here rather than restating it.
 When an agent hits a problem mid-run:
 
 1. **Fix it first.** If the fix is small and sits in a file on the current issue's `Touches` list,
-   make it. **One exception, and it is not a note:** a defect your own change caused outside
-   `Touches`, a cross-reference your diff just falsified, is repaired inside this change under
+   make it. Outside that list, two doors still lead to a fix instead of a note, and both are
+   tried before any note exists. **A defect your own change caused** outside `Touches`, a
+   cross-reference your diff just falsified, is repaired inside this change under
    `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's recorded
-   widening. Surface it, the orchestrator records the widening, and the fix lands here. A
-   regression an agent caused never leaves as a report note. Trying the fix is the first ask, not
-   the last resort.
-2. **If it will not fix in place, and the agent did not cause it,** carry it as a note and keep
+   widening: surface it, the orchestrator records the widening, and the fix lands here; a
+   regression an agent caused never leaves as a report note. **A defect nobody caused here** goes
+   through the size rule (`standards/issue-standards.md` § "The file claim and the size rule",
+   the single owner of its branches and threshold): when one of its permitting branches covers
+   the fix, the orchestrator records the size-rule claim and the fix is made in this run. Trying
+   the fix is the first ask, not the last resort.
+2. **If neither door opens** (the fix is one the size rule's branch 4 forbids, a large change to
+   a file another run holds, or it is not a file edit at all), carry it as a note and keep
    working. Finish the assigned issue. The problem does not stop the run and does not reach the
    board on the way. A spawned agent returns its notes to the orchestrator in its handoff (the
    route every agent spec's contract must state per `standards/agent-standards.md` § "Input /

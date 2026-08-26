@@ -541,7 +541,11 @@ A finding may be deferred only if fixing it requires genuinely separable new sco
   condition no matter how untouched the file it lands in is. Reading the two conditions as
   severable, and deferring a caused defect solely because the file lay outside the diff's touched
   set, is a known failure mode; disposition 1's widening, below, is where a caused defect goes
-  instead.
+  instead. And "sits in code this change does not touch" is itself narrowed by the size rule
+  (`standards/issue-standards.md` § "The file claim and the size rule", the single owner of its
+  branches and threshold): a pre-existing defect whose fix any of that rule's permitting branches
+  covers is fixed under it rather than deferred; only a fix its branch 4 forbids (a large change
+  to a file another run holds) still becomes a note through this disposition.
 
 **A deferred finding becomes a report note**, by whatever route the noticing agent's own spec
 defines for handing a note upward (for example `.claude/skills/capture-system-defect/SKILL.md`
@@ -589,6 +593,14 @@ PR on its own). A `Touches` line in the wedding-scavenger-hunt repo's own issue 
 found the honest-description doc must name the new blocking gate, a direct consequence of the
 change`, a wording pattern worth following here too.
 
+This paragraph owns a second sanctioned record type alongside the disposition-1 widening: the
+**size-rule claim**, made under `standards/issue-standards.md` § "The file claim and the size
+rule" branches 2 and 3 when a run takes a free file mid-run. It lands in the same two `Touches`
+lines and the same wording shape, but its stated reason cites the size rule, not a repair of a
+caused defect (example: `added mid-run under issue-standards file-claim branch 2: 6-line fix in a
+free file`), and a reviewer verifies it against that rule (the file was free, the size fits the
+branch) instead of against disposition 1.
+
 **Worked example: fix in place.** A reviewer finds: "this PR's diff moves a handler from one
 file to another, but the comment block this same diff adds two lines above still names the old
 file path: a reader following the comment lands on a file this PR deleted." The cited file's
@@ -599,8 +611,9 @@ above: a trivial, in-diff fix routed around the review instead of made in it.
 **Worked example: defer.** A reviewer finds: "an unrelated module, untouched by this PR,
 computes tie-breaks with a comparator that silently mis-ranks entries sharing a timestamp,
 unrelated to the change under review." The defect lives in code this change never
-touches, and fixing it is a separate correctness fix to a different subsystem with its own test
-surface. Disposition: defer, as a report note; the owner decides from its priced options whether
+touches, another run's live claim holds that module, and the fix runs well past the size rule's
+threshold: its branch 4, the one case still deferred. Fixing it is a separate correctness fix to
+a different subsystem with its own test surface. Disposition: defer, as a report note; the owner decides from its priced options whether
 it graduates into a new issue.
 
 **Severity labels.** `severity:major` is restored to its narrow definition: crash, data-loss, or

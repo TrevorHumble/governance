@@ -20,6 +20,13 @@ not where it goes: it is fixed in place under `standards/adversarial-review-prot
 and where it lands), rather than captured as a note. Use this skill only for a defect your current
 diff did not cause.
 
+**Small, or in a file nobody holds? Also the wrong door.** Before writing any note, run the fix
+through the size rule (`standards/issue-standards.md` § "The file claim and the size rule", the
+single owner of its branches and threshold): a fix any of its permitting branches covers is made
+under that rule, in this run, and never becomes a note. This skill captures only what its branch
+4 forbids fixing now (a large change to a file another run holds), plus defects that are not file
+edits at all (a process step, an external behavior).
+
 ## Step 1: identify and describe the defect
 
 Write a one-paragraph description covering:
@@ -45,8 +52,12 @@ the branch. Basis: the current task cannot complete correctly (no commit can lan
 workaround that does not involve bypassing the gate, so halt and report right then.
 
 **Scenario (does not block):** during the same run you notice `agents/researcher.md` cites a
-section header that was renamed two merges ago. Basis: the stale pointer does not block the
-current task, you found the right section anyway, so carry it as a note and keep going.
+section header that was renamed two merges ago; the stale name threads through a dozen lines of
+that file, and another run's live claim holds it with a rewrite in flight (the size rule's
+branch 4). Basis: the stale pointer does not block the
+current task, you found the right section anyway, and the size rule forbids the fix right now, so
+carry it as a note and keep going. Were the file free, or the fix small, the size rule would make
+this a fix, not a note.
 
 ## Step 3: write the note
 

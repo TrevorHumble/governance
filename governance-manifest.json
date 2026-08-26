@@ -21,6 +21,7 @@
     "tools/check-freshness.ps1",
     "tools/classify-dep-pr-core.ps1",
     "tools/classify-dep-pr.ps1",
+    "tools/file-claim-core.ps1",
     "tools/governance-sync-core.ps1",
     "tools/governance-sync.ps1",
     "tools/issue-core.ps1",
@@ -81,6 +82,7 @@
     "tools/check-freshness.ps1": "content",
     "tools/classify-dep-pr-core.ps1": "content",
     "tools/classify-dep-pr.ps1": "content",
+    "tools/file-claim-core.ps1": "content",
     "tools/governance-sync-core.ps1": "content",
     "tools/governance-sync.ps1": "content",
     "tools/issue-core.ps1": "content",
@@ -101,20 +103,62 @@
   "classesDefault": "structure",
   "arrivesAsStructure": ["standards/ownership-map.md", ".githooks/pre-commit"],
   "repoProfileFields": [
-    { "name": "preReview", "type": "string" },
-    { "name": "surfaceGlobs", "type": "array of strings" },
-    { "name": "shipMode", "type": "string" },
-    { "name": "criticalDependencies", "type": "array of strings" },
-    { "name": "criticalPaths", "type": "array of strings" },
-    { "name": "ciCheckNames", "type": "array of strings" },
-    { "name": "docCurrencyPaths", "type": "array of strings" },
-    { "name": "goalsDoc", "type": "string" },
-    { "name": "checkCommands", "type": "object" },
-    { "name": "ghPath", "type": "string" },
-    { "name": "defaultBranch", "type": "string" },
-    { "name": "governanceHome", "type": "string" },
-    { "name": "syncIssue", "type": "positive integer" },
-    { "name": "acknowledgedDivergentPaths", "type": "array of strings" }
+    {
+      "name": "preReview",
+      "type": "string"
+    },
+    {
+      "name": "surfaceGlobs",
+      "type": "array of strings"
+    },
+    {
+      "name": "shipMode",
+      "type": "string"
+    },
+    {
+      "name": "criticalDependencies",
+      "type": "array of strings"
+    },
+    {
+      "name": "criticalPaths",
+      "type": "array of strings"
+    },
+    {
+      "name": "ciCheckNames",
+      "type": "array of strings"
+    },
+    {
+      "name": "docCurrencyPaths",
+      "type": "array of strings"
+    },
+    {
+      "name": "goalsDoc",
+      "type": "string"
+    },
+    {
+      "name": "checkCommands",
+      "type": "object"
+    },
+    {
+      "name": "ghPath",
+      "type": "string"
+    },
+    {
+      "name": "defaultBranch",
+      "type": "string"
+    },
+    {
+      "name": "governanceHome",
+      "type": "string"
+    },
+    {
+      "name": "syncIssue",
+      "type": "positive integer"
+    },
+    {
+      "name": "acknowledgedDivergentPaths",
+      "type": "array of strings"
+    }
   ],
   "shelfRoots": ["docs/", "tools/", "scripts/", "skills/"]
 }

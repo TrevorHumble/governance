@@ -123,7 +123,11 @@ This repo is the global source of truth for governance. The rules, settled by th
   `.github/workflows/issue-guard.yml` applies it at runtime, to an issue opened without
   `needs-issue-review`. Dependabot separately auto-creates `dependencies`, `javascript`, and
   `github_actions` on its first pull request; those are not pipeline labels and are not counted in
-  the nine.
+  the nine. A tenth label shape, the per-run `active-<N>-*` claim label (its exact form owned by
+  `standards/issue-standards.md` § "The file claim and the size rule"), is not provisioned up
+  front and is not counted in the nine either: it is created per-run when an issue's review
+  passes, renamed at each re-stamp, and deleted when the run releases its files, per that
+  section.
 - **Local governance convention.** Every child repo (and this repo itself, on any given machine)
   keeps its own gitignored `CLAUDE.local.md` for per-machine notes only (a local gh path, other
   machine-specific values); a fresh worktree never contains it, so nothing a build needs to act on
