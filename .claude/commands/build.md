@@ -90,7 +90,12 @@ too, per `standards/issue-standards.md` § "The file claim and the size rule"). 
 itself is not written here; the fragment written above carries this ship's record until
 `/buildlog` folds it in.
 
-**9: Report.** Once the session's work ends, wrap, ship, or halt, emit the end-of-run report, once
+**9: Report.** Once the session's work ends, wrap, ship, or halt, first run the late-note pass
+when its trigger holds, per `agents/orchestrator.md` § "No agent
+files its own issue" rule 4 (the trigger and its exemptions are owned by
+`standards/adversarial-review-protocol.md` § "Reviewer count by artifact"'s Late-note pass
+bullet; a session-ending halt runs it too, before its `[HALT]` report). Then
+emit the end-of-run report, once
 and only once per session, per `agents/orchestrator.md` § "No agent files its own issue", § "How
 to write the report", and § "Report template". A session-ending halt's report already travels in
 its `[HALT]` entry, so this step adds nothing there. The session's work ends when it stops working

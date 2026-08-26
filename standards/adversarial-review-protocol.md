@@ -47,9 +47,14 @@ away from problems you didn't anticipate. Say "assume failure, look hard."
 listed is itself a finding."
 
 **Sanctioned briefing fields.** The fields a briefing may carry that are never by themselves a
-bias finding are the single Objective line (defined in § "Spawning a reviewer") and a
+bias finding are the single Objective line (defined in § "Spawning a reviewer"), a
 well-formed overage declaration (a measured number plus its atomic reason, defined in §
-"Review-size bound"). This list is owned here; a reviewer judges a briefing's other content
+"Review-size bound"), and the notes-under-challenge field (the current issue's `## Notes`
+entries, each note with its set-aside justification, defined in § "Spawning a reviewer"). The
+notes field does not lead the witness, which is why it is sanctioned: it declares a disposition
+the reviewer is asked to judge, rather than pointing at a part of the artifact suspected weak;
+judging deferrals is part of every reviewer's job (§ "Finding disposition", "Challenging a
+deferral"). This list is owned here; a reviewer judges a briefing's other content
 against this section's rules as before.
 
 This is a spawning discipline the orchestrator follows on every briefing: no evidence
@@ -179,6 +184,16 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
   the round-validity consequence of a scope mismatch): § "Spawning a reviewer" -
   Briefing audit, below. Status of its judgment findings: § "Advisory-lens lifecycle"
   below.
+- **Late-note pass** (`agents/reviewer-notes.md`) -> **1** reviewer over the notes only,
+  dispatched once at the end of the session's work (a wrap, a ship, or a session-ending halt
+  alike), before the end-of-run report is written, whenever any note lacks an explicit per-note
+  ruling from a round reviewer (§ "Finding disposition", "Challenging a deferral"; a session
+  that ran zero review rounds qualifies trivially). This bullet is the trigger's one home;
+  `agents/orchestrator.md` § "No agent files its own issue" rule 4 owns the dispatch mechanics
+  and points here rather than restating the trigger. It sits **outside** § "One-round stop
+  rule"'s round counting and **outside** § "Review-size bound": an already-long run never skips
+  it for being one round too many, and its input is notes, not a staged diff, so no shortstat
+  measure applies. Its rulings dispose per § "Finding disposition", "Challenging a deferral".
 - **Architecture lens** (`agents/reviewer-architecture.md`) -> runs alongside the code,
   round-1 reviewers (above) at PR-review time whenever the change adds a new component
   (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change,
@@ -416,6 +431,9 @@ Objective: <one-line goal the artifact is judged against, per § "De-bias the se
 the goal only, never the mechanisms>
 Overage declaration (optional; state only when this round's measured size exceeds §
 "Review-size bound"): <measured number> lines under review, atomic reason: <the atomic reason>
+Notes under challenge (optional; state only when the linked issue carries `## Notes` entries):
+the issue's `## Notes` entries pasted verbatim, each note's substance and its set-aside
+justification, nothing added or trimmed
 
 Artifact(s) under review (complete list, anything missing from the artifact
 itself is a finding):
@@ -546,6 +564,29 @@ A finding may be deferred only if fixing it requires genuinely separable new sco
   branches and threshold): a pre-existing defect whose fix any of that rule's permitting branches
   covers is fixed under it rather than deferred; only a fix its branch 4 forbids (a large change
   to a file another run holds) still becomes a note through this disposition.
+
+**Challenging a deferral.** A note and its set-aside justification ride under every reviewer of
+the round (the notes-under-challenge briefing field, § "De-bias the setup"), and ruling on them
+is a duty, not an option: a gating reviewer whose briefing carries the field returns one ruling
+line per note, from the vocabulary owned here, `OVERRULE` (the item must be handled in this
+run), `DROP` (the note's own justification states the confidence the confident-drop rule
+requires, `agents/orchestrator.md` § "No agent files its own issue" rule 4, and this reviewer
+agrees), or `UPHOLD` (the deferral holds; the note belongs in the report). A note is
+**challenged** only when it has an explicit ruling: reviewer silence on a briefed note is not a
+challenge, not an agreement to drop, and leaves the note eligible for the late-note pass. Split
+rulings resolve by severity, dropping being the most consequential outcome: any `OVERRULE`
+defeats every other ruling, and any `UPHOLD` defeats a `DROP`, so a note is dropped only when
+every reviewer that ruled on it ruled `DROP`; the orchestrator, the audited party, never picks
+between reviewers. Any
+one reviewer's `OVERRULE` binds
+the orchestrator the same way a blocker does, and a reviewer is expected to use this power, not
+to defer politely. The overrule contests the note's classification, not the size rule itself: the
+ruling routes the item back through disposition 1 or the size rule's branches, whichever the
+re-checked facts support, and when those facts confirm the size rule's branch 4 (a large fix in a
+file another run holds) or not-a-file-edit, the ruling resolves to wait-or-report rather than
+binding, so a correctly-classified note can never wedge a run on an unsatisfiable blocker. A note
+taken after the round closed is challenged by the late-note pass instead
+(`agents/reviewer-notes.md`, § "Reviewer count by artifact").
 
 **A deferred finding becomes a report note**, by whatever route the noticing agent's own spec
 defines for handing a note upward (for example `.claude/skills/capture-system-defect/SKILL.md`
