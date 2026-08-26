@@ -235,10 +235,11 @@ function Get-CiGateStatus {
   if ($declared.Count -eq 0) {
     return [PSCustomObject]@{ Armed = $false; Reason = 'ciCheckNames is empty in repo-profile.json; nothing declared to require' }
   }
-  # This reads required_status_checks.checks; tools/apply-branch-protection.ps1:112
-  # is this read site's twin, writing that same field and reading it back with
-  # the identical .required_status_checks.checks path. No shared home exists
-  # for the two reads (recorded gap, the governance repo's DESIGN.md §
+  # This reads required_status_checks.checks; the $readBack read in
+  # tools/apply-branch-protection.ps1 is this read site's twin, reading that
+  # same field back with the identical .required_status_checks.checks path,
+  # and the --input PUT above it is what writes the field. No shared home
+  # exists for the two reads (recorded gap, the governance repo's DESIGN.md §
   # "Merge-on-green sync (issue #15)"): a GitHub field rename must fix both
   # call sites by hand.
   $checksOut = & $Gh api "repos/{owner}/{repo}/branches/$DefaultBranch/protection" --jq '.required_status_checks.checks | map(.context)' 2>$null

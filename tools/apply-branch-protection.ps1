@@ -26,8 +26,46 @@ param(
   # tools/check-freshness.ps1's -Touches param avoids the same way). Split it
   # ourselves below.
   [string]$RequiredChecks,
-  [switch]$EmitPayload
+  [switch]$EmitPayload,
+  # Offline seam extension (issue #17): write the payload to this path instead
+  # of stdout, then exit before any network call. Requires -EmitPayload; see
+  # the guard below.
+  [string]$PayloadPath
 )
+
+# -PayloadPath without -EmitPayload is a caller mistake, not a silent
+# fall-through to a live PUT: catch it before repo-slug resolution so nobody
+# reaches a network call while expecting an offline dry run. Checked via
+# ContainsKey, not truthiness: -PayloadPath '' is still a caller mistake, and
+# this is the same emptiness contract the -EmitPayload branch below uses for
+# the same parameter.
+if ($PSBoundParameters.ContainsKey('PayloadPath') -and -not $EmitPayload) {
+  [Console]::Error.WriteLine('apply-branch-protection: -PayloadPath requires -EmitPayload')
+  exit 1
+}
+
+# Write-PayloadFile: the file's only payload-write site. Windows PowerShell
+# 5.1's `Set-Content -Encoding utf8` emits a UTF-8 BOM, which GitHub's JSON
+# parser rejects with a 400; this write never does. Do not add a second write
+# expression here -- tests/apply-branch-protection.test.js asserts exactly
+# one WriteAllText call.
+function Write-PayloadFile {
+  param(
+    [Parameter(Mandatory = $true)] [string]$Path,
+    [Parameter(Mandatory = $true)] [string]$Json
+  )
+  # [System.IO.File]::WriteAllText resolves a relative path against the .NET
+  # process directory, not PowerShell's current location; anchor it here.
+  if (-not [System.IO.Path]::IsPathRooted($Path)) {
+    $Path = Join-Path (Get-Location).ProviderPath $Path
+  }
+  try {
+    [System.IO.File]::WriteAllText($Path, $Json, (New-Object System.Text.UTF8Encoding($false)))
+  } catch {
+    [Console]::Error.WriteLine("apply-branch-protection: failed to write payload to '$Path': $($_.Exception.Message)")
+    exit 1
+  }
+}
 
 # Resolve the gh path and the default branch/required-checks fallback from
 # repo-profile.json, never hardcoded, so this tool works unmodified in any
@@ -86,11 +124,21 @@ if ($json -notmatch '"restrictions"\s*:\s*null') {
   exit 1
 }
 
-# -EmitPayload is the offline-testable seam: print the exact PUT body and exit
-# before any network call, so CI can regression-guard the payload shape
-# without live GitHub credentials.
+# -EmitPayload is the offline-testable seam: print (or, with -PayloadPath,
+# write to a file) the exact PUT body and exit before any network call, so CI
+# can regression-guard the payload shape without live GitHub credentials.
 if ($EmitPayload) {
-  Write-Output $json
+  if ($PSBoundParameters.ContainsKey('PayloadPath')) {
+    # An explicitly-passed empty string is a caller mistake, not "no path
+    # given": treat it as an error rather than silently falling back to stdout.
+    if (-not $PayloadPath) {
+      [Console]::Error.WriteLine('apply-branch-protection: -PayloadPath requires a non-empty path')
+      exit 1
+    }
+    Write-PayloadFile -Path $PayloadPath -Json $json
+  } else {
+    Write-Output $json
+  }
   exit 0
 }
 
@@ -100,10 +148,21 @@ if ($EmitPayload) {
 $slug = "$(& $gh repo view --json nameWithOwner -q .nameWithOwner 2>$null)".Trim()
 if (-not $slug) { [Console]::Error.WriteLine('apply-branch-protection: could not resolve repo slug via gh repo view'); exit 1 }
 
-$json | & $gh api --method PUT "repos/$slug/branches/$Branch/protection" --input - | Out-Null
-if ($LASTEXITCODE -ne 0) {
-  [Console]::Error.WriteLine("apply-branch-protection: PUT failed (exit $LASTEXITCODE). See gh's message above.")
-  exit 1
+# A temp file, not a pipe: piping into a native process risks a BOM under
+# some caller $OutputEncoding settings; Write-PayloadFile's write avoids that.
+# Measured evidence and the rejected $global:OutputEncoding design: issue #17.
+$tmpPath = Join-Path ([System.IO.Path]::GetTempPath()) ('apply-branch-protection-' + [guid]::NewGuid().ToString('N') + '.json')
+try {
+  Write-PayloadFile -Path $tmpPath -Json $json
+  & $gh api --method PUT "repos/$slug/branches/$Branch/protection" --input $tmpPath | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    [Console]::Error.WriteLine("apply-branch-protection: PUT failed (exit $LASTEXITCODE). See gh's message above.")
+    exit 1
+  }
+} finally {
+  if (Test-Path -LiteralPath $tmpPath) {
+    Remove-Item -LiteralPath $tmpPath -Force -ErrorAction SilentlyContinue
+  }
 }
 
 # The tool now both sends and reads required checks under `checks`: the PUT
