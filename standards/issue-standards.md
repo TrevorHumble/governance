@@ -54,11 +54,114 @@ widened file rests on the widening being recorded, not on tooling that ran befor
 
 Example: an issue touching one service file may be amended to also validate a field's format inside that same file, with owner + reviewer sign-off. It may not be amended to also touch an unrelated admin route to add a moderation control: that is a new, separately-reviewed issue, even if the owner wants it done "at the same time."
 
+The "never adds a file" line above has exactly two exceptions, and neither is an amendment: the
+disposition-1 widening (the paragraph above), and a size-rule claim under § "The file claim and the
+size rule" below, the one sanctioned way a `Touches` list grows mid-run without owner-plus-reviewer
+sign-off. Both are recorded on the `Touches` line, so the list a reviewer reads is still the whole
+truth.
+
 A change to the title, the user story, or an acceptance criterion after the owner has approved it
 is not this section's amendment: it re-triggers the owner hand-off's approval step instead, per §
 "Owner hand-off" below. This section's `Touches` bound still binds any implementation work the
 amended text creates; its owner-plus-reviewer sign-off does not apply to the owner's own approved
 words.
+
+---
+
+## The file claim and the size rule
+
+This section is the one home for how a run claims files and when a small fix skips the claim
+entirely. Every other file that needs either rule points here: `standards/decision-heuristics.md`
+§ "Scope discipline", `standards/adversarial-review-protocol.md` § "Finding disposition",
+`agents/orchestrator.md` § "No agent files its own issue", `agents/reviewer-issue.md`,
+`agents/reviewer-pr.md`, `agents/implementation-agent.md`,
+`.claude/skills/capture-system-defect/SKILL.md`, `.claude/commands/build.md`, and
+`.claude/commands/post-wave-review.md`.
+
+Why it exists: the `Touches` lock guards a collision between two concurrent runs. When no other
+run holds a file, there is no collision to guard, and the lock was turning two-line fixes into
+report notes on the owner's desk (issue #45 records the case). The claim makes "is anyone using
+this file?" checkable, and the size rule sets a floor below which the question does not even need
+asking.
+
+### The claim
+
+An issue whose issue review has passed carries a GitHub label of the form
+`active-<N>-YYYYMMDD-HHMM`, where `<N>` is the claiming issue's own number and the timestamp is
+**UTC**, minute precision, no separators inside the date or time (example:
+`active-45-20260825-2310`). The issue's `Touches` line is the set of files it claims. The issue
+number is in the label name because GitHub labels are repo-level entities: without `<N>`, two runs
+stamping in the same minute would share one entity, and one run's clear would strip the other's
+live hold.
+
+The orchestrator applies the label the moment issue review passes (the same moment
+`needs-issue-review` is cleared), and checks the board for competing claims before implementation
+starts: `gh issue list --state open --limit 100 --json number,labels,body` returns every open
+issue's number, labels, and `Touches:` line in one call. A result of exactly 100 rows may be
+truncated: page until the listing is exhausted before treating any file as free.
+
+### The release rule
+
+- **Clear on ship or close.** The run deletes its own `active-<N>-*` label when the issue merges
+  or closes, and when it deliberately stops without closing (a halt, an owner interruption it can
+  still act on). A run that dies without warning cannot clear anything; that case is covered by
+  the staleness fallback alone.
+- **Staleness fallback.** A label whose timestamp is more than 36 hours old may be cleared by any
+  run that finds it.
+- **Clearing deletes the entity**, not just its attachment to the issue: the label is per-run and
+  dead once cleared; leaving it would grow the label namespace by one corpse per run.
+- **Re-stamp on events, not clocks.** A run still working keeps its hold by re-stamping at each of
+  three events it actually performs: dispatching a review round, committing, and pushing. A
+  re-stamp renames the entity (create the new label, attach it, delete the old, in that order), so
+  one run always shows exactly one `active-<N>-*` label; if a re-stamp race leaves two visible,
+  the freshest stamp is the hold. Time-based self-assessment is explicitly
+  not the trigger: an agent has no reliable sense of elapsed time, so the refresh hangs off
+  events.
+
+### The size rule
+
+A mid-run change to a file outside the acting issue's `Touches` list takes one of four branches,
+decided by two questions: how big is the change, and does another run hold the file? Size is
+counted as **the larger of insertions or deletions in that file**, the same unit as
+`standards/adversarial-review-protocol.md` § "Review-size bound". A file is **held** when an open
+issue's `Touches` line names it and that issue carries a live (non-stale, well-formed)
+`active-<N>-*` label whose `<N>` matches the issue's own number; otherwise it is **free**. A
+stamp more than an hour in the future is not live either: a mis-zoned local stamp must not
+outlive the release promise by its skew. Paths
+compare in canonical git form (forward slashes, exact case): only that form grants or receives
+protection, so a `Touches` line writes paths the way `git ls-files` prints them.
+
+1. **Ten lines or fewer, file held by another run:** permitted, with no claim and no amendment.
+   The resulting merge conflict is accepted as the cost, resolved by whichever run merges later,
+   with no fresh claim needed for the resolution. The change must leave a verifiable record: the
+   PR body names the holding issue's number, so a reviewer can confirm the named issue's
+   `Touches` line really contains the file, telling a genuine branch-1 change apart from a
+   branch-2 change that skipped its required addition.
+2. **Ten lines or fewer, file free:** permitted. The acting run appends the file to its own
+   issue's `Touches` line (both copies: the GitHub issue body and the local draft), recorded as a
+   size-rule claim per `standards/adversarial-review-protocol.md` § "Finding disposition",
+   "Recording a widening". Its existing `active-<N>-*` label now covers the file for as long as
+   the run continues.
+3. **More than ten lines, file free:** permitted only after the same `Touches` addition and
+   record as branch 2; the claim comes first, then the change.
+4. **More than ten lines, file held by another run:** not permitted. The run notes the collision
+   and waits for the hold to release; this is the one case the lock exists for.
+
+**Double-claim tie-break.** The freeness check and the claim are two steps, so two runs can both
+read a file as free and both claim it. On discovering a double-claim (two open issues' `Touches`
+lines naming the file, both with live `active-<N>-*` labels), the claim with the later label
+timestamp yields: it removes the file from its `Touches` line, re-checks freeness, and waits
+under branch 4. On equal minute-granular timestamps, the higher issue number yields.
+
+**The ownership wall is not crossed.** The claim and the size rule operate inside the wall
+(`standards/ownership-map.md`), never across it: a parent-owned governance file in a child repo is
+never "free", whatever its labels say, and the child's `pre-commit` hook stays the authority. A
+cross-wall fix still routes through the governance home, per `standards/governance-sync.md`.
+
+**Decision logic is mechanized.** `tools/file-claim-core.ps1` holds the label parsing, staleness,
+holder, branch, and tie-break decisions; `tests/file-claim.test.js` pins them. The prose here and
+that module state one rule; if they ever diverge, fixing the divergence is a defect fix, not a
+rule change.
 
 ---
 

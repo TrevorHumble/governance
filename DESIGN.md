@@ -755,3 +755,41 @@ follow-up work, not done by issue #15.
 stderr, never a non-zero exit: a sync PR that cannot be armed stays open for hand-merge, and the
 run that tried to arm it still succeeded at its actual job, computing the plan and shipping the
 PR.
+
+## File claim and size rule (issue #45)
+
+`standards/issue-standards.md` § "The file claim and the size rule" owns the rule's substance;
+this section records why it is built the way it is.
+
+**The problem.** The `Touches` lock exists so two concurrent runs never edit one file. It was
+also converting two-line fixes in files nobody held into end-of-run report notes, the #17 run's
+`DESIGN.md` note being the recorded case. The lock guarded collisions that did not exist.
+
+**Why a GitHub label is the lock.** GitHub is this project's single source of truth, and a label
+is the one lock primitive another run can read with the same one-call board query it already
+makes. Alternatives considered: a pinned index file (a second source of truth to drift), and a
+lock branch or lock file in-repo (invisible from the board, and stale locks would need commits to
+clear).
+
+**Why the issue number is in the label name.** Labels are repo-level entities. Two runs stamping
+`active-20260825-1440` in the same minute would share one entity, and one run's clear would strip
+the other's live hold. `active-<N>-...` makes the entity per-run by construction.
+
+**Why re-stamp on events, not clocks.** An agent has no reliable sense of elapsed time, so hold
+refresh hangs off three events a working run actually performs (review dispatch, commit, push).
+The 36-hour staleness fallback is the only clock, and it is read, not kept: any run may clear a
+stale label, which is also the whole crash-recovery story; a run that dies without warning cleans
+up nothing and loses its hold a day and a half later.
+
+**Why ten lines, flat.** Measured over this repo (105 tracked files, median 63 lines), a
+percentage threshold collapses: 5 percent of a median file is 3 lines. The flat count is the same
+unit as the review-size bound (larger of insertions or deletions), so the corpus carries one size
+vocabulary.
+
+**Accepted costs.** Branch 1 (small fix in a held file) deliberately accepts a merge conflict as
+cheaper than a report note; whichever run merges later resolves it. The double-claim race (check
+and claim are two steps) is accepted and tie-broken (later stamp yields; equal stamps, higher
+issue number yields) rather than prevented, which would need a real lock service GitHub does not
+offer. The claim protocol itself is instruction-enforced, unmechanized (`WHAT-IT-CHECKS.md`
+posture); only the decisions are mechanized, in `tools/file-claim-core.ps1`, so tests can pin
+them.
