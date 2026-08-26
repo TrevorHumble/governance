@@ -14,6 +14,9 @@ Format:
 - YYYY-MM-DD - <normalized one-line substance> - <the owner's answer, in his words>
 ```
 
+The " - " separator belongs to the line's structure: the recorder replaces any " - " inside the
+answer with ", " so the substance field always parses back out exactly.
+
 ## Declines
 
 (none yet)

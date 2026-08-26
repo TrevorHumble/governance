@@ -476,13 +476,16 @@ When an agent hits a problem mid-run:
    the re-checked facts confirm the size rule's branch 4 or not-a-file-edit, in which case the
    classification-contest bound resolves it to wait-or-report.
    **Confident drop.** A note whose own justification states over-70-percent confidence in
-   do-nothing is dropped entirely, never appearing in the report, when the reviewer that saw it
-   (in-round or in the late-note pass) agrees. The agent alone may not drop it: an agent silently
+   do-nothing is dropped entirely, never appearing in the report, when every reviewer that ruled
+   on it (in-round or in the late-note pass) ruled `DROP`, per the split-rulings rule in
+   `standards/adversarial-review-protocol.md` § "Finding disposition", "Challenging a
+   deferral". The agent alone may not drop it: an agent silently
    dropping its own findings is the same unaudited exit this rule exists to close. A dropped
    note stays in `.run_state/notes.md` and the issue's `## Notes` section as the audit trail.
    **Recording a decline.** When the owner answers a report note with leave-it-alone, the
    orchestrator appends one line to the `owner-declines.md` of the repo the note belongs to: the
-   date, the note's normalized one-line substance verbatim, and the owner's answer. Only the
+   date, the note's normalized one-line substance verbatim, and the owner's answer, with any
+   " - " inside the answer replaced by ", " so the line's separators stay unambiguous. Only the
    owner's answer puts a line there; no agent adds one on its own initiative. An item recorded
    there is never raised again (pre-check 2 in rule 2 above). **Across the wall:** a session
    working in one repo reads another repo's declines without a checkout, via
