@@ -31,16 +31,17 @@ When it exits non-zero, report the failure in the session and continue the build
 
 **1: Research.** Before drafting anything, check local prior art: the codebase itself, `standards/`, `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `docs/`, `DESIGN.md`. For questions about the project's own stack and dependencies, consult the installed package docs and existing tests in `tests/`. Web search is a last resort when local sources do not answer the question: delegate through `agents/researcher.md`.
 
-**2: Pre-review (if declared).** Before issue-drafting, run this repo's declared Pre-review step (see `repo-profile.json`'s `preReview` field, a repo may name its own pre-review process file, such as a live visual-approval loop, or declare `none`; `surfaceGlobs` names the pre-review surface when one is declared). No shared command doc here asserts which pre-review process any particular repo uses.
+**2: Pre-review (if declared).** Before issue-drafting, run this repo's declared Pre-review step (see `repo-profile.json`'s `preReview` field, a repo may name its own pre-review process file, such as a live visual-approval loop, or declare `none`; `surfaceGlobs` names the pre-review surface when one is declared), unless that process file's own unchanged-artifact exemption covers the change, in which case the live owner loop is not re-entered and the rest of this pipeline runs on the change unchanged (`agents/orchestrator.md` § "Pre-review step" owns the exemption). No shared command doc here asserts which pre-review process any particular repo uses.
 
-When `preReview` is `none`, or the work falls outside `surfaceGlobs`, skip this step entirely and go straight to 2b, then step 3. Otherwise, follow the declared process file for its own edit-scope, approval, and hand-off rules: this shared pipeline doc does not restate them here.
+When `preReview` is `none`, or the work falls outside `surfaceGlobs`, skip this step entirely and go straight to 2b, then step 3. Otherwise, follow the declared process file for its own edit-scope, approval, exemption, and hand-off rules: this shared pipeline doc does not restate them here.
 
-Only once that declared process reports approval does step 2b run the owner hand-off, then step 3 (issue) draft the transcribed criteria and step 5 (implement) spawn an implementer for the remaining work, per `standards/issue-standards.md` for how an approved pre-review result becomes an acceptance criterion.
+Only once that declared process reports approval does step 2b run the owner hand-off, then step 3 (issue) draft the transcribed criteria and step 5 (implement) spawn an implementer for the remaining work, per `standards/issue-standards.md` for how an approved pre-review result becomes an acceptance criterion. A change carried by the unchanged-artifact exemption reaches no fresh approval by design: it proceeds to 2b and step 3 on the standing approval, and its criteria cite the exemption and that standing approval rather than transcribing a fresh outcome, per `standards/issue-standards.md` § "Acceptance criteria".
 
 **2b: Owner hand-off.** Before `gh issue create` runs, send the owner the hand-off message defined
 in `standards/issue-standards.md` § "Owner hand-off" (title, user story, acceptance criteria, in
-that order, nothing else) and wait for approval. The approval is recorded at step 3 per that
-section. Mechanics, including the return path for a post-approval change, are owned there, not
+that order, nothing else) and wait for approval, except for a child inheriting an approved epic's
+approval. The approval is recorded at step 3 per that section. Mechanics, including the return path
+for a post-approval change and the recorded form of an inherited approval, are owned there, not
 restated here.
 
 **3: Issue.** Create the GitHub issue first (`gh issue create --label needs-issue-review`, labelled by tier, using the gh CLI at the path declared in `repo-profile.json`'s `ghPath` field, default `gh` on PATH; a machine where gh lives elsewhere records the absolute path in that machine's own `CLAUDE.local.md`, never committed), and capture the assigned number `N`. Then write the draft as `data/wip-issues/<N>-slug.md` per `standards/issue-standards.md`. GitHub is the single source of truth: the board reflects the task from creation.
@@ -81,7 +82,9 @@ the green CI run covers the final commit. Then:
 - **Changes gated by a declared Pre-review step (step 2):** merge (or complete the direct-mode
   ship) once that Pre-review step has reached explicit owner approval AND the adversarial review
   has passed and CI is green. The declared Pre-review step is the owner's pre-merge control for
-  this change type; issue-speccing and revert remain available as well.
+  this change type; issue-speccing and revert remain available as well. A change carried by that
+  process file's unchanged-artifact exemption merges instead on what `agents/orchestrator.md`
+  § "Pre-review step"'s "The unchanged-artifact exemption" paragraph states.
 
 The default branch is never knowingly left red. If CI goes red, fix the cause or revert the
 commit before proceeding. Then close the GitHub issue referencing the commit and delete its

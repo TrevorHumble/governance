@@ -32,6 +32,16 @@ A criterion need only be answerable yes/no by a competent reviewer against real 
 
 **For a declared Pre-review surface only, the approved artifact is the acceptance criterion.** Taste is discovered, not specified: nobody knows a decoration is clutter until they see it. So for work on the surface named in `repo-profile.json`'s `surfaceGlobs` that goes through the phase-1 live pre-review loop (`agents/orchestrator.md` § "Pre-review step"), the written criteria **transcribe** what the owner already approved on the seeded preview, rather than **defining** it up front the way every other criterion in this standard does. Any behavior phase 1 faked to settle the shape (for example a hard-coded count just to see the layout) becomes real, specified work in the phase-2 criteria: the faked shortcut is not shipped as-is. **This transcription rule applies only to a declared Pre-review surface.** Logic, data, and tests, everything that is not the approved artifact itself, still take spec-first, adversarial criteria written before implementation, exactly as the rest of this standard describes; a criterion that is not about how the pre-reviewed artifact looks or reads does not get to claim this exemption.
 
+**A change carried by the unchanged-artifact exemption has no fresh outcome to transcribe.** When
+the declared pre-review process file's own unchanged-artifact exemption covers a change
+(`agents/orchestrator.md` § "Pre-review step"), no new pre-review pass ran, so its criteria cite the
+exemption and the standing approval record the process file names, instead of transcribing an
+outcome that does not exist. Such an issue also records, in so many words, the claim that the change
+leaves the pre-reviewed artifact's output unchanged: that claim is what the pull-request reviewer's
+verification duty reads and tests (`agents/reviewer-pr.md` § "Protocol"), so an issue citing the
+exemption without stating the claim leaves that duty with nothing to fire on and the exemption
+resting on no evidence at all.
+
 No criterion of the form "an agent can understand X": that is unfalsifiable and is a FAIL. Every AC that says "an agent can answer X" is unfalsifiable; rewrite it as a behavioral input-to-output assertion. A file path or a literal string belongs in the implementation plan, never in a criterion the owner has to read.
 
 ---
@@ -62,9 +72,12 @@ truth.
 
 A change to the title, the user story, or an acceptance criterion after the owner has approved it
 is not this section's amendment: it re-triggers the owner hand-off's approval step instead, per §
-"Owner hand-off" below. This section's `Touches` bound still binds any implementation work the
-amended text creates; its owner-plus-reviewer sign-off does not apply to the owner's own approved
-words.
+"Owner hand-off" below. This re-trigger keys off the `Owner-approved: yes` marker, so it fires for
+a child carrying its own direct owner approval exactly as it does for any other issue, and fires
+not at all for an inherited child, whose title, story, and criteria the owner never read: revising
+that agent-written wording re-triggers nothing. This section's `Touches` bound still binds any
+implementation work the amended text creates; its owner-plus-reviewer sign-off does not apply to
+the owner's own approved words.
 
 ---
 
@@ -181,10 +194,12 @@ The before step forces the implementer to decide which file, which mechanism, an
 ## Owner hand-off
 
 Before an issue exists, the owner receives one short message: the title, the user story, and the
-acceptance criteria, in that order, and nothing else. The implementation plan, the dependency map,
-the context, and the prior-art list are never part of it; they still belong in the GitHub issue
-body. The message is sent **before** `gh issue create` runs. No issue is created, and no issue's
-title, story, or acceptance criteria is changed, until the owner has approved. An objection
+acceptance criteria, in that order, and nothing else, except for a child issue inheriting an
+approved epic's approval under the "Inherited approval" paragraph below, which takes no hand-off of
+its own. The implementation plan, the dependency map, the context, and the prior-art list are never
+part of it; they still belong in the GitHub issue body. The message is sent **before** `gh issue
+create` runs. No issue is created, and no issue's title, story, or acceptance criteria is changed,
+until the owner has approved, with the same inherited-approval exception. An objection
 rewrites the whole message, title included, in chat, and it is re-sent; nothing is recorded until
 he approves. Neither the GitHub issue nor the `data/wip-issues/<N>-slug.md` draft exists yet at
 that point, so the approval carries forward: once both are created (`agents/orchestrator.md` §
@@ -200,9 +215,38 @@ or mid-flight, the `Owner-approved: yes` line is removed from the GitHub issue b
 the moment the changed text is written, so the marker never certifies text the owner has not seen.
 The hand-off message is re-sent with the changed text, and the line is recorded again only once
 the owner approves that re-sent message. A change confined to the implementation plan, the
-dependency map, or the context does not re-trigger this. `agents/orchestrator.md` and
+dependency map, or the context does not re-trigger this. This paragraph binds `Owner-approved: yes`
+text only: an inherited child's agent-written title, story, and criteria carry no such line, so
+changing them removes nothing and re-sends nothing. `agents/orchestrator.md` and
 `.claude/commands/build.md` point at this paragraph rather than restating it; so does §
 "Acceptance-criteria amendment" above for the mid-flight case.
+
+**Inherited approval.** An epic whose acceptance criteria the owner approved through the hand-off
+above may pre-approve the children filed inside its scope, so the owner is asked once for the epic
+rather than once per child. The rules:
+
+- The epic itself took a normal hand-off. Nothing inherits from an epic the owner never approved.
+- A child whose scope stays inside the epic's approved scope inherits that approval and takes no
+  hand-off of its own. A child needing scope beyond the epic returns to a normal hand-off for its
+  own title, story, and criteria.
+- The inheritance is recorded on its own line, immediately after the `**Type:**` line, in the
+  GitHub issue body and in the draft: `Inherited-approval: from <owner>/<repo>#N` for an epic in
+  another repository, or a bare `Inherited-approval: from #N` for one in this repo, followed by the
+  date of the owner directive that granted it. The key deliberately shares no prefix with
+  `Owner-approved:`: a near-identical key in the same slot would invite the exact misread the guard
+  below exists to catch.
+- An inherited line is **not** `Owner-approved: yes` and confers none of that marker's reviewer
+  exemptions. The child's title, user story, and acceptance criteria are agent-written and stay
+  fully open to a reviewer's attack, and every row this standard marks "not applicable to an
+  `Owner-approved: yes`" applies to them in full.
+- A reviewer that cannot read the named repository records the reference as unverified rather than
+  failing the issue on it: the child is judged on its own text, which is fully reviewable anyway.
+
+**The exact-string guard.** An inherited line sits in the same slot as the approval marker, so a
+reviewer scanning that slot can take one for the other. State it positively rather than relying on
+telling them apart: **only the exact string `Owner-approved: yes` grants the story and criteria
+exemptions; any other line in that slot, the inherited line included, grants none.** The two are
+mutually exclusive on one issue: an issue carries one or the other, never both.
 
 **Written format.** The line breaks below are part of the format. The wording is a suggested
 shape, not a character-exact template: "As a / I need / so that" is convenience, not doctrine
@@ -251,11 +295,16 @@ at least one criterion asserting a behavioral output value does not apply to a c
 `Owner-approved: yes`: the owner's own approved wording is not judged against that bar, per §
 "Reviewer checklist" below's Ready-tier checklist.
 
-**Ownership.** The owner owns the title, the user story, and the acceptance criteria. The agents
-own the implementation plan and the dependency map. A reviewer's findings address the plan, the
-dependency map, and the tier fields. A reviewer does not reword, rewrite, or fail an approved
-story or an approved acceptance criterion, and does not re-open wording the owner has already
-settled. Only the owner changes them, and he changes them in chat.
+**Ownership.** The owner owns the title, the user story, and the acceptance criteria he approved.
+The agents own the implementation plan and the dependency map. A reviewer's findings address the
+plan, the dependency map, and the tier fields. A reviewer does not reword, rewrite, or fail an
+approved story or an approved acceptance criterion, and does not re-open wording the owner has
+already settled. Only the owner changes them, and he changes them in chat. Four sentences here bind
+`Owner-approved: yes` text alone: the opening ownership sentence, the sentence limiting what a
+reviewer's findings address, the reviewer-restraint sentence, and "Only the owner changes them". An
+inherited child's title, story, and criteria are
+agent-written, so a reviewer attacks them like any other artifact, and an agent revises them on a
+reviewer's finding without the owner in the loop.
 
 **Not a gate.** No bot, hook, CI check, or script enforces any of the above. It holds by
 instruction alone.

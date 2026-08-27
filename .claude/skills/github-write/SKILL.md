@@ -30,8 +30,11 @@ equal, see `CLAUDE.md` § "Repo conventions". The sync rule:
 
 - **On issue creation** → the owner hand-off message defined in `standards/issue-standards.md` §
   "Owner hand-off" is sent and approved **before** `gh issue create` runs; an agent following this
-  recipe cannot file an issue around the hand-off. Then run `gh issue create`, plain title (no locally-minted number prefix;
-  GitHub assigns the number, per `standards/issue-standards.md` § "Naming"), with
+  recipe cannot file an issue around the hand-off. The one exception is a child of an owner-approved
+  epic, inside that epic's scope, which inherits the epic's approval and takes no hand-off of its
+  own; `standards/issue-standards.md` § "Owner hand-off" owns the mechanics and the line the child
+  records. Then run `gh issue create`, plain title (no locally-minted number prefix; GitHub assigns
+  the number, per `standards/issue-standards.md` § "Naming"), with
   `--label needs-issue-review` applied at creation time alongside the tier label: `ready` /
   `backlog` / `low priority`. Capture the number GitHub assigns before writing the local draft
   file, since that number is the draft's identity. The issue body can summarize and link the file.
