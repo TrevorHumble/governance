@@ -421,10 +421,40 @@ This repo's merge policy: a change off the declared Pre-review surface merges on
 review passes and CI is green, with owner control staying upstream (which work is specced, via
 issues) and downstream (revert, via git history); a change on the declared Pre-review surface is
 the deliberate exception, passing the Pre-review step (`agents/orchestrator.md` § "Pre-review
-step") before its criteria are even written. This repo's own profile declares `"preReview":
+step") before its criteria are even written, unless the declaring process file's
+unchanged-artifact exemption carries it, in which case it merges on the standing approval plus the
+per-file reviewer evidence that exemption requires. This repo's own profile declares `"preReview":
 "none"` and `"surfaceGlobs": []` (see hazard 4's disposition above), so the Pre-review step never
 triggers here today; the mechanism stays documented so a child repo that declares a real
 pre-review process (for example a live visual-approval loop) has somewhere generic to defer to.
+
+**Two owner directives, recorded.** On 2026-07-28 the owner directed that a change a reviewer has
+verified leaves the pre-reviewed artifact unchanged never comes back to him for a re-confirm: that
+is the unchanged-artifact exemption. On 2026-08-25 he directed that an epic whose acceptance
+criteria he approved pre-approves the children filed inside its scope, so the hand-off is asked once
+per epic rather than once per child: that is the inherited approval in
+`standards/issue-standards.md` § "Owner hand-off". Both spend less of the one resource the pipeline
+cannot manufacture, his attention.
+
+**Why the exemption is the process file's to define.** This repo is the parent of several children
+and only some run a pre-review process at all; what counts as "the artifact's output is unchanged"
+depends entirely on what that artifact is, which only the child knows. Enumerating qualifying
+changes here would mean writing a rule against artifacts this repo cannot see, and a stale
+enumeration read as authoritative is worse than none. So the parent states only that such an
+exemption may exist and that the rest of the pipeline still runs; the declaring process file sets
+its own evidence bar, and a child declaring no exemption has none. The parent does keep the half
+that must be shared: the pull-request reviewer's duty to produce per-file evidence
+(`agents/reviewer-pr.md`), because an exemption whose evidence nobody is obliged to produce rests
+on nothing.
+
+**Why definition-of-done clause 9 and `WHAT-IT-CHECKS.md` are left alone.** Clause 9 is already
+conditional: it governs a change whose effect is only checkable via the declared pre-review process.
+For a change carried by the exemption that condition does not hold, since the per-file reviewer
+evidence is exactly what makes the effect checkable another way. The clause therefore is **not
+triggered**, rather than firing and being satisfied, so it needs no amendment; `WHAT-IT-CHECKS.md`
+carries the same conditional rule in plain language for a human reader and is left alone for the
+same reason. Amending either would restate mechanics both already defer to. This is a judgment call,
+recorded here so it can be attacked rather than rediscovered.
 
 ## Keep-test rationale
 

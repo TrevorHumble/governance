@@ -27,6 +27,11 @@ intent, not attacked. The hostile default above and the ownership rule in that s
 contradict each other: this stance governs the plan, the dependency map, and every other artifact
 in this protocol's scope; it does not reach back into words the owner has already settled.
 
+A child issue inheriting an approved epic's approval has no owner approval of its own words: its
+title, user story, and acceptance criteria are agent-written and stay fully inside the artifact
+under review, attacked like any other. `standards/issue-standards.md` § "Owner hand-off" owns the
+recorded form and which exact line grants this carve-out.
+
 ---
 
 ## De-bias the setup
@@ -338,19 +343,23 @@ and that stays true with no exception. It does not forbid the separately-decided
 loop, live and pre-implementation, for a repo's declared pre-review surface only, when one is
 declared; full mechanics live at the process file that repo's `repo-profile.json` names, if any.
 Only after the owner approves is that surface's acceptance criteria written and the normal
-pipeline (issue review, implementation, PR review) runs. The loop carries no review finding to
-the owner and resolves no defect; it is exactly the "product direction, taste" carve-out this
-section already reserves for human judgment, made into an explicit step. A second sanctioned
-owner-decision point is the end-of-run report defined in
-`agents/orchestrator.md` § "No agent files its own issue". It decides, for example, whether an
-already-disposed, genuinely separable item under disposition 3 graduates from a report note to a
-new board row, and, for a held dependency PR under
-`agents/orchestrator/dependabot-pr-path.md`'s `review` classification, whether it merges. It never
-resolves a finding's severity or verdict, and it does not touch disposition 1 or disposition 2
-above. A fourth sanctioned owner-decision point is the owner hand-off,
-`standards/issue-standards.md` § "Owner hand-off": product direction settled before an issue even
-exists, it carries no reviewer finding to the owner, and it resolves no defect, so it sits outside
-this section's findings-resolution rule, the same way the Pre-review step above does.
+pipeline (issue review, implementation, PR review) runs, unless that process file's own
+unchanged-artifact exemption carries the change, in which case the criteria are written and the
+normal pipeline runs on the standing approval, with no fresh trip through the live loop
+(`agents/orchestrator.md` § "Pre-review step" owns the exemption). The loop carries no review
+finding to the owner and resolves no defect; it is exactly the "product direction, taste"
+carve-out this section already reserves for human judgment, made into an explicit step. A second
+sanctioned owner-decision point is the end-of-run report defined in `agents/orchestrator.md`
+§ "No agent files its own issue". It decides, for example, whether an already-disposed, genuinely
+separable item under disposition 3 graduates from a report note to a new board row, and, for a
+held dependency PR under `agents/orchestrator/dependabot-pr-path.md`'s `review` classification,
+whether it merges. It never resolves a finding's severity or verdict, and it does not touch
+disposition 1 or disposition 2 above. A fourth sanctioned owner-decision point is the owner
+hand-off, `standards/issue-standards.md` § "Owner hand-off": product direction settled before the
+issue it governs exists, whether that is the issue's own hand-off or the approved epic whose scope
+a child inherits it from, it carries no reviewer finding to the owner, and it resolves no defect,
+so it sits outside this section's findings-resolution rule, the same way the Pre-review step
+above does.
 
 Separately, that same PR type (a machine-generated pull of content already reviewed in the
 governance home, identified by its `syncIssue` reference) needs no findings-resolution rule from

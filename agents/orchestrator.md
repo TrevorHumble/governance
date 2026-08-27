@@ -75,19 +75,25 @@ the end of the session, carrying every note every segment collected.
    the issue is drafted, before it is reviewed, and before an implementer is ever spawned for the
    declared pre-review surface (`repo-profile.json`'s `surfaceGlobs`): the orchestrator settles
    the artifact live against the owner, freezes it, and only then does step 2b run the owner
-   hand-off, followed by step 3 drafting the now-transcribed issue and step 5's implementation
-   getting written. Before the owner approves, only
-   the paths named in `surfaceGlobs` may be edited; routes, services, and non-surface logic must
-   not be written during this step. A repo declaring `preReview: "none"` skips this step entirely
-   and proceeds to 2b, then step 3. No shared doc here names which pre-review process
-   any particular repo uses; each repo's own `repo-profile.json` and its named process file (if
-   any) are the source of truth.
+   hand-off (itself subject to 2b's inherited-epic exception), followed by step 3 drafting the
+   now-transcribed issue and step 5's implementation getting written. Before the owner approves,
+   only the paths named in `surfaceGlobs` may be edited; routes, services, and non-surface logic
+   must not be written during this step. A repo declaring `preReview: "none"` skips this step
+   entirely and proceeds to 2b, then step 3. A change the declaring process file's
+   unchanged-artifact exemption covers also proceeds straight to 2b and step 3, per § "Pre-review
+   step"'s "The unchanged-artifact exemption" paragraph below; the rest of this pipeline still runs
+   on it. No shared doc here names which pre-review process any particular repo uses; each repo's
+   own `repo-profile.json` and its named process file (if any) are the source of truth.
 
 **2b. Owner hand-off.** Before `gh issue create` runs, send the owner the hand-off message
 defined in `standards/issue-standards.md` § "Owner hand-off" (title, user story, acceptance
-criteria, in that order, nothing else) and wait for approval. Sizing note: "small" here means one
-agent session, and an agent's own estimate of what fits in a session runs low, so a story is not
-split merely because it feels large. The approval is recorded at step 3 per that section.
+criteria, in that order, nothing else) and wait for approval. One exception: a child of an epic
+whose acceptance criteria the owner already approved, and whose scope stays inside that epic's,
+inherits that approval and takes no hand-off of its own; the recorded form, its rules, and what a
+child needing wider scope does are owned by `standards/issue-standards.md` § "Owner hand-off", not
+restated here. Sizing note: "small" here means one agent session, and an agent's own estimate of
+what fits in a session runs low, so a story is not split merely because it feels large. The
+approval is recorded at step 3 per that section.
 **Return path:** owned by `standards/issue-standards.md` § "Owner hand-off"'s
 "Return path" paragraph, not restated here.
 
@@ -128,11 +134,14 @@ split merely because it feels large. The approval is recorded at step 3 per that
      the green CI run covers the final commit. Once the adversarial review has passed and CI is
      green, merge the PR (or, in `direct` mode, consider the ship complete), for every
      non-pre-review change type. A change on the declared pre-review surface additionally requires
-     step 2 to have reached explicit owner approval before this merge. The owner does not perform
-     merges; owner control is upstream (issue-speccing), downstream (revert via git history), and,
-     for a declared pre-review surface only, the pre-merge pre-review step. The default branch is
-     never knowingly left red. If CI goes red, fix the cause or revert the commit before
-     proceeding: a red default branch is a stop-and-fix condition, not something to push past.
+     step 2 to have reached explicit owner approval before this merge, unless the declaring process
+     file's unchanged-artifact exemption carries it, in which case § "Pre-review step"'s "The
+     unchanged-artifact exemption" paragraph states what it merges on instead. The owner does not
+     perform merges; owner control is upstream (issue-speccing), downstream (revert via git
+     history), and, for a declared pre-review surface only, the pre-merge pre-review step. The
+     default branch is never knowingly left red. If CI goes red, fix the cause or revert the commit
+     before proceeding: a red default branch is a stop-and-fix condition, not something to push
+     past.
 
 ---
 
@@ -140,14 +149,32 @@ split merely because it feels large. The approval is recorded at step 3 per that
 
 **Trigger.** Each repo declares its own pre-review surface in `repo-profile.json`'s `surfaceGlobs`
 field. A change touching, or that will touch, any declared surface path runs the pre-review step
-below before an issue is drafted. A repo with an empty `surfaceGlobs` list, or `preReview: "none"`,
-skips the gate entirely: the change merges on adversarial-review PASS plus green CI, as always.
+below before an issue is drafted, unless the exemption in the next paragraph carries it. A repo
+with an empty `surfaceGlobs` list, or `preReview: "none"`, skips the gate entirely: the change
+merges on adversarial-review PASS plus green CI, as always.
+
+**The unchanged-artifact exemption.** A repo's declared pre-review process file may define an
+exemption under which a change on the declared surface does not re-enter the live owner loop,
+because the change leaves the pre-reviewed artifact's output unchanged and the owner's standing
+approval of that artifact therefore still holds. The rest of the pipeline runs on such a change
+unchanged: the issue is drafted, the issue is reviewed, an implementer is spawned, the pull request
+is reviewed, and CI gates it, exactly as for any other change. **Such a change merges on the
+standing approval plus the reviewer evidence the exemption requires, in place of a fresh owner
+approval**, with adversarial-review PASS and green CI still required; this paragraph is the one
+home for that merge rule, and the other statements of the merge gate point here. What evidence the
+exemption rests on is the declaring process file's to set, not this file's, and it sets that bar
+above, never below, the per-file floor `agents/reviewer-pr.md` imposes on any change asserting the
+artifact is unchanged: no exemption is named or enumerated here, and a repo whose process file
+defines none has none. This is a different thing from § "Model policy"'s "The carve-out is a fence,
+not a blanket permission" paragraph: that paragraph fences which paths may be edited during phase 1,
+while this exemption decides whether phase 1 is re-entered at all.
 
 **Phase 1** is the settle-the-artifact-live loop run before an implementer is spawned for the
-declared surface; nothing commits until the owner approves. When a repo declares a pre-review
-process file (named in `repo-profile.json`'s `preReview` field, for example a live
-visual-approval loop), that file owns the full mechanics, the freeze, phase 2, and any two-doors
-rule; no mechanism is asserted here as belonging to every repo.
+declared surface; nothing commits until the owner approves, except for a change the
+unchanged-artifact exemption above carries, which merges as that paragraph states. When a repo
+declares a pre-review process file (named in `repo-profile.json`'s `preReview` field, for example
+a live visual-approval loop), that file owns the full mechanics, the freeze, phase 2, and any
+two-doors rule; no mechanism is asserted here as belonging to every repo.
 
 ---
 
@@ -614,8 +641,11 @@ Big: invent a new field, edit 3 files, every repo carries it forever. 2%
   (which work is specced, via issues) and downstream (revert, via git history). **A change on the
   declared pre-review surface is the one deliberate exception:** it passes the "Pre-review step"
   (above), the owner settling the artifact live against a seeded preview or equivalent, never by
-  reading a diff, before its criteria are even written. See the governance repo's `DESIGN.md` § "Merge policy and
-  pre-review rationale" for the merge policy and pre-review rationale recorded there.
+  reading a diff, before its criteria are even written. A change the declaring process file's
+  unchanged-artifact exemption carries is that exception's own limit, merging on what § "Pre-review
+  step"'s "The unchanged-artifact exemption" paragraph states, with every other pipeline gate
+  applying to it in full. See the governance repo's `DESIGN.md` § "Merge policy and pre-review
+  rationale" for the merge policy and pre-review rationale recorded there.
 - Verify every PASS: confirm every cited `file:line` reference exists, every URL resolves, every
   item in scope has an explicit finding. This check is the orchestrator's responsibility and is
   not delegated to the reviewer.
