@@ -286,11 +286,13 @@ function Resolve-GhPath {
 # names alphabetically; array elements are canonicalized in place but their
 # own order is left untouched: canonicalization treats every array as ordered
 # content by default, so a reorder still counts as a value change here.
-# (Test-IsAdditiveManifestDiff below treats sharedPaths, excludedPaths, and
-# arrivesAsStructure as order-free sets for its own narrower comparison; that
-# is a property of that one check, not of canonical-JSON equality in
-# general.) The one recursive step Get-CanonicalJson needs so two manifests
-# that differ only in JSON key order never read as a diff.
+# (Test-IsAdditiveManifestDiff below treats sharedPaths and arrivesAsStructure
+# as order-free sets for its own narrower comparison; that is a property of
+# that one check, not of canonical-JSON equality in general. excludedPaths
+# gets its own ordered comparison there instead; see DESIGN.md, "The
+# additive-manifest exception (issue #53)".) The one recursive step
+# Get-CanonicalJson needs so two manifests that differ only in JSON key order
+# never read as a diff.
 function ConvertTo-CanonicalValue {
   param($Value)
   if ($null -eq $Value) {
@@ -496,7 +498,7 @@ function Test-IsAdditiveManifestDiff {
         $added = @($parentArr[$childArr.Count..($parentArr.Count - 1)])
       }
       foreach ($a in $added) {
-        if ($a.StartsWith('!')) {
+        if (([string]$a).StartsWith('!')) {
           return [PSCustomObject]@{
             IsAdditive = $false
             Reason     = "excludedPaths entry '$a' is a negation, a subtraction rather than an addition"
