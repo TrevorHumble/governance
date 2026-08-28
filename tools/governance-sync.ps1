@@ -334,10 +334,23 @@ function Get-ChildTrackedFiles {
       return $null
     }
     $z = [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($outFile))
-    # The leading comma: see Get-UnacknowledgedDivergent's comment in
-    # tools/governance-sync-core.ps1 for why a bare `return @(...)` would
-    # unroll a zero-file result back to $null at the caller.
-    return ,@($z -split "`0" | Where-Object { $_ })
+    # `git ls-files -z` NUL-terminates each record, it does not NUL-separate
+    # them: the output always ends with a trailing NUL, so whatever comes
+    # after the last NUL is never a path. On Linux, Start-Process's
+    # -RedirectStandardOutput appends a trailing newline to a non-empty
+    # redirect file, so a naive split-and-filter-falsy picks up a phantom
+    # final entry holding that newline (a string with a newline is truthy).
+    # Cutting at the last NUL uses git's own terminator instead of guessing
+    # from whitespace, so a legitimate trailing space, embedded CR, or LF
+    # inside a real path is never touched.
+    $lastNul = $z.LastIndexOf([char]0)
+    if ($lastNul -lt 0) {
+      # The leading comma: see Get-UnacknowledgedDivergent's comment in
+      # tools/governance-sync-core.ps1 for why a bare `return @(...)` would
+      # unroll a zero-file result back to $null at the caller.
+      return ,@()
+    }
+    return ,@($z.Substring(0, $lastNul) -split "`0")
   } catch {
     return $null
   } finally {
