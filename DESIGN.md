@@ -581,11 +581,14 @@ PR`). There is no non-dry-run exit-0 state where a sync is pending but neither a
 issue exists to carry the decision: a killed or interrupted run leaves, at worst, a stale local
 branch or worktree registration the next run cleans up (the branch-rebuild step and the
 try/finally cleanup in `tools/governance-sync.ps1`), never a plan that silently vanishes. The
-whole-manifest comparison that drives the structure verdict (never an enumerated subset of fields)
-is deliberate: `classes`, `classesDefault`, `arrivesAsStructure`, `repoProfileFields`, and
-`shelfRoots` each change what a receiving child must itself do when they move, and a field added to
-the manifest later is something nobody has judged yet, so comparing the whole file withholds it by
-default instead of shipping it blind.
+whole-manifest comparison that drives the structure verdict is, outside issue #53's narrow additive
+exception (§ "The additive-manifest exception (issue #53)" below), still not an enumerated subset of
+fields: `classes`, `classesDefault`, `arrivesAsStructure`, `repoProfileFields`, and `shelfRoots` each
+change what a receiving child must itself do when they move, and a field added to the manifest later
+is something nobody has judged yet, so comparing the whole file withholds it by default instead of
+shipping it blind. The one exception, an enumerated four-field allowlist checked for pure,
+non-colliding additions, is narrower than this default and leaves it unchanged for every other
+field and for a removal or value change within those four.
 
 **The empty-plan close is best-effort, never load-bearing.** The nothing-to-do path (above) also
 closes a stale standing structure issue when a human has adopted a structure change by hand since
@@ -659,12 +662,14 @@ without the parent hand-copying the map into every child separately. Unlike the
 `WHAT-IT-CHECKS.md` relocation above, this file states no fact specific to any one repo's own
 build, so an unconditional sync overwrite carries no risk of clobbering a child's own true copy.
 
-The rule checker (above) made this delivery path unreachable in practice, though: any run where
-the parent's and child's manifests differ is itself a structure verdict, so a manifest update is
-never machine-merged. `governance-manifest.json` still reaches a child on that child's first
-delivery (no installed copy is no diff), and it is named among the withheld paths in the standing
-structure issue when it is part of the plan and differs, for a human to apply by hand; it is never
-carried by an ordinary content PR once a child already has a copy that differs from the parent's.
+Issue #53 narrows this: an additive, non-colliding manifest difference (§ "The additive-manifest
+exception (issue #53)" below) no longer forces the structure verdict on its own, so
+`governance-manifest.json` itself can now ship inside an ordinary content-classed sync PR and merge
+unreviewed, exactly like any other shared file this section describes. Every other manifest
+difference, a removal, a value change, or any difference in `classesDefault` or `retired` included,
+still forces structure: `governance-manifest.json` reaches such a child only on its first delivery
+(no installed copy is no diff) or as a withheld path in the standing structure issue, for a human to
+apply by hand.
 
 **The `.githooks/` executable-bit repair.** `tools/governance-sync.ps1` restages the whole
 `.githooks/` set found in the sync worktree with `--chmod=+x` on every run that has anything else
@@ -733,6 +738,84 @@ a collision: the parent moved, and the new sync supersedes the old one; `tools/g
 itself closes the superseded PR and deletes its branch before arming the new one (issue #15's
 superseded-PR sweep, § "Merge-on-green sync" below), not a reviewer, since no reviewer sees a
 content-classed sync PR any more.
+
+## The additive-manifest exception (issue #53)
+
+**What prompted this (2026-08-27).** A sync from this repo's `1ab0f7b` halted a downstream child
+and filed TaskMasterWedding#1314, withholding all seventeen planned paths. The manifest difference
+behind that halt was three added lines and nothing else: `tools/file-claim-core.ps1` and
+`tools/note-check-core.ps1` added to `sharedPaths` and `classes`, and `owner-declines.md` added to
+`excludedPaths`. Nothing was removed and no entry's value changed, and none of the three named
+files existed in that child's tree, so nothing the child already held was ever at risk. Whether the
+whole-manifest comparison (§ "Governance sync" above) forces structure on a diff this narrow was
+never actually judged before this issue; it always had, on the deliberately blunt "the parent's
+manifest differs from the child's installed copy at all" rule that section records.
+
+**Decision.** `tools/governance-sync-core.ps1`'s `Test-IsAdditiveManifestDiff` narrows that rule: a
+manifest difference no longer forces structure on its own when every differing field is one of
+`sharedPaths`, `excludedPaths`, `classes`, or `arrivesAsStructure`; nothing is removed and no
+existing entry's value changed within those four; and no entry newly added to `sharedPaths` or
+`classes` collides with a path the child already tracks (checked against `git ls-files`, via
+`tools/governance-sync.ps1`'s `Get-ChildTrackedFiles`, not the child's on-disk tree, so a
+gitignored runtime path such as `data/` or `.review_state/` never reports a false collision). Every
+other field, `classesDefault` and `retired` included, still forces structure on any difference,
+addition included.
+
+**The rejected wider rule.** "Only adds" alone, with no further test, was considered and rejected:
+it is not the safe boundary it looks like. Adding a path to `sharedPaths` takes a file the child
+already has out of the child's hands the moment that child's copy exists, since the ownership wall
+then blocks the child from committing it; an added `retired` entry deletes a file from the child
+outright; and a manifest's first `classesDefault` value silently reclassifies every path no
+`classes` entry names, something no earlier manifest ever declared a verdict for. Each of those is
+a taking, in effect, however additive the manifest diff looks on its face, which is why the actual
+test is narrower than "additive": every difference must be an addition, and the two fields where an
+addition can still take something away (`sharedPaths`, `classes`) carry their own collision check
+before qualifying.
+
+**Why `excludedPaths` needs its own order check.** `sharedPaths`, `classes`, and
+`arrivesAsStructure` are compared by membership alone: nothing that reads them
+(`Resolve-SharedSet`, `Get-PlanPathClassification`'s classes lookup and `arrivesAsStructure`
+check) cares what order their entries sit in. `excludedPaths` is different:
+`tests/governance-manifest.test.js`'s `isExcluded` applies its entries in order, last match wins,
+so `["buildlog/**", "!buildlog/README.md"]` and `["!buildlog/README.md", "buildlog/**"]` hold the
+same two entries but resolve `buildlog/README.md` oppositely. A membership-only test would call
+that reorder additive; a plain entry inserted ahead of an existing `!` entry is the same gap from
+the other direction, since position is never checked either way. `Test-IsAdditiveManifestDiff`
+closes this by requiring the child's `excludedPaths` array to be a leading prefix of the parent's:
+the only shape proven safe is new entries appended strictly after everything the child already
+has, which is why the check still walks the appended tail for a `!`-prefixed entry afterward, the
+same negation guard `sharedPaths` and `classes` never needed. The prefix comparison itself is
+ordinal (`[string]::Equals` with `StringComparison.Ordinal`), matching the case-sensitive
+`HashSet[string]` comparisons the membership branches use, so a case-only change such as
+`Buildlog/**` for `buildlog/**` reads as changed rather than as an unqualified match.
+
+**Why a shorter parent `excludedPaths` array alone is enough to decline.** A parent array shorter
+than the child's is not always a plain removal: a removal paired with a reorder, or a same-count
+value change alongside a real removal elsewhere, also lands here. The decline itself, structure,
+is correct in every one of those shapes; only the printed reason is a best-effort description of
+the likeliest cause, not a claim about which shape actually happened.
+
+**Why `tests/governance-sync.test.js` extracts `Get-ChildTrackedFiles`'s source instead of
+dot-sourcing the wrapper.** `tools/governance-sync.ps1`'s top-level body runs a real sync the
+moment it is dot-sourced, unlike `tools/governance-sync-core.ps1`, so the test cannot load the
+whole wrapper file the way it loads the core script. It pulls just this one function's source text
+out of the file with a regular expression and evaluates that text in its own PowerShell process
+instead, isolating the function under test from everything else in the file around it.
+
+**Why `ForEach-Object`, not `.Properties.Name`, walks a `classes` object's keys.** PowerShell's
+member-access enumeration on a zero-property PSCustomObject's `Properties` collection returns
+`$null`, not an empty collection, so `@($obj.PSObject.Properties.Name)` on `{}` is a one-element
+array holding `$null`, a phantom key that then reads as a removed `classes` entry. Piping through
+`ForEach-Object` enumerates the `Properties` collection itself (which is genuinely empty), so a
+zero-property object yields a real empty array.
+
+**Why `classesDefault` and `retired` stay structural on every difference, addition included, and
+not just on a value change or removal.** These are the two cases the "rejected wider rule"
+paragraph above already gives as reasons (`classesDefault`'s first appearance reclassifying every
+unnamed path, `retired`'s prune branch in `Get-SyncPlan` deleting a child's copy on a hash match):
+naming them again here would restate that paragraph rather than add to it. This issue changes
+nothing about either field's own behavior; it only draws the line for `sharedPaths`,
+`excludedPaths`, `classes`, and `arrivesAsStructure` narrower than an unqualified "any difference."
 
 ## Merge-on-green sync (issue #15)
 

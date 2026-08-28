@@ -298,6 +298,54 @@ function Invoke-SupersededSyncSweep {
   return [PSCustomObject]@{ Success = $true; ClosedCount = $closedCount }
 }
 
+# Get-ChildTrackedFiles -- $ChildTreeRoot's tracked files (git ls-files),
+# repo-relative and forward-slashed already (git's own form), NUL-split so a
+# path holding a newline, a carriage return, or a trailing space survives
+# intact. Feeds issue #53's additive-manifest exception
+# (Test-IsAdditiveManifestDiff in tools/governance-sync-core.ps1): $null on
+# any git failure, so that exception fails closed to structure rather than
+# risk a collision check against an incomplete list.
+function Get-ChildTrackedFiles {
+  param(
+    [Parameter(Mandatory = $true)] [string]$ChildTreeRoot
+  )
+  $outFile = [IO.Path]::GetTempFileName()
+  $errFile = [IO.Path]::GetTempFileName()
+  try {
+    # Start-Process + -RedirectStandardOutput to a file, not PowerShell's own
+    # native capture or `>`: both re-split stdout on line boundaries and
+    # rewrite a bare `\r` to `\n`, losing a CR-bearing tracked path (legal on
+    # POSIX). Redirecting at the OS handle level and reading raw bytes back
+    # keeps every byte, CR included, intact.
+    #
+    # No `-C`: `-ArgumentList` joins its elements with a plain space and
+    # applies no quoting, so a tree root containing a space (for example
+    # "Code Projects") would reach git split into two arguments and fail.
+    # `-WorkingDirectory` takes the path whole, no quoting needed.
+    #
+    # `-RedirectStandardError` points at a real temp file, not the `NUL`
+    # device name: `NUL` only resolves to the null device on Windows, and
+    # under pwsh on a POSIX CI runner it creates an ordinary file named
+    # `NUL` in the working directory that nothing removes.
+    $proc = Start-Process -FilePath 'git' -ArgumentList @('ls-files', '-z') `
+      -WorkingDirectory $ChildTreeRoot `
+      -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+    if ($proc.ExitCode -ne 0) {
+      return $null
+    }
+    $z = [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($outFile))
+    # The leading comma: see Get-UnacknowledgedDivergent's comment in
+    # tools/governance-sync-core.ps1 for why a bare `return @(...)` would
+    # unroll a zero-file result back to $null at the caller.
+    return ,@($z -split "`0" | Where-Object { $_ })
+  } catch {
+    return $null
+  } finally {
+    Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue
+  }
+}
+
 # Get-Classification -- reads the child manifest from $ChildTreeRoot and
 # returns Get-SyncClassification's result. Read half of the classify/print
 # pair; Write-ClassificationLines below is the print half, kept separate so
@@ -318,7 +366,14 @@ function Get-Classification {
       throw "governance-sync: could not parse child manifest at $childManifestPath ($($_.Exception.Message))"
     }
   }
-  return Get-SyncClassification -ParentManifest $ParentManifest -ChildManifest $childManifest -Plan $Plan -ParentRoot $ParentRoot
+  # Same tree this call classifies against, so the additive exception's
+  # collision test (issue #53) reads the same tree the run itself applies to,
+  # the dry-run preview and the real run alike (each already calls this
+  # function with its own tree; see the same-tree invariant, the governance repo's DESIGN.md §
+  # "Governance sync").
+  $childTrackedFiles = Get-ChildTrackedFiles -ChildTreeRoot $ChildTreeRoot
+  return Get-SyncClassification -ParentManifest $ParentManifest -ChildManifest $childManifest -Plan $Plan `
+    -ParentRoot $ParentRoot -ChildTrackedFiles $childTrackedFiles
 }
 
 # Write-ClassificationLines -- prints the issue #14 AC5 contract for $Classification:

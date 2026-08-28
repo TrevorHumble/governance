@@ -284,10 +284,13 @@ function Resolve-GhPath {
 
 # ConvertTo-CanonicalValue -- recursively sorts a PSCustomObject's property
 # names alphabetically; array elements are canonicalized in place but their
-# own order is left untouched, since a manifest array (sharedPaths, retired,
-# arrivesAsStructure) is order-sensitive content, not an order-free set. The
-# one recursive step Get-CanonicalJson needs so two manifests that differ only
-# in JSON key order never read as a diff.
+# own order is left untouched: canonicalization treats every array as ordered
+# content by default, so a reorder still counts as a value change here.
+# (Test-IsAdditiveManifestDiff below treats sharedPaths, excludedPaths, and
+# arrivesAsStructure as order-free sets for its own narrower comparison; that
+# is a property of that one check, not of canonical-JSON equality in
+# general.) The one recursive step Get-CanonicalJson needs so two manifests
+# that differ only in JSON key order never read as a diff.
 function ConvertTo-CanonicalValue {
   param($Value)
   if ($null -eq $Value) {
@@ -356,6 +359,198 @@ function Get-ManifestDiffFields {
     }
   }
   return @($diffs)
+}
+
+# Get-ManifestArrayFieldOrEmpty -- $Manifest.$Name as an array, or an empty
+# array when the property is absent or explicitly null. Shared by
+# Test-IsAdditiveManifestDiff's sharedPaths/excludedPaths/arrivesAsStructure
+# checks so a manifest that omits one of those fields reads as "declares
+# none" rather than throwing.
+function Get-ManifestArrayFieldOrEmpty {
+  param(
+    [Parameter(Mandatory = $true)] $Manifest,
+    [Parameter(Mandatory = $true)] [string]$Name
+  )
+  $prop = $Manifest.PSObject.Properties[$Name]
+  # The leading comma on both returns: a bare `return @()` unrolls an empty
+  # array onto the pipeline as zero elements, which a caller's assignment
+  # collapses back to $null (the same trap Get-UnacknowledgedDivergent above
+  # documents). ,@(...) makes the array itself the single pipeline object, so
+  # a zero-count result still reaches the caller as a real empty array.
+  if ($null -eq $prop -or $null -eq $prop.Value) {
+    return ,@()
+  }
+  return ,@($prop.Value)
+}
+
+# Get-ManifestObjectFieldOrEmpty -- $Manifest.$Name as a PSCustomObject, or an
+# empty one when the property is absent or explicitly null. The `classes`
+# counterpart to Get-ManifestArrayFieldOrEmpty above.
+function Get-ManifestObjectFieldOrEmpty {
+  param(
+    [Parameter(Mandatory = $true)] $Manifest,
+    [Parameter(Mandatory = $true)] [string]$Name
+  )
+  $prop = $Manifest.PSObject.Properties[$Name]
+  if ($null -eq $prop -or $null -eq $prop.Value) {
+    return [PSCustomObject]@{}
+  }
+  return $prop.Value
+}
+
+# Test-IsAdditiveManifestDiff -- issue #53's narrow exception to "any manifest
+# difference forces structure" (rule: standards/governance-sync.md § "What a
+# sync is"; rationale: the governance repo's DESIGN.md § "The
+# additive-manifest exception (issue #53)"). An added `excludedPaths` entry
+# counts as additive only when it is not a `!`-prefixed negation, since a
+# negation un-excludes a path and so is a subtraction in effect.
+# $ChildTrackedFiles must be the child's tracked file list (git ls-files
+# form: repo-relative, forward-slashed); $null disables the exception
+# outright, since a newly added sharedPaths or classes entry can then not be
+# checked for a collision at all -- the safe side is to call the whole diff
+# structure.
+function Test-IsAdditiveManifestDiff {
+  param(
+    [Parameter(Mandatory = $true)] $ParentManifest,
+    [Parameter(Mandatory = $true)] $ChildManifest,
+    [string[]]$ChildTrackedFiles
+  )
+  $allowedFields = @('sharedPaths', 'excludedPaths', 'classes', 'arrivesAsStructure')
+  $diffFields = Get-ManifestDiffFields -ParentManifest $ParentManifest -ChildManifest $ChildManifest
+  foreach ($f in $diffFields) {
+    if ($allowedFields -notcontains $f) {
+      return [PSCustomObject]@{
+        IsAdditive = $false
+        Reason     = "field '$f' differs and is outside the additive exception's four fields (sharedPaths, excludedPaths, classes, arrivesAsStructure)"
+      }
+    }
+  }
+
+  if ($null -eq $ChildTrackedFiles) {
+    return [PSCustomObject]@{
+      IsAdditive = $false
+      Reason     = 'no child tracked file list was supplied; a collision cannot be ruled out'
+    }
+  }
+
+  $addedSharedPaths = @()
+  $addedClassesKeys = @()
+
+  foreach ($f in $diffFields) {
+    if ($f -eq 'classes') {
+      $parentClasses = Get-ManifestObjectFieldOrEmpty -Manifest $ParentManifest -Name 'classes'
+      $childClasses = Get-ManifestObjectFieldOrEmpty -Manifest $ChildManifest -Name 'classes'
+      # Piped through ForEach-Object, not `.Properties.Name` directly: see
+      # DESIGN.md, "The additive-manifest exception (issue #53)", for why.
+      $parentKeys = @($parentClasses.PSObject.Properties | ForEach-Object { $_.Name })
+      $childKeys = @($childClasses.PSObject.Properties | ForEach-Object { $_.Name })
+      $parentKeySet = New-Object 'System.Collections.Generic.HashSet[string]'
+      foreach ($k in $parentKeys) { [void]$parentKeySet.Add($k) }
+      $childKeySet = New-Object 'System.Collections.Generic.HashSet[string]'
+      foreach ($k in $childKeys) { [void]$childKeySet.Add($k) }
+      $removedKeys = @($childKeys | Where-Object { -not $parentKeySet.Contains($_) })
+      if ($removedKeys.Count -gt 0) {
+        return [PSCustomObject]@{ IsAdditive = $false; Reason = "classes key removed: $($removedKeys -join ', ')" }
+      }
+      foreach ($k in $childKeys) {
+        $pv = Get-CanonicalJson -Value $parentClasses.PSObject.Properties[$k].Value
+        $cv = Get-CanonicalJson -Value $childClasses.PSObject.Properties[$k].Value
+        # Ordinal, matching the excludedPaths and HashSet[string] comparisons
+        # below: one comparison semantics per kind of value in this function.
+        if (-not [string]::Equals($pv, $cv, [System.StringComparison]::Ordinal)) {
+          return [PSCustomObject]@{ IsAdditive = $false; Reason = "classes key '$k' changed value" }
+        }
+      }
+      $addedClassesKeys = @($parentKeys | Where-Object { -not $childKeySet.Contains($_) })
+    } elseif ($f -eq 'excludedPaths') {
+      # excludedPaths is order-sensitive (isExcluded applies entries in
+      # order, last match wins), so a membership-only test is not enough:
+      # only a strict append after the child's existing entries is proven
+      # safe here. See DESIGN.md, "The additive-manifest exception (issue
+      # #53)", for the reordering and mid-array-insertion cases this guards.
+      $parentArr = Get-ManifestArrayFieldOrEmpty -Manifest $ParentManifest -Name $f
+      $childArr = Get-ManifestArrayFieldOrEmpty -Manifest $ChildManifest -Name $f
+      if ($childArr.Count -gt $parentArr.Count) {
+        # A shorter parent array is not always a plain removal; see
+        # DESIGN.md, "The additive-manifest exception (issue #53)".
+        return [PSCustomObject]@{
+          IsAdditive = $false
+          Reason     = "the parent's excludedPaths is shorter than the child's: an entry was removed, possibly along with a reorder or value change"
+        }
+      }
+      for ($i = 0; $i -lt $childArr.Count; $i++) {
+        # Ordinal, case-sensitive: matches the HashSet[string] comparisons
+        # below, whose default comparer is also ordinal. PowerShell's `-ne`
+        # is case-insensitive and would treat 'buildlog/**' and
+        # 'Buildlog/**' as unchanged, letting a real case-sensitivity change
+        # slip through as an append.
+        if (-not [string]::Equals([string]$childArr[$i], [string]$parentArr[$i], [System.StringComparison]::Ordinal)) {
+          return [PSCustomObject]@{
+            IsAdditive = $false
+            Reason     = 'excludedPaths reordered or changed mid-array: isExcluded reads entry order, so only a strict append after the child''s existing entries is safe'
+          }
+        }
+      }
+      $added = @()
+      if ($parentArr.Count -gt $childArr.Count) {
+        $added = @($parentArr[$childArr.Count..($parentArr.Count - 1)])
+      }
+      foreach ($a in $added) {
+        if ($a.StartsWith('!')) {
+          return [PSCustomObject]@{
+            IsAdditive = $false
+            Reason     = "excludedPaths entry '$a' is a negation, a subtraction rather than an addition"
+          }
+        }
+      }
+    } else {
+      # sharedPaths, arrivesAsStructure: membership only, since a pure
+      # reorder is safe here (neither Resolve-SharedSet nor the
+      # arrivesAsStructure check in Get-PlanPathClassification reads order).
+      # excludedPaths gets its own branch above because isExcluded does
+      # read order.
+      $parentArr = Get-ManifestArrayFieldOrEmpty -Manifest $ParentManifest -Name $f
+      $childArr = Get-ManifestArrayFieldOrEmpty -Manifest $ChildManifest -Name $f
+      $parentSet = New-Object 'System.Collections.Generic.HashSet[string]'
+      foreach ($p in $parentArr) { [void]$parentSet.Add($p) }
+      $childSet = New-Object 'System.Collections.Generic.HashSet[string]'
+      foreach ($p in $childArr) { [void]$childSet.Add($p) }
+      $removed = @($childArr | Where-Object { -not $parentSet.Contains($_) })
+      if ($removed.Count -gt 0) {
+        return [PSCustomObject]@{ IsAdditive = $false; Reason = "entry removed from ${f}: $($removed -join ', ')" }
+      }
+      $added = @($parentArr | Where-Object { -not $childSet.Contains($_) })
+      if ($f -eq 'sharedPaths') {
+        $addedSharedPaths = $added
+      }
+      # arrivesAsStructure additions need no collision test: pushing a path
+      # onto it only forces structure on that path's first delivery, the
+      # safe direction.
+    }
+  }
+
+  foreach ($entry in $addedSharedPaths) {
+    foreach ($tracked in $ChildTrackedFiles) {
+      if (Test-MatchesManifestEntry -Path $tracked -Entry $entry) {
+        return [PSCustomObject]@{
+          IsAdditive = $false
+          Reason     = "sharedPaths entry '$entry' collides with tracked child file '$tracked'"
+        }
+      }
+    }
+  }
+  foreach ($entry in $addedClassesKeys) {
+    foreach ($tracked in $ChildTrackedFiles) {
+      if (Test-MatchesManifestEntry -Path $tracked -Entry $entry) {
+        return [PSCustomObject]@{
+          IsAdditive = $false
+          Reason     = "classes key '$entry' collides with tracked child file '$tracked'"
+        }
+      }
+    }
+  }
+
+  return [PSCustomObject]@{ IsAdditive = $true; Reason = 'every manifest difference is a safe addition' }
 }
 
 # Get-ManifestClassMatch -- the manifest.classes entry that decides $Path: an
@@ -482,12 +677,18 @@ function Get-PlanPathClassification {
 # A structure RunClass withholds every plan path regardless of its own
 # per-file class, and the consistency rule does the same when a shipped Add
 # or Update cites a withheld path.
+#
+# $ChildTrackedFiles feeds issue #53's additive-manifest exception
+# (Test-IsAdditiveManifestDiff below; see the governance repo's DESIGN.md §
+# "The additive-manifest exception (issue #53)" for what qualifies). Omitted
+# (or $null), a manifest difference behaves exactly as before this issue.
 function Get-SyncClassification {
   param(
     [Parameter(Mandatory = $true)] $ParentManifest,
     $ChildManifest,
     [Parameter(Mandatory = $true)] $Plan,
-    [Parameter(Mandatory = $true)] [string]$ParentRoot
+    [Parameter(Mandatory = $true)] [string]$ParentRoot,
+    [string[]]$ChildTrackedFiles
   )
   $addSet = New-Object 'System.Collections.Generic.HashSet[string]'
   foreach ($p in @($Plan.Adds)) { [void]$addSet.Add($p) }
@@ -507,9 +708,16 @@ function Get-SyncClassification {
   $runReason = $null
   if ($null -ne $ChildManifest) {
     if ((Get-CanonicalJson -Value $ParentManifest) -ne (Get-CanonicalJson -Value $ChildManifest)) {
-      $runIsStructure = $true
-      $diffFields = Get-ManifestDiffFields -ParentManifest $ParentManifest -ChildManifest $ChildManifest
-      $runReason = "manifest fields differ: $($diffFields -join ', ')"
+      $additive = Test-IsAdditiveManifestDiff -ParentManifest $ParentManifest -ChildManifest $ChildManifest `
+        -ChildTrackedFiles $ChildTrackedFiles
+      if (-not $additive.IsAdditive) {
+        $runIsStructure = $true
+        $diffFields = Get-ManifestDiffFields -ParentManifest $ParentManifest -ChildManifest $ChildManifest
+        $runReason = "manifest fields differ: $($diffFields -join ', ') ($($additive.Reason))"
+      }
+      # IsAdditive true: $runIsStructure stays false and the run classifies
+      # on its remaining paths exactly as it would have if the manifests had
+      # matched.
     }
   }
 

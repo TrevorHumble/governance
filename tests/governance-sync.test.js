@@ -318,6 +318,74 @@ maybeDescribe('Get-UnacknowledgedDivergent raw return value (issue #15 CI red)',
   });
 });
 
+// ---- Get-ChildTrackedFiles (issue #53: tree paths git must not mis-split) --
+//
+// Why this extracts the function's source instead of dot-sourcing WRAPPER_SCRIPT:
+// DESIGN.md, "The additive-manifest exception (issue #53)".
+
+function runGetChildTrackedFiles(childTreeRoot) {
+  const wrapperSource = fs.readFileSync(WRAPPER_SCRIPT, 'utf8');
+  const match = /function Get-ChildTrackedFiles \{[\s\S]*?\n\}\r?\n/.exec(wrapperSource);
+  if (!match) {
+    throw new Error('Get-ChildTrackedFiles definition not found in ' + WRAPPER_SCRIPT);
+  }
+  const functionSource = match[0];
+  const cmd =
+    `${functionSource}\n` +
+    `$r = Get-ChildTrackedFiles -ChildTreeRoot '${childTreeRoot.replace(/'/g, "''")}'; ` +
+    // @($null) is a one-element array holding $null, not an empty array, so
+    // the count has to be read behind the null check rather than through
+    // @($r).Count directly, or a $null result would misreport as Count=1.
+    `if ($null -eq $r) { Write-Output "IsNull=True|Count=0" } else { Write-Output "IsNull=False|Count=$(@($r).Count)"; @($r) | ForEach-Object { Write-Output "F:$_" } }`;
+  const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], {
+    encoding: 'utf8',
+  });
+  return r;
+}
+
+maybeDescribe('Get-ChildTrackedFiles (issue #53)', () => {
+  it('a tree root whose path holds a space returns the real tracked list, not $null', () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-ctf-'));
+    const spacedRoot = path.join(parent, 'Code Projects', 'child repo');
+    fs.mkdirSync(spacedRoot, { recursive: true });
+    git(spacedRoot, ['init', '-q']);
+    git(spacedRoot, ['config', 'user.name', 'test']);
+    git(spacedRoot, ['config', 'user.email', 'test@example.invalid']);
+    writeFile(spacedRoot, 'repo-profile.json', '{}');
+    writeFile(spacedRoot, 'src/inner/file.txt', 'hello');
+    git(spacedRoot, ['add', '-A']);
+    git(spacedRoot, ['commit', '-q', '-m', 'seed']);
+
+    const r = runGetChildTrackedFiles(spacedRoot);
+    expect(r.status).toBe(0);
+    const lines = r.stdout.split(/\r?\n/).filter((l) => l.length > 0);
+    expect(lines[0]).toBe('IsNull=False|Count=2');
+    const files = lines.slice(1).map((l) => l.replace(/^F:/, ''));
+    expect(files.sort()).toEqual(['repo-profile.json', 'src/inner/file.txt']);
+
+    fs.rmSync(parent, { recursive: true, force: true });
+  });
+
+  it('a path that is not a git repository fails closed to $null', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-ctf-notrepo-'));
+    const r = runGetChildTrackedFiles(dir);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe('IsNull=True|Count=0');
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('a repo tracking zero files returns an empty array, not $null', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-ctf-empty-'));
+    git(dir, ['init', '-q']);
+    git(dir, ['config', 'user.name', 'test']);
+    git(dir, ['config', 'user.email', 'test@example.invalid']);
+    const r = runGetChildTrackedFiles(dir);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe('IsNull=False|Count=0');
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
 // ---- wrapper: configuration handling (AC 2) ------------------------------
 
 function runWrapper(args, envExtra) {
