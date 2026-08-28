@@ -850,7 +850,9 @@ PowerShell's own `"$(& git ...)"` capture with the same shape: allocate two temp
 `Start-Process` redirecting stdout and stderr to them, read the stdout file's raw bytes back, and
 decode. `"$(& git ...)"` re-splits stdout on line boundaries and rejoins with `$OFS` (a space),
 mangling a staged or tracked path that holds a newline or a bare CR even though `-z` asked git for
-NUL-terminated records, not newline-terminated ones.
+NUL-terminated records, not newline-terminated ones. It carries a second, independent defect:
+native-command capture decodes git's raw UTF-8 bytes through the console's own output encoding, so
+on a non-UTF-8 console a non-ASCII path comes back as different characters entirely.
 
 **The one home.** `tools/governance-sync-core.ps1`'s `Invoke-GitCaptureRaw` is now the single place
 that shape lives: it runs the git command, returns the raw decoded stdout string and the exit code,
@@ -867,8 +869,8 @@ itself self-contained, with no dependency on any other `tools/*.ps1` file, and
 `tests/commit-msg.test.js` copies only that one tool file into its fixture repo; picking up a
 dependency on `tools/governance-sync-core.ps1` would break both.
 
-That inline copy carries a one-line comment pointing back here so a future reader knows the shared
-home exists and why that one file cannot use it.
+That inline copy carries a comment pointing back here so a future reader knows the shared home
+exists and why that one file cannot use it.
 
 **The byte guarantee, stated precisely.** Reading git's raw bytes back and cutting at its own trailing
 NUL preserves git's own record boundaries: a legitimate trailing space, an embedded CR, or an LF
