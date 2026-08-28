@@ -13,11 +13,12 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { launcherMissing, skipTitle } = require('./ps-launcher');
+const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const HOOK_SRC = path.join(REPO_ROOT, '.githooks', 'pre-commit');
 const REAL_MANIFEST_PATH = path.join(REPO_ROOT, 'governance-manifest.json');
+const OWNERSHIP_CORE_SCRIPT = path.join(REPO_ROOT, 'tools', 'ownership-core.ps1');
 
 // Every temp directory any case below creates is registered here the
 // instant it exists, before any fallible work runs against it, so a case
@@ -113,6 +114,58 @@ function tryCommit(dir, files, branch) {
   }
   git(dir, ['add', '-A']);
   return spawnSync('git', ['commit', '-q', '-m', 'test commit'], { cwd: dir, encoding: 'utf8' });
+}
+
+// Reads Get-StagedParentOwnedPath's return value directly rather than
+// through the hook's own BLOCKED text; see the non-ASCII case below.
+function runGetStagedParentOwnedPath(dir) {
+  const outFile = path.join(dir, 'staged-parent-owned.out');
+  const scriptPath = OWNERSHIP_CORE_SCRIPT.replace(/'/g, "''");
+  const outPath = outFile.replace(/'/g, "''");
+  const cmd =
+    `. '${scriptPath}'; ` +
+    `$m = [PSCustomObject]@{ sharedPaths = @('standards/**') }; ` +
+    `$r = Get-StagedParentOwnedPath -Manifest $m; ` +
+    `$enc = New-Object System.Text.UTF8Encoding($false); ` +
+    `[IO.File]::WriteAllLines('${outPath}', [string[]]@($r), $enc)`;
+  const res = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], {
+    cwd: dir,
+    encoding: 'utf8',
+  });
+  if (res.status !== 0) {
+    throw new Error(
+      `Get-StagedParentOwnedPath isolation run failed:\n${res.stderr}\n${res.stdout}`
+    );
+  }
+  return fs
+    .readFileSync(outFile, 'utf8')
+    .split(/\r?\n/)
+    .filter((line) => line.length > 0);
+}
+
+// Same isolation call, but NUL-joins the result instead of writing one path
+// per line: the newline case below embeds a newline inside the path itself,
+// which a newline-per-line file transport cannot round-trip.
+function runGetStagedParentOwnedPathNulJoined(dir) {
+  const outFile = path.join(dir, 'staged-parent-owned-nul.out');
+  const scriptPath = OWNERSHIP_CORE_SCRIPT.replace(/'/g, "''");
+  const outPath = outFile.replace(/'/g, "''");
+  const cmd =
+    `. '${scriptPath}'; ` +
+    `$m = [PSCustomObject]@{ sharedPaths = @('standards/**') }; ` +
+    `$r = Get-StagedParentOwnedPath -Manifest $m; ` +
+    `$enc = New-Object System.Text.UTF8Encoding($false); ` +
+    `[IO.File]::WriteAllBytes('${outPath}', $enc.GetBytes(($r -join [char]0)))`;
+  const res = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], {
+    cwd: dir,
+    encoding: 'utf8',
+  });
+  if (res.status !== 0) {
+    throw new Error(
+      `Get-StagedParentOwnedPath isolation run failed:\n${res.stderr}\n${res.stdout}`
+    );
+  }
+  return fs.readFileSync(outFile, 'utf8').split('\0');
 }
 
 const NON_SELF_PROFILE = { governanceHome: 'https://governance.invalid/parent.git', syncIssue: 1 };
@@ -271,6 +324,68 @@ maybeDescribe('.githooks/pre-commit', () => {
     const out = `${res.stdout}${res.stderr}`;
     expect(out).toContain('BLOCKED');
   });
+
+  // Get-StagedParentOwnedPath now reads git's output as raw UTF-8 bytes
+  // instead of through PowerShell's own console-encoding native capture
+  // (see DESIGN.md § "NUL-safe git output: one home"). A parent-owned path
+  // with a space or a non-ASCII character must still be detected and named
+  // under the new reader.
+  it('blocks and names a parent-owned path whose name contains a space', () => {
+    const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
+    const res = tryCommit(dir, { 'standards/new rule.md': 'edit\n' }, 'feat/whatever');
+    expect(res.status).not.toBe(0);
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+    expect(out).toContain('standards/new rule.md');
+  });
+
+  // Not asserting the literal name here: the hook's own $OutputEncoding
+  // lossily mangles a non-ASCII character before this assertion sees it.
+  // The isolation test below reads the return value directly instead.
+  it('blocks a parent-owned path whose name contains a non-ASCII character', () => {
+    const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
+    const res = tryCommit(dir, { 'standards/café.md': 'edit\n' }, 'feat/whatever');
+    expect(res.status).not.toBe(0);
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+  });
+
+  // The two cases above assert only BLOCKED, which a mangled path satisfies
+  // just as well as a correct one. This case checks the returned path
+  // string itself, which discriminates a mangled decode from a correct one.
+  it('Get-StagedParentOwnedPath returns the non-ASCII path byte-for-byte', () => {
+    const dir = registerDir(fs.mkdtempSync(path.join(os.tmpdir(), 'ownership-core-isolation-')));
+    git(dir, ['init', '-q']);
+    git(dir, ['config', 'user.name', 'test']);
+    git(dir, ['config', 'user.email', 'test@example.invalid']);
+    writeFile(dir, 'standards/café.md', 'edit\n');
+    git(dir, ['add', '-A']);
+    const result = runGetStagedParentOwnedPath(dir);
+    expect(result).toEqual(['standards/café.md']);
+  });
+
+  // ASCII-only, so this discriminates on console encoding alone (matched on
+  // Windows and Linux alike, unlike the non-ASCII case above): PowerShell's
+  // native-command capture rejoins captured lines with a space on every
+  // platform, so reverting Invoke-GitCaptureRaw to that form would split
+  // this filename's embedded newline into two lines and rejoin them wrong.
+  // NTFS cannot hold a filename with an embedded newline, hence the skip.
+  it.skipIf(process.platform === 'win32')(
+    'Get-StagedParentOwnedPath returns an embedded-newline path intact (Linux only)',
+    () => {
+      const dir = registerDir(
+        fs.mkdtempSync(path.join(os.tmpdir(), 'ownership-core-isolation-newline-'))
+      );
+      git(dir, ['init', '-q']);
+      git(dir, ['config', 'user.name', 'test']);
+      git(dir, ['config', 'user.email', 'test@example.invalid']);
+      const NEWLINE_PATH = 'standards/line\none.md';
+      writeFile(dir, NEWLINE_PATH, 'edit\n');
+      git(dir, ['add', '-A']);
+      const result = runGetStagedParentOwnedPathNulJoined(dir);
+      expect(result).toEqual([NEWLINE_PATH]);
+    }
+  );
 
   // A mixed-case sync-branch lookalike is not exempted. The sync only ever
   // builds lowercase branch names, and git branch names are case-sensitive,

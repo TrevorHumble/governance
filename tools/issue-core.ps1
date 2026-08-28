@@ -44,8 +44,32 @@ function Resolve-IssueNumber {
 # only deletes code files still counts as CODE. NUL-safe path handling guards
 # against non-ASCII or space-containing paths.
 function Test-StagedHasCode {
-  $z = "$(& git -c core.quotepath=false diff --cached --name-only -z 2>$null)"
-  $paths = @($z -split "`0" | Where-Object { $_ })
+  # NUL-safe git output, kept inline rather than calling the shared
+  # tools/governance-sync-core.ps1 helper (self-contained, per the header).
+  # No -WorkingDirectory: runs against the invoking tree.
+  # $ErrorActionPreference = 'Stop', function-scoped, makes a genuine
+  # PowerShell error propagate rather than read back as "no code staged",
+  # which is what keeps this fail-closed: the governance repo's DESIGN.md §
+  # "NUL-safe git output: one home".
+  $ErrorActionPreference = 'Stop'
+  $outFile = $null
+  $errFile = $null
+  try {
+    $outFile = [IO.Path]::GetTempFileName()
+    $errFile = [IO.Path]::GetTempFileName()
+    Start-Process -FilePath 'git' `
+      -ArgumentList @('-c', 'core.quotepath=false', 'diff', '--cached', '--name-only', '-z') `
+      -NoNewWindow -Wait -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+    $z = [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($outFile))
+  } finally {
+    if ($null -ne $outFile) { Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue }
+    if ($null -ne $errFile) { Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue }
+  }
+  $lastNul = $z.LastIndexOf([char]0)
+  $paths = @()
+  if ($lastNul -ge 0) {
+    $paths = @($z.Substring(0, $lastNul) -split "`0")
+  }
   if (@($paths).Count -eq 0) { return $false }
   foreach ($p in $paths) {
     if ($p -notmatch '(?i)\.(md|markdown)$') { return $true }

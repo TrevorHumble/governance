@@ -28,25 +28,21 @@ function Get-StagedParentOwnedPath {
   if ($null -eq $sharedPathsProp -or $null -eq $sharedPathsProp.Value) {
     throw 'Get-StagedParentOwnedPath: governance-manifest.json has no sharedPaths array (corrupt manifest)'
   }
-  # git's stderr lines, once redirected, arrive in PowerShell as
-  # non-terminating NativeCommandError records; the caller (the pre-commit
-  # hook) runs this whole script under $ErrorActionPreference = 'Stop', which
-  # promotes any such record to terminating and aborts the scan on a plain
-  # git warning, not just a real git failure. $LASTEXITCODE is the only
-  # trustworthy signal of whether git itself failed, so the preference is
-  # relaxed for just this one call and restored right after, and the exit
-  # code is checked explicitly instead of leaning on the promoted error.
-  $previousEap = $ErrorActionPreference
-  $ErrorActionPreference = 'Continue'
-  try {
-    $z = "$(& git -c core.quotepath=false diff --cached -z --name-only 2>$null)"
-  } finally {
-    $ErrorActionPreference = $previousEap
+  # NUL-safe git output via Invoke-GitCaptureRaw (this file already
+  # dot-sources tools/governance-sync-core.ps1, per the header). No
+  # -WorkingDirectory: this wall always runs against the invoking tree.
+  # Rationale and the byte guarantee this actually gives: the governance
+  # repo's DESIGN.md § "NUL-safe git output: one home".
+  $capture = Invoke-GitCaptureRaw -ArgumentList @('-c', 'core.quotepath=false', 'diff', '--cached', '-z', '--name-only')
+  if ($capture.ExitCode -ne 0) {
+    throw "Get-StagedParentOwnedPath: git diff --cached failed with exit code $($capture.ExitCode)"
   }
-  if ($LASTEXITCODE -ne 0) {
-    throw "Get-StagedParentOwnedPath: git diff --cached failed with exit code $LASTEXITCODE"
+  $z = $capture.Output
+  $lastNul = $z.LastIndexOf([char]0)
+  $paths = @()
+  if ($lastNul -ge 0) {
+    $paths = @($z.Substring(0, $lastNul) -split "`0")
   }
-  $paths = @($z -split "`0" | Where-Object { $_ })
   $sharedPaths = @($sharedPathsProp.Value)
   $result = New-Object System.Collections.Generic.List[string]
   foreach ($p in $paths) {

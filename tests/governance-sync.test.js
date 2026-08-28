@@ -1,5 +1,6 @@
 // tests/governance-sync.test.js
-// Vitest tests for tools/governance-sync-core.ps1 (pure planning logic) and
+// Vitest tests for tools/governance-sync-core.ps1 (planning logic, runs
+// read-only git commands but performs no mutation) and
 // tools/governance-sync.ps1 (the wrapper: configuration handling and the
 // end-to-end pull-and-PR flow). Launcher resolution is shared: see
 // tests/ps-launcher.js.
@@ -321,7 +322,9 @@ maybeDescribe('Get-UnacknowledgedDivergent raw return value (issue #15 CI red)',
 // ---- Get-ChildTrackedFiles (issue #53: tree paths git must not mis-split) --
 //
 // Why this extracts the function's source instead of dot-sourcing WRAPPER_SCRIPT:
-// DESIGN.md, "The additive-manifest exception (issue #53)".
+// DESIGN.md, "The additive-manifest exception (issue #53)". It also dot-sources
+// CORE_SCRIPT ahead of the extracted text so Invoke-GitCaptureRaw, which the
+// function now calls, is defined: see DESIGN.md § "NUL-safe git output: one home".
 
 function runGetChildTrackedFiles(childTreeRoot) {
   const wrapperSource = fs.readFileSync(WRAPPER_SCRIPT, 'utf8');
@@ -330,7 +333,13 @@ function runGetChildTrackedFiles(childTreeRoot) {
     throw new Error('Get-ChildTrackedFiles definition not found in ' + WRAPPER_SCRIPT);
   }
   const functionSource = match[0];
+  // Get-ChildTrackedFiles now calls Invoke-GitCaptureRaw (DESIGN.md § "NUL-safe
+  // git output: one home"), so the extracted text needs that helper defined.
+  // Dot-sourcing CORE_SCRIPT only defines its functions and runs nothing at
+  // the top level, so it gives it that one dependency without dot-sourcing
+  // WRAPPER_SCRIPT itself, which would run a real sync on load.
   const cmd =
+    `. '${CORE_SCRIPT.replace(/'/g, "''")}'\n` +
     `${functionSource}\n` +
     `$r = Get-ChildTrackedFiles -ChildTreeRoot '${childTreeRoot.replace(/'/g, "''")}'; ` +
     // @($null) is a one-element array holding $null, not an empty array, so

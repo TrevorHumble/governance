@@ -1,15 +1,64 @@
 # tools/governance-sync-core.ps1: pure planning logic for pulling shared governance
 # from the home repo into a child. Dot-source this file; do not run it directly
 # (mirrors the -core.ps1 convention of tools/repo-profile-core.ps1 and
-# tools/classify-dep-pr-core.ps1). No side effects beyond reading the filesystem
-# and, in Resolve-GhPath, probing commands: every git/gh mutation lives in the
-# wrapper, tools/governance-sync.ps1, not here, so this file's functions can be
+# tools/classify-dep-pr-core.ps1). No side effects beyond reading the filesystem,
+# running read-only git commands (Invoke-GitCaptureRaw), and, in Resolve-GhPath,
+# probing commands: every git/gh mutation lives in the wrapper,
+# tools/governance-sync.ps1, not here, so this file's functions can be
 # dot-sourced and called directly from tests with no repo state at risk.
 #
 # Design and the same-tree invariant this plan feeds: the governance repo's
 # DESIGN.md § "Governance sync".
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
+
+# Invoke-GitCaptureRaw -- runs a git command via Start-Process, redirecting
+# stdout and stderr to temp files, and returns the raw decoded stdout string
+# plus the exit code. The one home for reading git output NUL-safely instead
+# of PowerShell's own "$(& git ...)" capture. Error policy is the caller's:
+# nothing here is caught, and $ErrorActionPreference = 'Stop' is set
+# function-scoped so a genuine PowerShell error (git missing from PATH, a
+# temp directory that is full or read-only) actually propagates rather than
+# being swallowed. Full rationale and the byte guarantee this actually
+# gives: the governance repo's DESIGN.md § "NUL-safe git output: one home".
+#
+# Two traps every caller must not walk into: -ArgumentList joins its
+# elements with a plain space and applies no quoting, so never pass a path
+# through it, use -WorkingDirectory instead; and -RedirectStandardError is a
+# real temp file, not the NUL device name, which is an ordinary file on a
+# POSIX runner that nothing removes.
+function Invoke-GitCaptureRaw {
+  param(
+    [Parameter(Mandatory = $true)] [string[]]$ArgumentList,
+    [string]$WorkingDirectory
+  )
+  $ErrorActionPreference = 'Stop'
+  $outFile = $null
+  $errFile = $null
+  try {
+    $outFile = [IO.Path]::GetTempFileName()
+    $errFile = [IO.Path]::GetTempFileName()
+    $startArgs = @{
+      FilePath               = 'git'
+      ArgumentList           = $ArgumentList
+      NoNewWindow            = $true
+      Wait                   = $true
+      PassThru               = $true
+      RedirectStandardOutput = $outFile
+      RedirectStandardError  = $errFile
+    }
+    if ($WorkingDirectory) { $startArgs['WorkingDirectory'] = $WorkingDirectory }
+    $proc = Start-Process @startArgs
+    $bytes = [IO.File]::ReadAllBytes($outFile)
+    return [PSCustomObject]@{
+      ExitCode = $proc.ExitCode
+      Output   = [System.Text.Encoding]::UTF8.GetString($bytes)
+    }
+  } finally {
+    if ($null -ne $outFile) { Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue }
+    if ($null -ne $errFile) { Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue }
+  }
+}
 
 # Get-FileSha256 -- SHA-256 of a file's bytes, lowercase hex. Get-FileHash's
 # .Hash is uppercase; the retired-entry schema (tests/governance-manifest.test.js)
@@ -709,7 +758,13 @@ function Get-SyncClassification {
   $runIsStructure = $false
   $runReason = $null
   if ($null -ne $ChildManifest) {
-    if ((Get-CanonicalJson -Value $ParentManifest) -ne (Get-CanonicalJson -Value $ChildManifest)) {
+    # Ordinal and case-sensitive, matching every other manifest-value
+    # comparison in this file (Get-ManifestDiffFields and the classes-key and
+    # excludedPaths checks above): PowerShell's `-ne` is case-insensitive,
+    # which would read a case-only difference as no difference at all.
+    # Rationale: the governance repo's DESIGN.md § "The additive-manifest
+    # exception (issue #53)", "Ordinal manifest comparisons".
+    if (-not [string]::Equals((Get-CanonicalJson -Value $ParentManifest), (Get-CanonicalJson -Value $ChildManifest), [System.StringComparison]::Ordinal)) {
       $additive = Test-IsAdditiveManifestDiff -ParentManifest $ParentManifest -ChildManifest $ChildManifest `
         -ChildTrackedFiles $ChildTrackedFiles
       if (-not $additive.IsAdditive) {

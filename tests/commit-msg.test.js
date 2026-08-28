@@ -122,4 +122,21 @@ maybeDescribe('.githooks/commit-msg', () => {
     const res = tryCommit(dir, { 'app.js': 'console.log(1);\n' }, 'add app', 'feat/issue-42');
     expect(res.status).toBe(0);
   });
+
+  // Test-StagedHasCode now reads git's output as raw UTF-8 bytes instead of
+  // through PowerShell's own console-encoding native capture (see
+  // DESIGN.md § "NUL-safe git output: one home"). A staged path with a space
+  // or a non-ASCII character must still be classified CODE, and blocked with
+  // no issue reference, under the new reader.
+  it('blocks a code commit whose only staged file name contains a space, with no issue reference', () => {
+    const res = tryCommit(dir, { 'my app.js': 'console.log(1);\n' }, 'add app');
+    expect(res.status).not.toBe(0);
+    expect(`${res.stdout}${res.stderr}`).toContain('BLOCKED');
+  });
+
+  it('blocks a code commit whose only staged file name contains a non-ASCII character, with no issue reference', () => {
+    const res = tryCommit(dir, { 'app-éclair.js': 'console.log(1);\n' }, 'add app');
+    expect(res.status).not.toBe(0);
+    expect(`${res.stdout}${res.stderr}`).toContain('BLOCKED');
+  });
 });
