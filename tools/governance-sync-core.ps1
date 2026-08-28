@@ -21,6 +21,12 @@
 # temp directory that is full or read-only) actually propagates rather than
 # being swallowed. Full rationale and the byte guarantee this actually
 # gives: the governance repo's DESIGN.md § "NUL-safe git output: one home".
+#
+# Two traps every caller must not walk into: -ArgumentList joins its
+# elements with a plain space and applies no quoting, so never pass a path
+# through it, use -WorkingDirectory instead; and -RedirectStandardError is a
+# real temp file, not the NUL device name, which is an ordinary file on a
+# POSIX runner that nothing removes.
 function Invoke-GitCaptureRaw {
   param(
     [Parameter(Mandatory = $true)] [string[]]$ArgumentList,

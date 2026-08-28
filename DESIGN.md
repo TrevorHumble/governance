@@ -552,8 +552,9 @@ rather than silently truncating a huge diff and missing violations past the cut 
 ## Governance sync
 
 Issue #3 ships the mechanism `README.md`'s "Rules of the road" and this file's own seed ADR had
-stated as policy but left unbuilt: `tools/governance-sync.ps1` (the wrapper, the only file with
-side effects) and `tools/governance-sync-core.ps1` (the pure planning logic), wired into
+stated as policy but left unbuilt: `tools/governance-sync.ps1` (the wrapper: the only file that
+mutates git or GitHub state) and `tools/governance-sync-core.ps1` (the planning logic, which runs
+read-only git commands but performs no mutation), wired into
 `.claude/commands/build.md` step 0b and `agents/orchestrator.md`'s Operating rules, reviewed per
 the new `standards/governance-sync.md`.
 
@@ -802,8 +803,8 @@ whole wrapper file the way it loads the core script. It pulls just this one func
 out of the file with a regular expression and evaluates that text in its own PowerShell process
 instead, isolating the function under test from everything else in the file around it. Since
 `Get-ChildTrackedFiles` itself now calls `Invoke-GitCaptureRaw`, the harness dot-sources
-`tools/governance-sync-core.ps1` (a pure library with no side effects beyond reading the
-filesystem, so this is safe) before evaluating the extracted text, giving the function the one
+`tools/governance-sync-core.ps1` (dot-sourcing only defines its functions and runs nothing at the
+top level, so this is safe) before evaluating the extracted text, giving the function the one
 dependency it needs without pulling in the wrapper's own top-level sync.
 
 **Why `ForEach-Object`, not `.Properties.Name`, walks a `classes` object's keys.** PowerShell's

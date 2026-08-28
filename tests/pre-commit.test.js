@@ -13,11 +13,12 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { launcherMissing, skipTitle } = require('./ps-launcher');
+const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const HOOK_SRC = path.join(REPO_ROOT, '.githooks', 'pre-commit');
 const REAL_MANIFEST_PATH = path.join(REPO_ROOT, 'governance-manifest.json');
+const OWNERSHIP_CORE_SCRIPT = path.join(REPO_ROOT, 'tools', 'ownership-core.ps1');
 
 // Every temp directory any case below creates is registered here the
 // instant it exists, before any fallible work runs against it, so a case
@@ -113,6 +114,39 @@ function tryCommit(dir, files, branch) {
   }
   git(dir, ['add', '-A']);
   return spawnSync('git', ['commit', '-q', '-m', 'test commit'], { cwd: dir, encoding: 'utf8' });
+}
+
+// Direct isolation test of Get-StagedParentOwnedPath: dot-sources
+// tools/ownership-core.ps1 itself and reads back the returned path string
+// byte-for-byte, so a mangled byte shows up in the assertion instead of
+// being hidden behind the hook's own $OutputEncoding-narrowed BLOCKED text
+// (see the non-ASCII case below). Writes the result to a file with a
+// BOM-less UTF-8 encoding rather than printing it, since PowerShell's own
+// stdout encoding for a redirected pipe is a second, unrelated place a
+// non-ASCII byte could be lost.
+function runGetStagedParentOwnedPath(dir) {
+  const outFile = path.join(dir, 'staged-parent-owned.out');
+  const scriptPath = OWNERSHIP_CORE_SCRIPT.replace(/'/g, "''");
+  const outPath = outFile.replace(/'/g, "''");
+  const cmd =
+    `. '${scriptPath}'; ` +
+    `$m = [PSCustomObject]@{ sharedPaths = @('standards/**') }; ` +
+    `$r = Get-StagedParentOwnedPath -Manifest $m; ` +
+    `$enc = New-Object System.Text.UTF8Encoding($false); ` +
+    `[IO.File]::WriteAllLines('${outPath}', [string[]]@($r), $enc)`;
+  const res = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], {
+    cwd: dir,
+    encoding: 'utf8',
+  });
+  if (res.status !== 0) {
+    throw new Error(
+      `Get-StagedParentOwnedPath isolation run failed:\n${res.stderr}\n${res.stdout}`
+    );
+  }
+  return fs
+    .readFileSync(outFile, 'utf8')
+    .split(/\r?\n/)
+    .filter((line) => line.length > 0);
 }
 
 const NON_SELF_PROFILE = { governanceHome: 'https://governance.invalid/parent.git', syncIssue: 1 };
@@ -290,18 +324,36 @@ maybeDescribe('.githooks/pre-commit', () => {
   // hook's PowerShell process writes the blocked path to a pipe under its
   // own $OutputEncoding (US-ASCII on this launcher, independent of the git
   // reader this issue changes), which lossily replaces a non-ASCII
-  // character before the surrounding sh script ever sees it. Read via
-  // Invoke-GitCaptureRaw / Get-StagedParentOwnedPath in isolation (as
-  // above), the path itself decodes correctly; what this case actually
-  // proves is that a non-ASCII path is still matched against sharedPaths
-  // and blocks the commit, which is what "the wall is not looser than
-  // before" requires.
+  // character before the surrounding sh script ever sees it. The isolation
+  // test below reads Get-StagedParentOwnedPath's own return value directly,
+  // bypassing that pipe, and proves the path itself decodes correctly; this
+  // case proves the weaker but still necessary fact that a non-ASCII path is
+  // matched against sharedPaths and blocks the commit either way.
   it('blocks a parent-owned path whose name contains a non-ASCII character', () => {
     const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
     const res = tryCommit(dir, { 'standards/café.md': 'edit\n' }, 'feat/whatever');
     expect(res.status).not.toBe(0);
     const out = `${res.stdout}${res.stderr}`;
     expect(out).toContain('BLOCKED');
+  });
+
+  // Isolation test for finding 1: the two cases above only assert BLOCKED,
+  // which a mangled path satisfies exactly as well as a correct one (a
+  // space-joined mangled name still matches standards/** and still blocks).
+  // This case instead calls Get-StagedParentOwnedPath directly and checks
+  // the returned path string itself, which does discriminate: reverting the
+  // Invoke-GitCaptureRaw reader to the old "$(& git ... -z ...)" capture form
+  // decodes this console's non-UTF-8 OutputEncoding over the path's UTF-8
+  // bytes and returns a different string.
+  it('Get-StagedParentOwnedPath returns the non-ASCII path byte-for-byte', () => {
+    const dir = registerDir(fs.mkdtempSync(path.join(os.tmpdir(), 'ownership-core-isolation-')));
+    git(dir, ['init', '-q']);
+    git(dir, ['config', 'user.name', 'test']);
+    git(dir, ['config', 'user.email', 'test@example.invalid']);
+    writeFile(dir, 'standards/café.md', 'edit\n');
+    git(dir, ['add', '-A']);
+    const result = runGetStagedParentOwnedPath(dir);
+    expect(result).toEqual(['standards/café.md']);
   });
 
   // A mixed-case sync-branch lookalike is not exempted. The sync only ever

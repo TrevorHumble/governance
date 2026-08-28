@@ -1,5 +1,6 @@
 // tests/governance-sync.test.js
-// Vitest tests for tools/governance-sync-core.ps1 (pure planning logic) and
+// Vitest tests for tools/governance-sync-core.ps1 (planning logic, runs
+// read-only git commands but performs no mutation) and
 // tools/governance-sync.ps1 (the wrapper: configuration handling and the
 // end-to-end pull-and-PR flow). Launcher resolution is shared: see
 // tests/ps-launcher.js.
@@ -334,8 +335,8 @@ function runGetChildTrackedFiles(childTreeRoot) {
   const functionSource = match[0];
   // Get-ChildTrackedFiles now calls Invoke-GitCaptureRaw (DESIGN.md § "NUL-safe
   // git output: one home"), so the extracted text needs that helper defined.
-  // Dot-sourcing CORE_SCRIPT (a pure library, no side effects beyond reading
-  // the filesystem) gives it that one dependency without dot-sourcing
+  // Dot-sourcing CORE_SCRIPT only defines its functions and runs nothing at
+  // the top level, so it gives it that one dependency without dot-sourcing
   // WRAPPER_SCRIPT itself, which would run a real sync on load.
   const cmd =
     `. '${CORE_SCRIPT.replace(/'/g, "''")}'\n` +

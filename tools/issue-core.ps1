@@ -44,15 +44,13 @@ function Resolve-IssueNumber {
 # only deletes code files still counts as CODE. NUL-safe path handling guards
 # against non-ASCII or space-containing paths.
 function Test-StagedHasCode {
-  # NUL-safe git output, kept inline (self-contained per the header) rather
-  # than calling the shared tools/governance-sync-core.ps1 helper. No
-  # -WorkingDirectory: runs against the invoking tree.
-  # $ErrorActionPreference = 'Stop', function-scoped, is what makes a
-  # genuine PowerShell error propagate instead of silently falling through
-  # to "no code staged"; a git failure (nonzero exit) still yields empty
-  # output and $false, unaffected. Full rationale, the fail-closed contract
-  # this backs, and why 'Stop' is required here: the governance repo's
-  # DESIGN.md § "NUL-safe git output: one home".
+  # NUL-safe git output, kept inline rather than calling the shared
+  # tools/governance-sync-core.ps1 helper (self-contained, per the header).
+  # No -WorkingDirectory: runs against the invoking tree.
+  # $ErrorActionPreference = 'Stop', function-scoped, makes a genuine
+  # PowerShell error propagate rather than read back as "no code staged",
+  # which is what keeps this fail-closed: the governance repo's DESIGN.md §
+  # "NUL-safe git output: one home".
   $ErrorActionPreference = 'Stop'
   $outFile = $null
   $errFile = $null

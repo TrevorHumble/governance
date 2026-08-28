@@ -1,9 +1,10 @@
 # tools/governance-sync.ps1: pulls this repo's declared shared governance into
 # a child repo as a small pull request that merges itself on green CI, no
 # reviewer, once the child's declared CI guard is confirmed required on its
-# default branch. The only file in this pair with side effects (clone,
-# fetch, worktree, commit, push, gh); the planning logic itself is pure and
-# lives in tools/governance-sync-core.ps1.
+# default branch. The only file in this pair that mutates git or GitHub
+# state (clone, fetch, worktree, commit, push, gh); the planning logic runs
+# read-only git commands but performs no mutation, and lives in
+# tools/governance-sync-core.ps1.
 #
 # Exit-code contract, the same-tree invariant, and the one-profile-parsed-once
 # rule this wrapper implements: the governance repo's DESIGN.md § "Governance
@@ -300,22 +301,19 @@ function Invoke-SupersededSyncSweep {
 
 # Get-ChildTrackedFiles -- $ChildTreeRoot's tracked files (git ls-files),
 # repo-relative and forward-slashed already (git's own form), NUL-split so a
-# path holding a newline, a carriage return, or a trailing space survives
-# git's own record boundaries intact (the byte guarantee this actually
-# gives: the governance repo's DESIGN.md § "NUL-safe git output: one
-# home"). Feeds issue #53's additive-manifest exception
-# (Test-IsAdditiveManifestDiff in tools/governance-sync-core.ps1): $null on
-# any git failure, so that exception fails closed to structure rather than
-# risk a collision check against an incomplete list.
+# path holding a newline, a carriage return, or a trailing space is read back
+# exactly as git recorded it, never re-split or rejoined by whitespace (the
+# byte guarantee this actually gives: the governance repo's DESIGN.md §
+# "NUL-safe git output: one home"). Feeds issue #53's additive-manifest
+# exception (Test-IsAdditiveManifestDiff in tools/governance-sync-core.ps1):
+# $null on any git failure, so that exception fails closed to structure
+# rather than risk a collision check against an incomplete list.
 #
 # Calls Invoke-GitCaptureRaw (tools/governance-sync-core.ps1, dot-sourced
-# above; the shared home, see the governance repo's DESIGN.md § "NUL-safe git
-# output: one home")
-# rather than carrying its own inline copy of the temp-file/Start-Process
-# shape. Invoke-GitCaptureRaw itself does not catch, so this function's own
-# try/catch is what turns a genuine PowerShell error (git missing, a full
-# temp directory) into this function's own $null contract instead of
-# letting it propagate.
+# above; the shared home, see the governance repo's DESIGN.md § "NUL-safe
+# git output: one home"). Invoke-GitCaptureRaw itself does not catch, so
+# this function's own try/catch is what turns a genuine PowerShell error
+# into this function's own $null contract.
 function Get-ChildTrackedFiles {
   param(
     [Parameter(Mandatory = $true)] [string]$ChildTreeRoot
