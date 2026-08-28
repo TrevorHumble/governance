@@ -44,27 +44,25 @@ function Resolve-IssueNumber {
 # only deletes code files still counts as CODE. NUL-safe path handling guards
 # against non-ASCII or space-containing paths.
 function Test-StagedHasCode {
-  # Read via Start-Process, not PowerShell's own "$(& git ...)" capture: that
-  # form splits stdout on newlines and rejoins with $OFS (a space), so a
-  # staged path containing a newline comes back mangled even though `-z`
-  # asked git for NUL-terminated, not newline-terminated, records. Reading
-  # the raw bytes back and cutting at git's own trailing NUL keeps every byte
-  # intact. On any git failure the output file is empty, so $paths comes back
-  # empty the same way the old code's suppressed-stderr capture did; this
-  # function still never throws on a git failure, matching its prior
-  # behavior.
+  # NUL-safe git output, kept inline (self-contained per the header) rather
+  # than calling the shared tools/governance-sync-core.ps1 helper. No
+  # -WorkingDirectory: runs against the invoking tree.
+  # $ErrorActionPreference = 'Stop', function-scoped, is what makes a
+  # genuine PowerShell error propagate instead of silently falling through
+  # to "no code staged"; a git failure (nonzero exit) still yields empty
+  # output and $false, unaffected. Full rationale, the fail-closed contract
+  # this backs, and why 'Stop' is required here: the governance repo's
+  # DESIGN.md § "NUL-safe git output: one home".
+  $ErrorActionPreference = 'Stop'
   $outFile = $null
   $errFile = $null
-  $z = ''
   try {
     $outFile = [IO.Path]::GetTempFileName()
     $errFile = [IO.Path]::GetTempFileName()
     Start-Process -FilePath 'git' `
       -ArgumentList @('-c', 'core.quotepath=false', 'diff', '--cached', '--name-only', '-z') `
-      -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile | Out-Null
+      -NoNewWindow -Wait -RedirectStandardOutput $outFile -RedirectStandardError $errFile
     $z = [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($outFile))
-  } catch {
-    $z = ''
   } finally {
     if ($null -ne $outFile) { Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue }
     if ($null -ne $errFile) { Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue }

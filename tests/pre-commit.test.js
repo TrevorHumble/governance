@@ -272,6 +272,38 @@ maybeDescribe('.githooks/pre-commit', () => {
     expect(out).toContain('BLOCKED');
   });
 
+  // Get-StagedParentOwnedPath now reads git's output as raw UTF-8 bytes
+  // instead of through PowerShell's own console-encoding native capture
+  // (see DESIGN.md § "NUL-safe git output: one home"). A parent-owned path
+  // with a space or a non-ASCII character must still be detected and named
+  // under the new reader.
+  it('blocks and names a parent-owned path whose name contains a space', () => {
+    const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
+    const res = tryCommit(dir, { 'standards/new rule.md': 'edit\n' }, 'feat/whatever');
+    expect(res.status).not.toBe(0);
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+    expect(out).toContain('standards/new rule.md');
+  });
+
+  // Not asserting the literal name here, unlike the space case above: the
+  // hook's PowerShell process writes the blocked path to a pipe under its
+  // own $OutputEncoding (US-ASCII on this launcher, independent of the git
+  // reader this issue changes), which lossily replaces a non-ASCII
+  // character before the surrounding sh script ever sees it. Read via
+  // Invoke-GitCaptureRaw / Get-StagedParentOwnedPath in isolation (as
+  // above), the path itself decodes correctly; what this case actually
+  // proves is that a non-ASCII path is still matched against sharedPaths
+  // and blocks the commit, which is what "the wall is not looser than
+  // before" requires.
+  it('blocks a parent-owned path whose name contains a non-ASCII character', () => {
+    const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
+    const res = tryCommit(dir, { 'standards/café.md': 'edit\n' }, 'feat/whatever');
+    expect(res.status).not.toBe(0);
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+  });
+
   // A mixed-case sync-branch lookalike is not exempted. The sync only ever
   // builds lowercase branch names, and git branch names are case-sensitive,
   // so the mixed-case form can only be hand-made; it must not exempt a

@@ -301,41 +301,31 @@ function Invoke-SupersededSyncSweep {
 # Get-ChildTrackedFiles -- $ChildTreeRoot's tracked files (git ls-files),
 # repo-relative and forward-slashed already (git's own form), NUL-split so a
 # path holding a newline, a carriage return, or a trailing space survives
-# intact. Feeds issue #53's additive-manifest exception
+# git's own record boundaries intact (the byte guarantee this actually
+# gives: the governance repo's DESIGN.md § "NUL-safe git output: one
+# home"). Feeds issue #53's additive-manifest exception
 # (Test-IsAdditiveManifestDiff in tools/governance-sync-core.ps1): $null on
 # any git failure, so that exception fails closed to structure rather than
 # risk a collision check against an incomplete list.
+#
+# Calls Invoke-GitCaptureRaw (tools/governance-sync-core.ps1, dot-sourced
+# above; the shared home, see the governance repo's DESIGN.md § "NUL-safe git
+# output: one home")
+# rather than carrying its own inline copy of the temp-file/Start-Process
+# shape. Invoke-GitCaptureRaw itself does not catch, so this function's own
+# try/catch is what turns a genuine PowerShell error (git missing, a full
+# temp directory) into this function's own $null contract instead of
+# letting it propagate.
 function Get-ChildTrackedFiles {
   param(
     [Parameter(Mandatory = $true)] [string]$ChildTreeRoot
   )
-  $outFile = $null
-  $errFile = $null
   try {
-    $outFile = [IO.Path]::GetTempFileName()
-    $errFile = [IO.Path]::GetTempFileName()
-    # Start-Process + -RedirectStandardOutput to a file, not PowerShell's own
-    # native capture or `>`: both re-split stdout on line boundaries and
-    # rewrite a bare `\r` to `\n`, losing a CR-bearing tracked path (legal on
-    # POSIX). Redirecting at the OS handle level and reading raw bytes back
-    # keeps every byte, CR included, intact.
-    #
-    # No `-C`: `-ArgumentList` joins its elements with a plain space and
-    # applies no quoting, so a tree root containing a space (for example
-    # "Code Projects") would reach git split into two arguments and fail.
-    # `-WorkingDirectory` takes the path whole, no quoting needed.
-    #
-    # `-RedirectStandardError` points at a real temp file, not the `NUL`
-    # device name: `NUL` only resolves to the null device on Windows, and
-    # under pwsh on a POSIX CI runner it creates an ordinary file named
-    # `NUL` in the working directory that nothing removes.
-    $proc = Start-Process -FilePath 'git' -ArgumentList @('ls-files', '-z') `
-      -WorkingDirectory $ChildTreeRoot `
-      -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
-    if ($proc.ExitCode -ne 0) {
+    $capture = Invoke-GitCaptureRaw -ArgumentList @('ls-files', '-z') -WorkingDirectory $ChildTreeRoot
+    if ($capture.ExitCode -ne 0) {
       return $null
     }
-    $z = [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($outFile))
+    $z = $capture.Output
     # Cuts at the last NUL rather than splitting on NUL and filtering blanks:
     # see DESIGN.md's "additive-manifest exception (issue #53)" section, "Why
     # Get-ChildTrackedFiles cuts at the last NUL instead of splitting and
@@ -350,9 +340,6 @@ function Get-ChildTrackedFiles {
     return ,@($z.Substring(0, $lastNul) -split "`0")
   } catch {
     return $null
-  } finally {
-    if ($null -ne $outFile) { Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue }
-    if ($null -ne $errFile) { Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue }
   }
 }
 

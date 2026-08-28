@@ -800,7 +800,11 @@ dot-sourcing the wrapper.** `tools/governance-sync.ps1`'s top-level body runs a 
 moment it is dot-sourced, unlike `tools/governance-sync-core.ps1`, so the test cannot load the
 whole wrapper file the way it loads the core script. It pulls just this one function's source text
 out of the file with a regular expression and evaluates that text in its own PowerShell process
-instead, isolating the function under test from everything else in the file around it.
+instead, isolating the function under test from everything else in the file around it. Since
+`Get-ChildTrackedFiles` itself now calls `Invoke-GitCaptureRaw`, the harness dot-sources
+`tools/governance-sync-core.ps1` (a pure library with no side effects beyond reading the
+filesystem, so this is safe) before evaluating the extracted text, giving the function the one
+dependency it needs without pulling in the wrapper's own top-level sync.
 
 **Why `ForEach-Object`, not `.Properties.Name`, walks a `classes` object's keys.** PowerShell's
 member-access enumeration on a zero-property PSCustomObject's `Properties` collection returns
@@ -826,6 +830,81 @@ string with a newline is truthy, so a blank-string filter never catches it). Thi
 CI failure surfaced: a two-file child tree returned a three-entry list. Cutting at the last NUL
 uses git's own terminator instead of guessing from whitespace, so a legitimate trailing space,
 embedded CR, or LF inside a real path is never touched.
+
+**Ordinal manifest comparisons.** Every manifest-value comparison in `tools/governance-sync-core.ps1`
+(`Get-ManifestDiffFields`, the `classes`-key and `excludedPaths` checks inside
+`Test-IsAdditiveManifestDiff`, and the whole-manifest check in `Get-SyncClassification`) uses
+`[string]::Equals` with `StringComparison.Ordinal`, never PowerShell's own `-eq`/`-ne`, which are
+case-insensitive by default. `standards/governance-sync.md` requires every field outside the four-field
+additive exception to stay structural on any difference, a case-only change included; a
+case-insensitive comparison would read `buildlog/**` and `Buildlog/**` as the same value and let a
+real difference pass as no difference at all.
+
+## NUL-safe git output: one home
+
+**The problem.** Three modules read staged or tracked paths from git in a NUL-safe way:
+`tools/governance-sync.ps1`'s `Get-ChildTrackedFiles`, `tools/ownership-core.ps1`'s
+`Get-StagedParentOwnedPath`, and `tools/issue-core.ps1`'s `Test-StagedHasCode`. All three replaced
+PowerShell's own `"$(& git ...)"` capture with the same shape: allocate two temp files, run git via
+`Start-Process` redirecting stdout and stderr to them, read the stdout file's raw bytes back, and
+decode. `"$(& git ...)"` re-splits stdout on line boundaries and rejoins with `$OFS` (a space),
+mangling a staged or tracked path that holds a newline or a bare CR even though `-z` asked git for
+NUL-terminated records, not newline-terminated ones.
+
+**The one home.** `tools/governance-sync-core.ps1`'s `Invoke-GitCaptureRaw` is now the single place
+that shape lives: it runs the git command, returns the raw decoded stdout string and the exit code,
+and leaves error policy entirely to the caller. `tools/ownership-core.ps1` calls it, since that file
+already dot-sources `tools/governance-sync-core.ps1` for other shared rules, and so does
+`tools/governance-sync.ps1`'s own `Get-ChildTrackedFiles`, which wraps the call in its own
+`try`/`catch` so a git failure still returns `$null` rather than throwing (see "Why
+`tests/governance-sync.test.js` extracts `Get-ChildTrackedFiles`'s source instead of dot-sourcing
+the wrapper" above for why the test loads `tools/governance-sync-core.ps1` alongside the extracted
+function rather than dot-sourcing the whole wrapper).
+
+**One justified exception.** `tools/issue-core.ps1` keeps its own inline copy. That file declares
+itself self-contained, with no dependency on any other `tools/*.ps1` file, and
+`tests/commit-msg.test.js` copies only that one tool file into its fixture repo; picking up a
+dependency on `tools/governance-sync-core.ps1` would break both.
+
+That inline copy carries a one-line comment pointing back here so a future reader knows the shared
+home exists and why that one file cannot use it.
+
+**The byte guarantee, stated precisely.** Reading git's raw bytes back and cutting at its own trailing
+NUL preserves git's own record boundaries: a legitimate trailing space, an embedded CR, or an LF
+inside a real path is never re-split or rejoined by PowerShell. It does not guarantee a byte-exact
+round trip for a path holding a byte sequence that is not valid UTF-8 (legal on Linux, where a path
+is an arbitrary byte string): `[System.Text.Encoding]::UTF8.GetString` replaces an invalid byte with
+U+FFFD. No caller in this repo needs that round trip; the guarantee that matters is that git's record
+boundaries survive.
+
+**The fail-closed rule for a genuine PowerShell error.** `Invoke-GitCaptureRaw` does not catch: a git
+failure that PowerShell can represent without throwing (a nonzero exit code, or empty stdout on a
+suppressed stderr line) reaches the caller as ordinary data for the caller's own contract to
+interpret, while a genuine PowerShell error, such as `git` missing from PATH or
+`[IO.Path]::GetTempFileName()` throwing on a full or read-only temp directory, propagates as an
+exception instead of being swallowed. This matters most for `tools/issue-core.ps1`'s
+`Test-StagedHasCode`: `.githooks/commit-msg`'s own contract is "anything not explicitly DOC (CODE,
+empty output, or PS error) -> enforce", so a PowerShell error inside that function must surface as a
+PS error to the hook, not read back as an empty path list that returns `$false` (DOC) and lets a code
+commit through the issue-reference gate with no issue named. An earlier version of this function
+wrapped the temp-file allocation and byte read in a `catch` that converted every exception, this one
+included, into "no code staged"; that catch is gone. A git failure still yields empty output and
+`$false`, matching the function's behavior before this NUL-safe rewrite, since a nonzero git exit
+code was never checked here and never threw.
+
+**Removing the catch was not enough on its own.** Under PowerShell's default
+`$ErrorActionPreference` of `'Continue'`, an unhandled exception from a direct .NET call (not a
+cmdlet) that reaches no `try`/`catch` does not unwind the function the way a normal exception would:
+PowerShell writes the error and moves on to the _next line in the same function_, which would have
+left `Test-StagedHasCode` falling through to its empty-path-list branch and returning `$false`
+anyway, silently, exactly the bug being fixed. `$ErrorActionPreference = 'Stop'`, set function-scoped
+in both `Test-StagedHasCode` and `Invoke-GitCaptureRaw`, is what actually promotes such an exception
+to one that unwinds the function and propagates to the caller; `Get-ChildTrackedFiles`'s own
+`try`/`catch` needs no such promotion, since a `try`/`catch` always catches a direct .NET exception
+regardless of `$ErrorActionPreference`. Verified directly: with `$env:TEMP`/`$env:TMP` pointed at a
+path that cannot exist, `Test-StagedHasCode` throws instead of returning `$false`, and a real
+`git commit` run through `.githooks/commit-msg` under the same broken environment is blocked for
+naming no issue instead of silently passing as a doc-only commit.
 
 ## Merge-on-green sync (issue #15)
 
