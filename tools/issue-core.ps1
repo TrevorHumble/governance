@@ -44,8 +44,36 @@ function Resolve-IssueNumber {
 # only deletes code files still counts as CODE. NUL-safe path handling guards
 # against non-ASCII or space-containing paths.
 function Test-StagedHasCode {
-  $z = "$(& git -c core.quotepath=false diff --cached --name-only -z 2>$null)"
-  $paths = @($z -split "`0" | Where-Object { $_ })
+  # Read via Start-Process, not PowerShell's own "$(& git ...)" capture: that
+  # form splits stdout on newlines and rejoins with $OFS (a space), so a
+  # staged path containing a newline comes back mangled even though `-z`
+  # asked git for NUL-terminated, not newline-terminated, records. Reading
+  # the raw bytes back and cutting at git's own trailing NUL keeps every byte
+  # intact. On any git failure the output file is empty, so $paths comes back
+  # empty the same way the old code's suppressed-stderr capture did; this
+  # function still never throws on a git failure, matching its prior
+  # behavior.
+  $outFile = $null
+  $errFile = $null
+  $z = ''
+  try {
+    $outFile = [IO.Path]::GetTempFileName()
+    $errFile = [IO.Path]::GetTempFileName()
+    Start-Process -FilePath 'git' `
+      -ArgumentList @('-c', 'core.quotepath=false', 'diff', '--cached', '--name-only', '-z') `
+      -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile | Out-Null
+    $z = [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($outFile))
+  } catch {
+    $z = ''
+  } finally {
+    if ($null -ne $outFile) { Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue }
+    if ($null -ne $errFile) { Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue }
+  }
+  $lastNul = $z.LastIndexOf([char]0)
+  $paths = @()
+  if ($lastNul -ge 0) {
+    $paths = @($z.Substring(0, $lastNul) -split "`0")
+  }
   if (@($paths).Count -eq 0) { return $false }
   foreach ($p in $paths) {
     if ($p -notmatch '(?i)\.(md|markdown)$') { return $true }

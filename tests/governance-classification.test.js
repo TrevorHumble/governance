@@ -326,6 +326,21 @@ maybeDescribe('Test-IsAdditiveManifestDiff, via Get-SyncClassification (issue #5
     expect(c.RunClass).toBe('structure');
   });
 
+  // issue #53 follow-up: a manifest pair differing ONLY by letter case, with
+  // no other field touched, must still force structure. The whole-manifest
+  // gate in Get-SyncClassification used to compare with PowerShell's `-ne`,
+  // which is case-insensitive, so this exact pair read as no difference at
+  // all and never reached Test-IsAdditiveManifestDiff.
+  it('manifests differing only by case in a retired entry, with nothing else touched, classifies structure', () => {
+    const child = baseAdditiveManifest();
+    child.retired = [{ path: 'legacy/gone.txt', sha256: 'a'.repeat(64) }];
+    const parent = Object.assign({}, child, {
+      retired: [{ path: 'Legacy/Gone.txt', sha256: 'a'.repeat(64) }],
+    });
+    const c = runAdditiveCase(parent, child, ['tools/a.ps1']);
+    expect(c.RunClass).toBe('structure');
+  });
+
   it('a plain added excludedPaths entry alone classifies content', () => {
     const child = baseAdditiveManifest();
     const parent = Object.assign({}, child, {

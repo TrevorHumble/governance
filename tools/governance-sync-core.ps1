@@ -709,7 +709,15 @@ function Get-SyncClassification {
   $runIsStructure = $false
   $runReason = $null
   if ($null -ne $ChildManifest) {
-    if ((Get-CanonicalJson -Value $ParentManifest) -ne (Get-CanonicalJson -Value $ChildManifest)) {
+    # Ordinal, matching every other manifest-value comparison in this file
+    # (Get-ManifestDiffFields, the classes-key and excludedPaths checks
+    # below): PowerShell's `-ne` is case-insensitive, so a case-only
+    # difference between the two manifests read as no difference at all,
+    # skipped the diff branch below, and let the run classify content on a
+    # manifest that in fact differed (standards/governance-sync.md: "every
+    # other field ... stays structural on any difference, addition
+    # included").
+    if (-not [string]::Equals((Get-CanonicalJson -Value $ParentManifest), (Get-CanonicalJson -Value $ChildManifest), [System.StringComparison]::Ordinal)) {
       $additive = Test-IsAdditiveManifestDiff -ParentManifest $ParentManifest -ChildManifest $ChildManifest `
         -ChildTrackedFiles $ChildTrackedFiles
       if (-not $additive.IsAdditive) {
