@@ -313,15 +313,8 @@ maybeDescribe('Test-IsAdditiveManifestDiff, via Get-SyncClassification (issue #5
     expect(c.RunClass).toBe('structure');
   });
 
-  // round-6 finding 1: Get-ManifestDiffFields used to feed only a reason
-  // string, but this issue promoted it into the gate Test-IsAdditiveManifestDiff
-  // loops over, and its comparison is case-insensitive. A retired entry
-  // differing only by case, paired with a real sharedPaths addition, used to
-  // let the case-only retired difference vanish from diffFields entirely, so
-  // only 'sharedPaths' reached the four-field check and this classified
-  // content. The fix compares ordinally, so the case-only retired difference
-  // still shows up and forces structure, per the rule that a retired edit
-  // stays structural without exception (standards/ownership-map.md).
+  // issue #53: a retired entry differing only by case, alongside a real sharedPaths
+  // addition, must still force structure (standards/ownership-map.md).
   it('a retired entry differing only by case, alongside a real sharedPaths addition, classifies structure', () => {
     const child = baseAdditiveManifest();
     child.retired = [{ path: 'legacy/gone.txt', sha256: 'a'.repeat(64) }];
@@ -416,10 +409,8 @@ maybeDescribe('Test-IsAdditiveManifestDiff, via Get-SyncClassification (issue #5
     expect(c.RunClass).toBe('structure');
   });
 
-  // issue #53 regression guard: a zero-property PSCustomObject's
-  // PSObject.Properties.Name enumerates as $null rather than an empty
-  // collection, which used to read as one phantom removed classes key and
-  // wrongly forced structure on a child manifest with no classes entries.
+  // issue #53 regression guard: a zero-property PSCustomObject's PSObject.Properties.Name
+  // enumerates as $null, not an empty collection, and must not read as a removed classes key.
   it('a child manifest with an empty classes object and an added parent classes key, no collision, classifies content', () => {
     const child = baseAdditiveManifest();
     child.classes = {};
