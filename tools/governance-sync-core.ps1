@@ -354,7 +354,7 @@ function Get-ManifestDiffFields {
     if ($null -ne $pProp) { $pVal = $pProp.Value }
     $cVal = $null
     if ($null -ne $cProp) { $cVal = $cProp.Value }
-    if ((Get-CanonicalJson -Value $pVal) -ne (Get-CanonicalJson -Value $cVal)) {
+    if (-not [string]::Equals((Get-CanonicalJson -Value $pVal), (Get-CanonicalJson -Value $cVal), [System.StringComparison]::Ordinal)) {
       $diffs.Add($n)
     }
   }

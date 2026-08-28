@@ -817,6 +817,16 @@ naming them again here would restate that paragraph rather than add to it. This 
 nothing about either field's own behavior; it only draws the line for `sharedPaths`,
 `excludedPaths`, `classes`, and `arrivesAsStructure` narrower than an unqualified "any difference."
 
+**Why `Get-ChildTrackedFiles` cuts at the last NUL instead of splitting and filtering blanks.**
+`git ls-files -z` NUL-terminates each record, it does not NUL-separate them: the output always ends
+with a trailing NUL, so whatever comes after the last NUL is never a path. On Linux,
+`Start-Process`'s `-RedirectStandardOutput` appends a trailing newline to a non-empty redirect file,
+so a naive split-and-filter-falsy picks up a phantom final entry holding that newline (a string
+with a newline is truthy, so a blank-string filter never catches it). This is what round 6's CI
+failure surfaced: a two-file child tree returned a three-entry list. Cutting at the last NUL uses
+git's own terminator instead of guessing from whitespace, so a legitimate trailing space, embedded
+CR, or LF inside a real path is never touched.
+
 ## Merge-on-green sync (issue #15)
 
 **Decision (owner, 2026-08-21).** A content-classed sync PR merges itself on green CI, with no

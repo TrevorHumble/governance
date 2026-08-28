@@ -313,6 +313,26 @@ maybeDescribe('Test-IsAdditiveManifestDiff, via Get-SyncClassification (issue #5
     expect(c.RunClass).toBe('structure');
   });
 
+  // round-6 finding 1: Get-ManifestDiffFields used to feed only a reason
+  // string, but this issue promoted it into the gate Test-IsAdditiveManifestDiff
+  // loops over, and its comparison is case-insensitive. A retired entry
+  // differing only by case, paired with a real sharedPaths addition, used to
+  // let the case-only retired difference vanish from diffFields entirely, so
+  // only 'sharedPaths' reached the four-field check and this classified
+  // content. The fix compares ordinally, so the case-only retired difference
+  // still shows up and forces structure, per the rule that a retired edit
+  // stays structural without exception (standards/ownership-map.md).
+  it('a retired entry differing only by case, alongside a real sharedPaths addition, classifies structure', () => {
+    const child = baseAdditiveManifest();
+    child.retired = [{ path: 'legacy/gone.txt', sha256: 'a'.repeat(64) }];
+    const parent = Object.assign({}, child, {
+      retired: [{ path: 'Legacy/Gone.txt', sha256: 'A'.repeat(64) }],
+      sharedPaths: child.sharedPaths.concat(['tools/new-file.ps1']),
+    });
+    const c = runAdditiveCase(parent, child, ['tools/a.ps1']);
+    expect(c.RunClass).toBe('structure');
+  });
+
   it('a plain added excludedPaths entry alone classifies content', () => {
     const child = baseAdditiveManifest();
     const parent = Object.assign({}, child, {

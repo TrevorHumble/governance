@@ -309,9 +309,11 @@ function Get-ChildTrackedFiles {
   param(
     [Parameter(Mandatory = $true)] [string]$ChildTreeRoot
   )
-  $outFile = [IO.Path]::GetTempFileName()
-  $errFile = [IO.Path]::GetTempFileName()
+  $outFile = $null
+  $errFile = $null
   try {
+    $outFile = [IO.Path]::GetTempFileName()
+    $errFile = [IO.Path]::GetTempFileName()
     # Start-Process + -RedirectStandardOutput to a file, not PowerShell's own
     # native capture or `>`: both re-split stdout on line boundaries and
     # rewrite a bare `\r` to `\n`, losing a CR-bearing tracked path (legal on
@@ -334,15 +336,10 @@ function Get-ChildTrackedFiles {
       return $null
     }
     $z = [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($outFile))
-    # `git ls-files -z` NUL-terminates each record, it does not NUL-separate
-    # them: the output always ends with a trailing NUL, so whatever comes
-    # after the last NUL is never a path. On Linux, Start-Process's
-    # -RedirectStandardOutput appends a trailing newline to a non-empty
-    # redirect file, so a naive split-and-filter-falsy picks up a phantom
-    # final entry holding that newline (a string with a newline is truthy).
-    # Cutting at the last NUL uses git's own terminator instead of guessing
-    # from whitespace, so a legitimate trailing space, embedded CR, or LF
-    # inside a real path is never touched.
+    # Cuts at the last NUL rather than splitting on NUL and filtering blanks:
+    # see DESIGN.md's "additive-manifest exception (issue #53)" section, "Why
+    # Get-ChildTrackedFiles cuts at the last NUL instead of splitting and
+    # filtering blanks" for why the naive approach loses on Linux.
     $lastNul = $z.LastIndexOf([char]0)
     if ($lastNul -lt 0) {
       # The leading comma: see Get-UnacknowledgedDivergent's comment in
@@ -354,8 +351,8 @@ function Get-ChildTrackedFiles {
   } catch {
     return $null
   } finally {
-    Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue
+    if ($null -ne $outFile) { Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue }
+    if ($null -ne $errFile) { Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue }
   }
 }
 
