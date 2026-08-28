@@ -41,7 +41,13 @@ function basePlan(overrides) {
   );
 }
 
-function runGetSyncClassification(parentManifestObj, childManifestObjOrNull, planObj, parentRoot) {
+function runGetSyncClassification(
+  parentManifestObj,
+  childManifestObjOrNull,
+  planObj,
+  parentRoot,
+  childTrackedFilesOrUndefined
+) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gclass-'));
   const parentManifestPath = path.join(dir, 'parent-manifest.json');
   fs.writeFileSync(parentManifestPath, JSON.stringify(parentManifestObj));
@@ -54,12 +60,23 @@ function runGetSyncClassification(parentManifestObj, childManifestObjOrNull, pla
   const planPath = path.join(dir, 'plan.json');
   fs.writeFileSync(planPath, JSON.stringify(planObj));
   const parentRootArg = String(parentRoot).replace(/'/g, "''");
+  // undefined omits -ChildTrackedFiles entirely (the exception's own $null
+  // default); an array, empty included, is passed through as literal
+  // PowerShell strings so a caller can assert the "supplied but empty"
+  // case (issue #53) separately from "not supplied at all".
+  let childTrackedFilesArg = '';
+  if (childTrackedFilesOrUndefined !== undefined) {
+    const quoted = childTrackedFilesOrUndefined
+      .map((p) => `'${String(p).replace(/'/g, "''")}'`)
+      .join(', ');
+    childTrackedFilesArg = ` -ChildTrackedFiles @(${quoted})`;
+  }
   const cmd =
     `. '${CORE_SCRIPT}'; ` +
     `$pm = (Get-Content -Raw '${parentManifestPath}') | ConvertFrom-Json; ` +
     `$cm = ${childManifestExpr}; ` +
     `$pl = (Get-Content -Raw '${planPath}') | ConvertFrom-Json; ` +
-    `try { $c = Get-SyncClassification -ParentManifest $pm -ChildManifest $cm -Plan $pl -ParentRoot '${parentRootArg}'; ` +
+    `try { $c = Get-SyncClassification -ParentManifest $pm -ChildManifest $cm -Plan $pl -ParentRoot '${parentRootArg}'${childTrackedFilesArg}; ` +
     `$c | ConvertTo-Json -Depth 8 -Compress } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 9 }`;
   const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd], {
     encoding: 'utf8',
@@ -183,5 +200,234 @@ maybeDescribe('Get-SyncClassification (AC3, AC5, AC6)', () => {
     expect(c.Withheld).toEqual(
       expect.arrayContaining(['tools/numeric.ps1', 'tools/arr.ps1', 'tools/unmatched.ps1'])
     );
+  });
+});
+
+// issue #53: an additive, non-colliding manifest difference no longer forces
+// the run to structure on its own. Every case below uses an empty plan (the
+// manifest diff, not the plan content, is what each case exercises), so a
+// content RunClass here means only "the manifest difference did not force
+// structure," per Get-SyncClassification's own "the plan is empty; nothing
+// to classify" reason on an empty plan.
+function baseAdditiveManifest() {
+  return {
+    retired: [],
+    sharedPaths: ['standards/**', 'tools/a.ps1'],
+    excludedPaths: ['README.md'],
+    classes: { 'standards/**': 'content', 'tools/a.ps1': 'content' },
+    classesDefault: 'structure',
+    arrivesAsStructure: [],
+  };
+}
+
+function runAdditiveCase(parentManifest, childManifest, childTrackedFilesOrUndefined) {
+  const parentRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gclass-additive-parent-'));
+  const r = runGetSyncClassification(
+    parentManifest,
+    childManifest,
+    basePlan(),
+    parentRoot,
+    childTrackedFilesOrUndefined
+  );
+  expect(r.status).toBe(0);
+  return parseClassification(r.stdout);
+}
+
+maybeDescribe('Test-IsAdditiveManifestDiff, via Get-SyncClassification (issue #53)', () => {
+  it('additive with no collision classifies content', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      sharedPaths: child.sharedPaths.concat(['tools/new-file.ps1']),
+    });
+    const c = runAdditiveCase(parent, child, ['tools/a.ps1']);
+    expect(c.RunClass).toBe('content');
+  });
+
+  it('additive where one added sharedPaths entry names a tracked child file classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      sharedPaths: child.sharedPaths.concat(['tools/existing.ps1']),
+    });
+    const c = runAdditiveCase(parent, child, ['tools/existing.ps1']);
+    expect(c.RunClass).toBe('structure');
+    expect(c.RunReason).toContain('manifest fields differ');
+  });
+
+  it('additive where one added sharedPaths entry is a prefix/** glob over a directory the child already tracks files in classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      sharedPaths: child.sharedPaths.concat(['docs/**']),
+    });
+    const c = runAdditiveCase(parent, child, ['docs/readme.md']);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('additive where one added classes key names a tracked child file classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      classes: Object.assign({}, child.classes, { 'tools/existing.ps1': 'content' }),
+    });
+    const c = runAdditiveCase(parent, child, ['tools/existing.ps1']);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a removal classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      sharedPaths: child.sharedPaths.filter((p) => p !== 'tools/a.ps1'),
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a changed value on an existing entry classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      classes: Object.assign({}, child.classes, { 'tools/a.ps1': 'structure' }),
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a classesDefault value change classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, { classesDefault: 'content' });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a classesDefault field present in the parent and absent in the child classifies structure', () => {
+    const child = baseAdditiveManifest();
+    delete child.classesDefault;
+    const parent = baseAdditiveManifest();
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('an added retired entry classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      retired: [{ path: 'legacy/gone.txt', sha256: 'a'.repeat(64) }],
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  // issue #53: a retired entry differing only by case, alongside a real sharedPaths
+  // addition, must still force structure (standards/ownership-map.md).
+  it('a retired entry differing only by case, alongside a real sharedPaths addition, classifies structure', () => {
+    const child = baseAdditiveManifest();
+    child.retired = [{ path: 'legacy/gone.txt', sha256: 'a'.repeat(64) }];
+    const parent = Object.assign({}, child, {
+      retired: [{ path: 'Legacy/Gone.txt', sha256: 'A'.repeat(64) }],
+      sharedPaths: child.sharedPaths.concat(['tools/new-file.ps1']),
+    });
+    const c = runAdditiveCase(parent, child, ['tools/a.ps1']);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a plain added excludedPaths entry alone classifies content', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      excludedPaths: child.excludedPaths.concat(['newfile.md']),
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('content');
+  });
+
+  it('an added !-prefixed excludedPaths entry classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      excludedPaths: child.excludedPaths.concat(['!README.md']),
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  // issue #53: excludedPaths is order-sensitive (isExcluded applies entries
+  // in order, last match wins), so membership alone is not enough.
+  it('a pure excludedPaths reorder that moves a ! entry across the entry it negates classifies structure', () => {
+    const child = baseAdditiveManifest();
+    child.excludedPaths = ['buildlog/**', '!buildlog/README.md'];
+    const parent = Object.assign({}, child, {
+      excludedPaths: ['!buildlog/README.md', 'buildlog/**'],
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a plain excludedPaths addition inserted before an existing ! entry classifies structure', () => {
+    const child = baseAdditiveManifest();
+    child.excludedPaths = ['buildlog/**', '!buildlog/README.md'];
+    const parent = Object.assign({}, child, {
+      excludedPaths: ['buildlog/**', 'newfile.md', '!buildlog/README.md'],
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a plain excludedPaths entry appended after an existing ! entry still classifies content', () => {
+    const child = baseAdditiveManifest();
+    child.excludedPaths = ['buildlog/**', '!buildlog/README.md'];
+    const parent = Object.assign({}, child, {
+      excludedPaths: ['buildlog/**', '!buildlog/README.md', 'newfile.md'],
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('content');
+  });
+
+  // issue #53: the excludedPaths prefix comparison is ordinal, case-sensitive
+  // (tools/governance-sync-core.ps1), so a case-only change reads as changed
+  // rather than as an unqualified match. Without that, 'buildlog/**' and
+  // 'Buildlog/**' would read as equal and the added 'newfile.md' entry would
+  // pass through as a safe append.
+  it('excludedPaths differing only by case classifies structure, not the added-tail append it would otherwise read as', () => {
+    const child = baseAdditiveManifest();
+    child.excludedPaths = ['buildlog/**'];
+    const parent = Object.assign({}, child, {
+      excludedPaths: ['Buildlog/**', 'newfile.md'],
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  it('a supplied-but-empty child file list with a colliding-shaped addition classifies content (nothing tracked to collide with)', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      sharedPaths: child.sharedPaths.concat(['tools/would-collide.ps1']),
+    });
+    const c = runAdditiveCase(parent, child, []);
+    expect(c.RunClass).toBe('content');
+  });
+
+  it('no child file list at all classifies structure', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, {
+      sharedPaths: child.sharedPaths.concat(['tools/would-collide.ps1']),
+    });
+    const c = runAdditiveCase(parent, child, undefined);
+    expect(c.RunClass).toBe('structure');
+  });
+
+  // issue #53 regression guard: a zero-property PSCustomObject's PSObject.Properties.Name
+  // enumerates as $null, not an empty collection, and must not read as a removed classes key.
+  it('a child manifest with an empty classes object and an added parent classes key, no collision, classifies content', () => {
+    const child = baseAdditiveManifest();
+    child.classes = {};
+    const parent = Object.assign({}, child, {
+      classes: { 'tools/new.ps1': 'content' },
+    });
+    const c = runAdditiveCase(parent, child, ['README.md']);
+    expect(c.RunClass).toBe('content');
+  });
+
+  it('a child manifest with no classes property at all and an added parent classes key, no collision, classifies content', () => {
+    const child = baseAdditiveManifest();
+    delete child.classes;
+    const parent = Object.assign({}, child, {
+      classes: { 'tools/new.ps1': 'content' },
+    });
+    const c = runAdditiveCase(parent, child, ['README.md']);
+    expect(c.RunClass).toBe('content');
   });
 });

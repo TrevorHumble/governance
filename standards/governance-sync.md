@@ -27,11 +27,31 @@ and its precondition.
 A structure change is withheld from the PR, never merged silently. A run that still ships
 something after withholding prints the marker `structure change: partial withhold` and opens the
 PR carrying only what was not withheld. A run where the whole plan classifies as structure (the
-parent's manifest differs from the child's installed copy at all, a shipped file's text cites a
-withheld path, or nothing is left to ship after withholding) prints `structure change: no sync PR`
-and opens no PR at all: no PR to merge, so no reviewer question ever arises for it either. Either
-way the withheld paths are named in the child's standing structure issue (§ "The standing-issue
-rule" below) instead, for a human to sequence by hand.
+parent's manifest differs from the child's installed copy in a way the additive exception below
+does not cover, a shipped file's text cites a withheld path, or nothing is left to ship after
+withholding) prints `structure change: no sync PR` and opens no PR at all: no PR to merge, so no
+reviewer question ever arises for it either. Either way the withheld paths are named in the
+child's standing structure issue (§ "The standing-issue rule" below) instead, for a human to
+sequence by hand.
+
+**The additive-manifest exception.** A manifest difference does not, on its own, force structure
+when every field the two manifests differ in is one of exactly `sharedPaths`, `excludedPaths`,
+`classes`, or `arrivesAsStructure`; nothing is removed and no existing entry's value changed within
+those four; and no entry newly added to `sharedPaths` or `classes` names a path the child already
+tracks (an added `sharedPaths` entry would otherwise land the parent's copy on top of the child's
+own file, and an added `classes` key can beat the glob that governs a path today and flip it from
+withheld to shipped). A `!`-prefixed `excludedPaths` addition is a negation, a subtraction rather
+than an addition, and does not qualify. `excludedPaths` is also order-sensitive (its entries are
+applied in order, last match wins, so a `!`-prefixed entry only un-excludes what an earlier plain
+entry excluded), so a plain addition qualifies only when it is appended after every entry the
+child already has; a reorder or an insertion anywhere else is structural even when the set of
+entries is unchanged. Every other field, `classesDefault` and `retired` included,
+stays structural on any difference, addition included: a first `classesDefault` would silently
+reclassify every path no `classes` entry names, and an added `retired` entry deletes a file from
+the child on its next run. This is what makes the exception safe to leave unreviewed: nothing ever
+leaves the child's hands and no file the child already has changes ownership without the child
+seeing it happen in an ordinary content PR first. The auto-merge property above (§ "Merge-on-green")
+is unchanged and is exactly what this exception is bounded to protect.
 
 ## Adoption fields
 

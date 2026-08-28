@@ -166,6 +166,19 @@ a parent-owned file says. Adding or removing a path in this map's own "Parent-ow
 split-ownership directories" section is the prose form of the same act, and is structural for the
 same reason.
 
+`standards/governance-sync.md` § "What a sync is" narrows this for two of those three arrays. An
+addition to `sharedPaths` that names no path the receiving child already tracks is not structural
+on its own, since it takes nothing away from a child that does not yet hold the path (the same
+exception also reaches an addition to `classes`, a keyed map rather than one of these three
+arrays, on the same reasoning). A plain addition to `excludedPaths` is not structural either, since
+it only leaves a path with the child, but only when it is appended after every entry the child
+already has: `excludedPaths` is applied in order with last match wins, so a reorder or a mid-array
+insertion can change which entry decides a path even with the same entries present, and stays
+structural on that ground alone. A `!`-prefixed addition there un-excludes a path and stays
+structural, the same as any removal. A `retired` edit, addition included, stays structural without
+exception: an added `retired` entry deletes a file from the child on its next run, which is a
+removal whatever the manifest diff looks like.
+
 ---
 
 ## The redirect rule
