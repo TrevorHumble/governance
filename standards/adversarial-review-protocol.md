@@ -54,12 +54,17 @@ listed is itself a finding."
 **Sanctioned briefing fields.** The fields a briefing may carry that are never by themselves a
 bias finding are the single Objective line (defined in § "Spawning a reviewer"), a
 well-formed overage declaration (a measured number plus its atomic reason, defined in §
-"Review-size bound"), and the notes-under-challenge field (the current issue's `## Notes`
-entries, each note with its set-aside justification, defined in § "Spawning a reviewer"). The
-notes field does not lead the witness, which is why it is sanctioned: it declares a disposition
-the reviewer is asked to judge, rather than pointing at a part of the artifact suspected weak;
-judging deferrals is part of every reviewer's job (§ "Finding disposition", "Challenging a
-deferral"). This list is owned here; a reviewer judges a briefing's other content
+"Review-size bound"), the notes-under-challenge field (the current issue's `## Notes`
+entries, each note with its set-aside justification, defined in § "Spawning a reviewer"), and
+the referee's dispute payload (the reviewer's finding and evidence, the implementer's dispute
+and evidence, presented without ranking or framing, plus the goals doc, the issue's user
+story and acceptance criteria, and the pre-review record or its stated absence, defined in §
+"Spawning a reviewer" and `agents/reviewer-referee.md`). The notes field does not lead the
+witness, which is why it is sanctioned: it declares a disposition the reviewer is asked to
+judge, rather than pointing at a part of the artifact suspected weak; judging deferrals is
+part of every reviewer's job (§ "Finding disposition", "Challenging a deferral"). The dispute
+payload is sanctioned for the same reason: it hands the referee both sides' case, not a hint
+toward either one. This list is owned here; a reviewer judges a briefing's other content
 against this section's rules as before.
 
 This is a spawning discipline the orchestrator follows on every briefing: no evidence
@@ -177,12 +182,27 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
   **The architecture lens also gates round 1** when its trigger applies, per the
   Architecture lens bullet below: round 1's gating reviewer count is not fixed at two, it
   grows by one whenever that trigger fires, so state it by condition, not by count.
-- **Code, rounds 2+** -> see `## One-round stop rule` below: a re-check fires only for a
-  blocker/major finding, and is scoped to the fix, with **1 fresh reviewer**.
+- **Code, rounds 2+** -> see `## Referee and the eight-round loop` below: a re-check fires only
+  for a blocker/major finding, and is scoped to the fix, with **1 fresh reviewer** per round.
+- **Referee** (`agents/reviewer-referee.md`) -> dispatched exactly when a blocker or major
+  finding is formally disputed at round 2 or any later round (`## Referee and the eight-round
+loop` below): **1** reviewer, a fresh instance with no context from any prior round. A
+  referee dispatch is not a code-review round: it sits **outside** § "Referee and the
+  eight-round loop"'s round counting and **outside** § "Review-size bound", the same way the
+  late-note pass does; no briefing audit runs on it, since its input is the dispute payload,
+  not a staged diff. The dispatch still re-stamps the issue's `active-<N>-*` claim label, like
+  any other review-round dispatch, per `standards/issue-standards.md` § "The file claim and
+  the size rule". A referee bias-check halt (`agents/reviewer-referee.md` § "Bias check") is a
+  briefing invalidation: the orchestrator re-briefs and re-runs the referee once, mirroring §
+  "Spawning a reviewer" - Briefing audit's recovery rule; a second halt on the same dispatch
+  takes that same section's two-invalidations escalation. Unlike a new advisory lens, the
+  referee enters the pipeline gating from its first dispatch rather than advisory-first: an
+  owner decision, recorded in `DESIGN.md`'s 2026-08-30 decision paragraph, per §
+  "Advisory-lens lifecycle" below.
 - **Security lens** (`agents/reviewer-security.md`) -> a single advisory lens, dispatched
   per `## Which reviews does this change need?` below. A major/blocker finding from it
-  takes the standard one-round stop rule like any other finding: there is no separate
-  reviewer-count escalation.
+  takes the standard cadence in `## Referee and the eight-round loop` like any other finding:
+  there is no separate reviewer-count escalation.
 - **Briefing-audit lens** (`agents/reviewer-briefing.md`) -> a single advisory lens,
   dispatched concurrent with every code-review round (round 1 and every rounds-2+ scoped
   re-check). Mechanics (the machine-generated scope it audits, its dispatch inputs, and
@@ -195,15 +215,15 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
   ruling from a round reviewer (§ "Finding disposition", "Challenging a deferral"; a session
   that ran zero review rounds qualifies trivially). This bullet is the trigger's one home;
   `agents/orchestrator.md` § "No agent files its own issue" rule 4 owns the dispatch mechanics
-  and points here rather than restating the trigger. It sits **outside** § "One-round stop
-  rule"'s round counting and **outside** § "Review-size bound": an already-long run never skips
+  and points here rather than restating the trigger. It sits **outside** § "Referee and the
+  eight-round loop"'s round counting and **outside** § "Review-size bound": an already-long run never skips
   it for being one round too many, and its input is notes, not a staged diff, so no shortstat
   measure applies. Its rulings dispose per § "Finding disposition", "Challenging a deferral".
 - **Architecture lens** (`agents/reviewer-architecture.md`) -> runs alongside the code,
   round-1 reviewers (above) at PR-review time whenever the change adds a new component
   (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change,
-  no owner request needed. A blocker/major finding from it takes the standard one-round
-  stop rule, the same cadence as the design-philosophy gate. This promotion to gating is an
+  no owner request needed. A blocker/major finding from it takes the standard cadence in
+  `## Referee and the eight-round loop`, the same cadence as the design-philosophy gate. This promotion to gating is an
   owner decision, recorded in `DESIGN.md`, per § "Advisory-lens lifecycle" below: the owner
   approved restoring the lens as an automatic gate rather than requiring a
   further advisory trial. It is also invocable on
@@ -218,21 +238,51 @@ different, non-weaker model than the implementer) is `standards/agent-standards.
 
 ---
 
-## One-round stop rule
+## Referee and the eight-round loop
 
 Round 1 of code review runs the PR reviewer and the design-philosophy reviewer together
 (`## Reviewer count by artifact`). What happens next depends on what they found:
 
 - **Minor and nit findings are fixed inline by the implementer and shipped with no
   re-review.** They do not block the merge and do not need a second look once addressed.
-- **A blocker or major finding triggers exactly one re-check**, scoped to that fix: the
-  implementer fixes it, and one fresh reviewer confirms the fix, not a full re-review of
-  the whole artifact again.
-- There is no severity adjudicator, no contest/concede fork, no round-count soft cap, and
-  no reviewer panel. A PASS with an open blocker or major finding is never a PASS.
+- **A blocker or major finding triggers a re-check**, scoped to that fix: the implementer
+  fixes it, and one fresh reviewer confirms the fix, not a full re-review of the whole
+  artifact again.
+- There is no severity adjudicator and no reviewer panel beyond the referee below. A PASS
+  with an open blocker or major finding is never a PASS.
 
-This is a deliberately lean process: no multi-round soft-cap-and-severity-gate machinery
-sits behind it (see the governance repo's `DESIGN.md` § "Lean review process rationale").
+**The fork, at two or more rounds on the same finding.** Round 1 raises a blocker or major
+finding; the scoped re-check above is round 2 on that finding, and a further undisputed
+re-check advances the same finding to round 3, round 4, and onward. When the fresh reviewer
+raises the same finding again at round 2 or any later round, which side the finding takes
+next depends on whether the implementer disputes it:
+
+- **Disputed**: the implementer has stated, on the record, an argument against the finding
+  itself, with evidence, and the fresh reviewer raised the same finding again. Routes to the
+  referee, `agents/reviewer-referee.md`. "Fixing is hard" is never a dispute: a dispute
+  requires a stated argument against the finding itself, not a statement about the difficulty
+  of fixing it. A dispute does not suspend the round-2 fix attempt: the implementer still
+  produces its best fix and carries the dispute in the same hand-off, so round 2 has a real
+  scoped diff to review. It is the fresh reviewer raising the same finding again against that
+  fix that routes the dispute to the referee.
+- **Undisputed** (the default: the implementer accepts the finding as a real defect, or
+  raises no dispute at all): the fix-and-fresh-reviewer loop keeps running, one round at a
+  time, to a ceiling of **eight** re-review rounds on that finding. The counting basis: the
+  scoped re-check at round 2 is re-review round 1, and each further re-check advances the
+  re-review count by one. If the eighth re-review round (round 9 overall) still has not
+  produced a PASS on it, the segment halts (`agents/orchestrator.md` § "Stop condition").
+
+**The referee's ruling is final on that finding.** A given finding is disputed at most once,
+never a second time, regardless of which round raises the dispute. A **SUSTAIN** ruling (the
+referee ruled for the reviewer) becomes undisputed for the rest of the run and re-enters the
+loop above at its current ledger count, pre-referee rounds included, never reset to zero. An
+**OVERTURN** ruling (the referee ruled for the implementer) drops the finding and closes its
+ledger entry; the implementer does no further work on it. Full referee mechanics, input, and
+output: `agents/reviewer-referee.md`.
+
+This is a deliberately lean process: no multi-round soft-cap-and-severity-gate machinery of
+the pre-teardown shape sits behind it (see the governance repo's `DESIGN.md` § "Lean review
+process rationale").
 
 ---
 
@@ -379,6 +429,9 @@ the first place and there is nothing left here to carve out).
 - For each gap give a concrete, copy-pasteable fix.
 - Final verdict: **PASS/FAIL**, one token, no hedging. Attach the numbered defect
   list. A PASS with open blockers or majors is not a PASS.
+- **Exception: the referee.** `agents/reviewer-referee.md` returns the ruling shape its own
+  charter defines (`SUSTAIN`/`OVERTURN` naming a winning side and a grounding artifact), not a
+  PASS/FAIL verdict with a numbered defect list; this section governs every other reviewer.
 
 ---
 
@@ -418,8 +471,8 @@ object store, though it may refresh the index's cache-tree under the index lock.
 **Machine-generated scope.** For a code review, the briefing's file list comes from the
 round's named git command, run against the round's declared scope, and is pasted verbatim:
 round 1 is `git diff --cached --name-status`, the staged change against HEAD, with the
-round bound to the `git write-tree` oid; a rounds-2+ scoped re-check per § "One-round stop
-rule" is `git diff --cached --name-status <round-1 bound tree oid>`, the fix's diff
+round bound to the `git write-tree` oid; a rounds-2+ scoped re-check per § "Referee and the
+eight-round loop" is `git diff --cached --name-status <round-1 bound tree oid>`, the fix's diff
 relative to the round-1 tree. The orchestrator never hand-curates this list: it does not
 add to, trim, or reword what the command produced. A non-code-review artifact (an issue
 draft) lists that one file instead: this rule governs a code review's file list, not
@@ -434,7 +487,8 @@ scope).
 You are the reviewer agent defined in <path to agents/reviewer-*.md>. Read that
 file first and follow it exactly, including its read-only rules.
 
-Standard(s) to judge against: <path to standards/*.md>
+Standard(s) to judge against: <path to standards/*.md>; omit when spawning the referee, whose
+grounding artifacts ride in the Dispute payload
 Protocol: standards/adversarial-review-protocol.md
 Objective: <one-line goal the artifact is judged against, per § "De-bias the setup" -
 the goal only, never the mechanisms>
@@ -443,15 +497,24 @@ Overage declaration (optional; state only when this round's measured size exceed
 Notes under challenge (optional; state only when the linked issue carries `## Notes` entries):
 the issue's `## Notes` entries pasted verbatim, each note's substance and its set-aside
 justification, nothing added or trimmed
+Dispute payload (optional; state only when spawning the referee, `agents/reviewer-referee.md`):
+the reviewer's finding and evidence, the implementer's dispute and evidence, presented without
+ranking or framing, plus the goals doc (the doc named by `repo-profile.json`'s `goalsDoc`
+field; when that field is empty, a statement that no goals doc exists), the issue's user story
+and acceptance criteria, and, when this repo declares a pre-review process, the pre-reviewed
+decisions for the change; when this repo declares `preReview: "none"`, a statement that no
+pre-review record exists and that this is the normal case
 
 Artifact(s) under review (complete list, anything missing from the artifact
 itself is a finding):
 - <path to artifact>, or, for a code review: tree oid <oid> plus this round's file
   list, the round's named git command's output (§ "Spawning a reviewer" -
-  Machine-generated scope, above) pasted verbatim
+  Machine-generated scope, above) pasted verbatim; omit when spawning the referee, whose
+  input is the Dispute payload above
 
 Return your verdict in the output format your agent definition specifies
-(verdict token plus numbered defect list with severity and file:line evidence).
+(verdict token plus numbered defect list with severity and file:line evidence; a referee
+returns the ruling shape its definition specifies instead).
 ```
 
 **No mutation authority.** Spawn every reviewer with no mutation authority: use a read-only agent
@@ -492,7 +555,7 @@ affected reviewers before accepting any verdict from that round, at most once pe
 across either trigger. A second briefing invalidation on the same round, whether two
 scope-mismatch FAILs, two bias-check halts, or one of each, halts the segment, logged in
 `BUILDLOG.md` per `agents/orchestrator.md` § "Stop condition" (that section's own
-two-full-rounds impasse condition is a different trigger and is never cited for this
+eight-round halt is a different trigger and is never cited for this
 one). An `INVALID ROUND` report is not a briefing invalidation and does not count toward
 that bound. It covers three distinct triggers across the auditor's Duties 1 through 4: a
 tree-oid mismatch (Duty 1), a `git write-tree` failure (Duty 1), or any other duty's git
@@ -546,7 +609,7 @@ A finding is _in-scope-fixable_ when both hold:
   consequence of the change, and the fix is bounded: not a new feature, not a large refactor.
 
 An in-scope-fixable defect **must** be fixed in the current change before it merges: the
-`## One-round stop rule` above covers exactly this case. It may **never** be deferred to a
+`## Referee and the eight-round loop` above covers exactly this case. It may **never** be deferred to a
 new GitHub issue or a `spawn_task` chip. **"I do not want another review round" is never a
 valid reason to defer.** Neither is "it's trivial"; see the anti-pattern below.
 

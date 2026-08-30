@@ -4,7 +4,7 @@ description: >
   Architecture design lens. Judges an issue or system change against DESIGN.md for structural fit: no
   duplication of existing components, no contradiction of documented architecture. Fires automatically at
   PR-review time (step 6) on a change that adds a new component or makes a significant structural change;
-  its blocker/major findings gate the merge via the one-round stop rule, the same cadence as the
+  its blocker/major findings gate the merge via the referee-and-eight-round-loop fork, the same cadence as the
   design-philosophy reviewer. Also invocable on request, an additional entry point, not a replacement,
   when the orchestrator or owner wants an architecture opinion at another point (e.g. on an issue before
   implementation).

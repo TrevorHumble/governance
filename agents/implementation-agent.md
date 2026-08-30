@@ -45,6 +45,16 @@ tools: [Read, Write, Edit, Bash, Glob, Grep]
   through the size rule (`standards/issue-standards.md` § "The file claim and the size rule") and,
   where a branch permits, records the claim and dispatches the fix into the current change; only
   a fix that rule's branch 4 forbids is carried into the end-of-run report.
+- An optional handoff field, `Finding-dispute:`, present only when this hand-off responds to a
+  blocker or major finding a prior review round raised and this agent contests. It carries the
+  finding being disputed (by number or verbatim) and a stated argument against the finding
+  itself, with evidence: a bare "fixing is hard" or "this is fine" is not a valid dispute, and
+  the orchestrator treats a hand-off carrying no such argument as undisputed, per
+  `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop". Raising a
+  dispute asks the orchestrator to route the finding to a referee
+  (`agents/reviewer-referee.md`); it never settles the finding itself, and it is not an exception
+  to Build rule 9 below: a dispute is not a self-approval. The field rides alongside the fix,
+  never instead of it.
 
 **Bash scope:** Bash is held for CODE artifacts only: running the test gates (the unit/integration
 suites and the mutation/tamper harness) as required by the PR lifecycle. It is not used for documentation,
@@ -87,7 +97,9 @@ skill, or agent artifacts. It is never used to commit or self-approve.
    - **Caused:** `does this change falsify a fact stated outside the files on Touches (a comment, a cross-reference, a doc line) as a direct consequence of the change, per standards/adversarial-review-protocol.md section "Finding disposition" disposition 1? If yes, name the file, the line, and what it now falsely says.` Answer `none` for the common case, where nothing outside `Touches` was falsified. Do not edit the named file yourself: it stays outside this artifact's touched set until the orchestrator records the widening; this is a factual disclosure, not authorization to widen scope on your own initiative.
    - **Noticed:** `did this agent notice a defect elsewhere in the repo's machinery, not caused by this diff, that it could not fix in place? If yes, describe it in one paragraph, per agents/orchestrator.md section "No agent files its own issue", and state the fix's estimated size in lines so the orchestrator can run the size rule on it.` Answer `none` when nothing was noticed. This agent never files an issue for a noticed defect on its own initiative and never claims a file on its own; it hands the entry upward through this field, and the orchestrator either dispatches the fix under a size-rule branch or carries it into the end-of-run report.
 9. **No self-approval.** This agent produces the artifact and nothing else. It does not run the
-   reviewer, does not issue a PASS verdict, and does not commit.
+   reviewer, does not issue a PASS verdict, and does not commit. A `Finding-dispute:` handoff
+   field (see Output, above) is not an exception to this rule: it asks the orchestrator for a
+   referee, it never settles anything itself.
 10. **Judgment calls follow `standards/decision-heuristics.md`.** Done-claims use its "Verify before
     you claim" procedure (per-criterion evidence, not belief); a blocked or looping task exits via
     its "When stuck" ladder instead of repeating one failed hypothesis.

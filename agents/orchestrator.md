@@ -113,8 +113,8 @@ approval is recorded at step 3 per that section.
    rule) rather than starting implementation into a collision.
 5. **Implementation**: spawn `agents/implementation-agent.md` (Sonnet) with full handoff: the
    passing issue and all prior-art file paths.
-6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per § "Model policy" below. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "One-round stop rule". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same one-round stop rule. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated. Dispatching a review round is a claim re-stamp event: refresh the issue's `active-<N>-*` label per `standards/issue-standards.md` § "The file claim and the size rule" release rule.
-7. **Commit**: once per run, before the first commit, confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1`; never proceed assuming a gate that isn't on; an unconfigured clone enforces nothing). On the reviewers' PASS (and, for a blocker/major finding, once it is fixed and confirmed per the one-round stop rule), `git commit` with a short message that includes `(#N)` referencing the issue. **`commit-msg` checks that the commit message names a GitHub issue**: a code commit with no `(#N)`, closing keyword, or `issue-N` branch is blocked; a doc-only (`*.md`) commit is exempt. **`pre-commit` checks that the commit stages no parent-owned governance path**, per `standards/ownership-map.md`; once the launcher probe and the profile parse both succeed, it exits cleanly on a governance-sync branch (the exemption that applies in a child, since `governanceHome` is never `self` there) or in the governance home itself. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
+6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per § "Model policy" below. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "Referee and the eight-round loop". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same eight-round-loop cadence. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated. Dispatching a review round is a claim re-stamp event: refresh the issue's `active-<N>-*` label per `standards/issue-standards.md` § "The file claim and the size rule" release rule.
+7. **Commit**: once per run, before the first commit, confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1`; never proceed assuming a gate that isn't on; an unconfigured clone enforces nothing). On the reviewers' PASS (and, for a blocker/major finding, once it is fixed and confirmed per `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"), `git commit` with a short message that includes `(#N)` referencing the issue. **`commit-msg` checks that the commit message names a GitHub issue**: a code commit with no `(#N)`, closing keyword, or `issue-N` branch is blocked; a doc-only (`*.md`) commit is exempt. **`pre-commit` checks that the commit stages no parent-owned governance path**, per `standards/ownership-map.md`; once the launcher probe and the profile parse both succeed, it exits cleanly on a governance-sync branch (the exemption that applies in a child, since `governanceHome` is never `self` there) or in the governance home itself. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
    Committing and pushing are both claim re-stamp events: refresh the issue's `active-<N>-*`
    label at each, per `standards/issue-standards.md` § "The file claim and the size rule".
    Then **close the GitHub issue** for this work (`gh issue close`, referencing the commit) so the board
@@ -290,28 +290,54 @@ procedure, the harness enforcement, the selector, and the cascade:
 
 ## Stop condition
 
-Review follows the **one-round stop rule** in `standards/adversarial-review-protocol.md` § "One-round
-stop rule"; full mechanics live there, not restated here.
+Review follows **the referee and the eight-round loop** in
+`standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"; full mechanics
+live there, not restated here.
 
 - Every FAIL is fixed by the implementation agent and re-reviewed with a fresh reviewer instance.
   The author never decides a finding is a "nitpick"; see `standards/adversarial-review-protocol.md` §
   "Finding disposition" for what counts as in-scope-fixable vs. taste vs. genuinely separable.
-- **Impasse.** If a segment cannot reach PASS after two full re-review rounds on the same blocker/major
-  finding, halt the segment and log it in `BUILDLOG.md`: a halt is not an acceptance; the work is not
-  committed. A halt also clears the halted issue's `active-<N>-*` claim label, per
-  `standards/issue-standards.md` § "The file claim and the size rule" release rule: a stopped run
-  releases its files. **When the halt ends the session** (a single-segment run, or the last segment still
-  standing), the `[HALT]` entry carries the session's end-of-run report, in § "Report template"'s
-  shape, folding in every note this worktree collected across every segment the session ran; it is
-  not a bare halt notice, and it is written only after the late-note pass has run when its
-  trigger holds (§ "No agent files its own issue" rule 4): a halt hands the owner no
-  unchallenged note either. **When the halt is per-segment inside a run that keeps going**
-  (`agents/orchestrator/autonomous-timed-run.md` § "A halt is per-segment, never a run exit"), the
-  `[HALT]` entry logs the halt only; the session continues with its next segment inside the same
-  worktree, and the end-of-run report is not emitted until the session itself ends, per rule 4
-  below.
+- **The per-finding ledger.** The round count and fix history for a blocker/major finding that
+  survives its first scoped re-check live in a ledger the orchestrator writes under
+  `.run_state/` (already inside its declared write scope, alongside `.run_state/notes.md`): one
+  entry per round, holding the re-review round number (counting the round-2 scoped re-check as
+  re-review round 1), the fix approach attempted, and the re-review
+  verdict together with the finding text that kept it open, never the bare PASS/FAIL token
+  alone, appended the moment that round's verdict lands. This is what lets the count survive
+  context compaction and a long autonomous run. Claim-label re-stamp events are unchanged:
+  dispatching a review round still re-stamps the issue's `active-<N>-*` label per
+  `standards/issue-standards.md` § "The file claim and the size rule", event-keyed exactly as
+  before.
+- **The fork, at two or more rounds on the same finding.** Disputed (the implementer has
+  stated, on the record, an argument against the finding itself, and the fresh reviewer raised
+  the same finding again) routes to the referee (`agents/reviewer-referee.md`); undisputed (the
+  implementer accepts it as a real defect, or raises no dispute) keeps the
+  fix-and-fresh-reviewer loop running. Full mechanics, the disputed-once rule, and what a
+  SUSTAIN or OVERTURN ruling does to the ledger: `standards/adversarial-review-protocol.md` §
+  "Referee and the eight-round loop".
+- **The eight-round halt.** If an undisputed finding still has not produced a PASS at the
+  ceiling set by `standards/adversarial-review-protocol.md` § "Referee and the eight-round
+  loop", halt the segment and log it in `BUILDLOG.md`, assembled from the ledger
+  above so the `[HALT]` entry lists every fix approach tried and why each failed: a halt is not
+  an acceptance; the work is not committed. A halt also clears the halted issue's `active-<N>-*`
+  claim label, per `standards/issue-standards.md` § "The file claim and the size rule" release
+  rule: a stopped run releases its files. **When the halt ends the session** (a single-segment
+  run, or the last segment still standing), the `[HALT]` entry carries the session's end-of-run
+  report, in § "Report template"'s shape, folding in every note this worktree collected across
+  every segment the session ran; it is not a bare halt notice, and it is written only after the
+  late-note pass has run when its trigger holds (§ "No agent files its own issue" rule 4): a
+  halt hands the owner no unchallenged note either. **When the halt is per-segment inside a run
+  that keeps going** (`agents/orchestrator/autonomous-timed-run.md` § "A halt is per-segment,
+  never a run exit"), the `[HALT]` entry logs the halt only; the session continues with its next
+  segment inside the same worktree, and the end-of-run report is not emitted until the session
+  itself ends, per rule 4 below.
+- **Recording a referee ruling.** The ship's `buildlog/<N>-<PR>.md` fragment names which side
+  won and which owner-settled artifact grounded the ruling, or the `[HALT]` entry does, if the
+  segment later halts. On a segment that ends with neither a ship nor a halt (a wrap or an
+  interruption), the ruling is carried in the end-of-run report instead, since the gitignored
+  `.run_state/` ledger dies with the worktree.
 - **Scope-mismatch halt.** A briefing-audit scope mismatch can halt a segment on a different
-  trigger from the impasse rule above; mechanics owned by
+  trigger from the eight-round halt above; mechanics owned by
   `standards/adversarial-review-protocol.md` § "Spawning a reviewer" - Briefing audit.
 
 **Disposing of a finding, every round.** A FAIL is never routed to a new GitHub issue or a
@@ -409,9 +435,9 @@ nothing adaptable, proceed with authoring per `standards/agent-standards.md` (ag
 
 These gates are additive to the existing `reviewer-issue` / `reviewer-pr` pipeline. They do not replace any existing step.
 
-**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 6 (Artifact review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the one-round stop rule for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
+**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 6 (Artifact review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the referee-and-eight-round-loop fork for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
 
-**Design-philosophy gate (PR-review time):** Spawn `agents/reviewer-design-philosophy.md` (Opus) for every implementation artifact at PR-review time. What counts as an implementation artifact, and the cadence for a FAIL: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact" and § "One-round stop rule".
+**Design-philosophy gate (PR-review time):** Spawn `agents/reviewer-design-philosophy.md` (Opus) for every implementation artifact at PR-review time. What counts as an implementation artifact, and the cadence for a FAIL: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact" and § "Referee and the eight-round loop".
 
 **Briefing audit (concurrent with every code-review round):** the round's briefing file list is machine-generated, and the briefing itself is audited by `agents/reviewer-briefing.md` (Opus); duty and dispatch inputs: `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Status: its judgment findings are advisory per § "Advisory-lens lifecycle"; a scope-mismatch report is a round-validity condition under that same protocol section, not a lens verdict.
 
