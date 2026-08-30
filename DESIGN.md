@@ -396,11 +396,38 @@ This repo runs adversarial review with no proof-layer bureaucracy: no evidence-c
 no severity adjudicator, no reviewer panels, and (per `tools/apply-branch-protection.ps1`)
 `required_approving_review_count` stays 0 by default, since a solo-maintainer repo cannot have its
 owner approve their own PR. CI plus independent adversarial review is the gate, not a human
-approval click. The full history of that decision, including the proof-layer teardown it replaced,
-is the wedding-scavenger-hunt repo's own `DESIGN.md`, an explicitly-marked provenance note; this
+approval click. The full history of the proof-layer teardown itself, the evidence-capture
+artifacts and reviewer panels it removed, is the wedding-scavenger-hunt repo's own `DESIGN.md`,
+an explicitly-marked provenance note; this
 repo's own history begins at its 2026-08-16 seed and does not carry that teardown ADR forward. The
 posture this leaves behind is tamper-evident, not tamper-proof, the same honest framing
 `WHAT-IT-CHECKS.md` uses for what is and is not mechanically enforced here.
+
+**The referee and the eight-round loop (owner, 2026-08-30).** The flat two-round halt this repo
+inherited from the teardown conflated two different situations: a genuine taste dispute between
+implementer and reviewer, and a real defect that is simply not fixed yet. Before the teardown, the
+pre-teardown protocol ran a 3-round soft-cap trigger with a concede/contest fork and a severity
+adjudicator, and declared impasse only at 6 total rounds without PASS; both parameters are quoted
+here from the wedding-scavenger-hunt repo's own governance history, an explicitly-marked
+provenance note, since no off-disk artifact is available ("At 3 rounds without PASS, the
+orchestrator first declares whether it concedes"; on the contest path a fresh adjudicator
+classified each open defect consequential or inconsequential; "A consequential-or-open defect that
+survives 6 total rounds without PASS is declared an impasse"). The teardown collapsed that to a
+flat two-round halt and lost the dispute-vs-defect distinction. This repo's own halt #14
+(`BUILDLOG.md`, 2026-08-22) is the recorded case of the collapsed rule abandoning a fixable
+defect: the reviewer was right every round, rounds 3 through 5 each moved the duplication rather
+than removing it, and the fix that closed it came only after the halt, on owner direction.
+
+The referee that replaces the flat halt is lighter than the pre-teardown severity adjudicator it
+echoes: it fires only on a genuine, formally stated dispute, never on a defect the implementer
+already accepts, and it carries no severity taxonomy, no concede/contest fork, and no
+evidence-artifact machinery. An undisputed defect never reaches it at all; it loops instead, to
+the ceiling `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"
+sets. Unlike a new advisory lens, which enters on an advisory trial per that protocol's §
+"Advisory-lens lifecycle", the referee enters the pipeline gating from its first dispatch: it
+rules only a dispute already raised through the normal cadence, not a fresh judgment call on
+an unreviewed surface, so there is nothing for an advisory trial to de-risk. Full mechanics:
+that same section.
 
 ## Branch-protection strictness
 

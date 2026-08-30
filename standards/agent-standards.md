@@ -30,8 +30,12 @@ a finding in its numbered defect list, and the orchestrator disposes of that fin
 `standards/adversarial-review-protocol.md` § "Finding disposition" like any other. When the
 noticed defect is instead a pre-existing instance a standard scopes out of the current diff's
 findings, the design-philosophy reviewer's route home is its own `Report notes:` block, per
-`agents/reviewer-design-philosophy.md` § "Input / output contract". Every other reviewer has no such block and
-returns the same kind of observation as an ordinary numbered finding instead.
+`agents/reviewer-design-philosophy.md` § "Input / output contract". The referee carries a
+matching slot for the same reason, in a different shape: it never sees a diff to raise an
+ordinary numbered finding against, so its noticed-defect route home is the optional `Noticed:`
+line in its own ruling output, per `agents/reviewer-referee.md` § "Input / output contract".
+Every other reviewer has no such block and returns the same kind of observation as an ordinary
+numbered finding instead.
 
 **Orchestrator carve-out:** the orchestrator itself has no handoff to return a note through, since
 it is not spawned. When the orchestrator notices a defect it did not cause and cannot fix in
