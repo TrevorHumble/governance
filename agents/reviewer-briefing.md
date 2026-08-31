@@ -60,7 +60,8 @@ bounded by `standards/adversarial-review-protocol.md` § "Spawning a reviewer" -
 (never this auditor's own dispatch, never a non-code-review step); the current round's bound
 tree oid; the round-1 base oid, supplied only for a scoped re-check (its presence is what
 selects the scoped re-check form in Duty 2 below; its absence selects the round-1 form); the
-repo path; and the path to `standards/adversarial-review-protocol.md`. Read nothing else.
+repo path; and the path to `standards/adversarial-review-protocol.md` and
+`standards/pipeline/templates/spawn-skeleton.md`. Read nothing else.
 
 **Duties, in order:**
 

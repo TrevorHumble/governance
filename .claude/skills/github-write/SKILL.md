@@ -40,7 +40,8 @@ equal, see `CLAUDE.md` § "Repo conventions". The sync rule:
   file, since that number is the draft's identity. The issue body can summarize and link the file.
   Record the approval in both the GitHub issue body and the draft as required by
   `standards/issue-standards.md` § "Owner hand-off".
-- **On merge to the default branch (via pull request, or a direct commit in `shipMode: "direct"`)** → `gh issue close` the matching card, referencing the commit.
+- **On merge to the default branch** → close the matching card; the ship step's packet,
+  `standards/pipeline/steps/11-ship.md`, carries the close command.
 - **On graduation/supersession** → update the card (re-label, or close with a pointer to the successor).
 - Never leave the board disagreeing with the issue files / BUILDLOG (the folded archive plus any
   pending fragment in `buildlog/`); the orchestrator's own close-out step keeps them in sync as
@@ -75,18 +76,7 @@ Run `git status` before staging to avoid committing `.env` or large binaries.
 
 ## Opening a PR
 
-```powershell
-git push -u origin <branch>
-& "<resolved ghPath>" pr create `
-  --title "Short title" `
-  --body @'
-## Summary
-- ...
-
-## Test plan
-- [ ] ...
-'@
-```
+See `standards/pipeline/steps/11-ship.md`.
 
 ## Conventions
 

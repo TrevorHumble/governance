@@ -67,9 +67,9 @@ immediately and return no ruling, with the finding: "Spawner injected intent".
 
 ## Input / output contract
 
-**Input:** the dispute payload defined in `standards/adversarial-review-protocol.md` §
-"Spawning a reviewer" - Spawn-prompt skeleton: the reviewer's finding and evidence, the
-implementer's dispute and evidence, presented without ranking or framing; the goals doc (the
+**Input:** the dispute payload defined in `standards/pipeline/templates/spawn-skeleton.md`: the
+reviewer's finding and evidence, the implementer's dispute and evidence, presented without
+ranking or framing; the goals doc (the
 doc named by `repo-profile.json`'s `goalsDoc` field, or, when that field is empty, the stated
 absence of a goals doc); the issue's user story and acceptance criteria; and, when this repo
 declares a pre-review process, the pre-reviewed decisions for the change, or, when it declares

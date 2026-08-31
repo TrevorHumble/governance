@@ -373,8 +373,8 @@ function Get-Classification {
 
 # Write-ClassificationLines -- prints the issue #14 AC5 contract for $Classification:
 # one `classify <class>: <path> (<reason>)` line per plan path, then one
-# `classify RUN <content|structure>: <reason>` line (`.claude/commands/build.md`
-# step 0b branches on that marker). The one call both the dry-run and
+# `classify RUN <content|structure>: <reason>` line (`standards/pipeline/PIPELINE.md`
+# step 02 branches on that marker). The one call both the dry-run and
 # real-run branches make, so the printed contract can never drift between
 # the two.
 function Write-ClassificationLines {

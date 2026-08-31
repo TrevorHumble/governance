@@ -88,8 +88,10 @@ entirely. Every other file that needs either rule points here: `standards/decisi
 § "Scope discipline", `standards/adversarial-review-protocol.md` § "Finding disposition",
 `agents/orchestrator.md` § "No agent files its own issue", `agents/reviewer-issue.md`,
 `agents/reviewer-pr.md`, `agents/implementation-agent.md`,
-`.claude/skills/capture-system-defect/SKILL.md`, `.claude/commands/build.md`, and
-`.claude/commands/post-wave-review.md`.
+`.claude/skills/capture-system-defect/SKILL.md`, `standards/pipeline/PIPELINE.md`,
+`.claude/commands/post-wave-review.md`, `standards/pipeline/steps/06-issue.md`,
+`standards/pipeline/steps/07-issue-review.md`, `standards/pipeline/steps/09-pr-review.md`,
+`standards/pipeline/steps/10-commit.md`, and `standards/pipeline/steps/11-ship.md`.
 
 Why it exists: the `Touches` lock guards a collision between two concurrent runs. When no other
 run holds a file, there is no collision to guard, and the lock was turning two-line fixes into
@@ -113,6 +115,9 @@ starts: `gh issue list --state open --limit 100 --json number,labels,body` retur
 issue's number, labels, and `Touches:` line in one call. A result of exactly the limit's row
 count may be truncated: re-run with a higher `--limit` until the count comes back below it,
 never treating a full page as complete, before treating any file as free.
+
+An issue whose `Touches` is none and whose implementation plan files child issues is an epic; it
+stamps no claim label, since there is nothing for the label to protect.
 
 ### The release rule
 
@@ -181,7 +186,7 @@ rule change.
 
 ## The Haiku bar
 
-The implementation plan is a clarity heuristic: it must be clear and unambiguous enough that following it would not send a weak model off the rails. It is a thought experiment about plan clarity, not a requirement to inline every fact. Current implementer/reviewer tiers: `agents/orchestrator.md` § "Model policy".
+The implementation plan is a clarity heuristic: it must be clear and unambiguous enough that following it would not send a weak model off the rails. It is a thought experiment about plan clarity, not a requirement to inline every fact. Current implementer/reviewer tiers: `standards/pipeline/templates/model-tiers.md`.
 
 If a step says "do the thing," rewrite it. Each step names what to create, read, or write and where.
 
@@ -202,8 +207,7 @@ create` runs. No issue is created, and no issue's title, story, or acceptance cr
 until the owner has approved, with the same inherited-approval exception. An objection
 rewrites the whole message, title included, in chat, and it is re-sent; nothing is recorded until
 he approves. Neither the GitHub issue nor the `data/wip-issues/<N>-slug.md` draft exists yet at
-that point, so the approval carries forward: once both are created (`agents/orchestrator.md` §
-"Pipeline (ordered)" step 3), the agent records `Owner-approved: yes` on its own line, immediately
+that point, so the approval carries forward: once both are created (`standards/pipeline/steps/06-issue.md`), the agent records `Owner-approved: yes` on its own line, immediately
 after the `**Type:**` line, in the GitHub issue body and in the draft, carrying the approval given
 at hand-off. The GitHub issue body's copy is the board record; the draft's copy is the one a reviewer
 checks, per § "Reviewer checklist" below and `agents/reviewer-issue.md`, since that agent is handed
@@ -218,7 +222,7 @@ the owner approves that re-sent message. A change confined to the implementation
 dependency map, or the context does not re-trigger this. This paragraph binds `Owner-approved: yes`
 text only: an inherited child's agent-written title, story, and criteria carry no such line, so
 changing them removes nothing and re-sends nothing. `agents/orchestrator.md` and
-`.claude/commands/build.md` point at this paragraph rather than restating it; so does §
+`standards/pipeline/PIPELINE.md` point at this paragraph rather than restating it; so does §
 "Acceptance-criteria amendment" above for the mid-flight case.
 
 **Inherited approval.** An epic whose acceptance criteria the owner approved through the hand-off
@@ -248,42 +252,8 @@ telling them apart: **only the exact string `Owner-approved: yes` grants the sto
 exemptions; any other line in that slot, the inherited line included, grants none.** The two are
 mutually exclusive on one issue: an issue carries one or the other, never both.
 
-**Written format.** The line breaks below are part of the format. The wording is a suggested
-shape, not a character-exact template: "As a / I need / so that" is convenience, not doctrine
-(Ron Jeffries, https://ronjeffries.com/xprog/blog/how-should-user-stories-be-written/, checked
-2026-08-22).
-
-- **Title:** one line, plain language, naming what is needed, not how it is built.
-- **User story:** three lines, each on its own line:
-  ```
-  **As a** [persona],
-  **I need** [thing],
-  **so that** [outcome].
-  ```
-- **Acceptance criteria:** one fenced block holding one or more scenarios. Each scenario opens
-  with `Scenario <n>: <short description>` on its own line, followed by `GIVEN`, `WHEN`, `THEN`
-  each on its own line, with optional `AND` lines after any of them. Keywords in capitals, one
-  keyword per line, a blank line between scenarios.
-
-Filled example:
-
-> **Title:** Every rider sees their own trip, not the whole schedule
->
-> **As a** rider,
-> **I need** my trip list to show only the trips I booked,
-> **so that** I never wonder whose trip is whose.
->
-> ```
-> Scenario 1: I see my own trip
-> GIVEN I have booked a trip
-> WHEN I open my trip list
-> THEN my trip is there
->
-> Scenario 2: I do not see another rider's trip
-> GIVEN another rider has booked a trip
-> WHEN I open my trip list
-> THEN their trip is not there
-> ```
+**Written format.** See `standards/pipeline/templates/hand-off-format.md` for the exact format and
+the filled example.
 
 **Count.** § "Acceptance criteria" above binds what an agent writes; this section restates none of
 that count. A criterion the owner adds himself is not bounded by it and is not counted against
@@ -384,7 +354,7 @@ ready-issue and close the backlog issue.
 
 ## Sonnet tier eligibility
 
-A ready-tier issue's implementation and review may run on Sonnet instead of the standard reviewer policy (`agents/orchestrator.md` § "Model policy"), not by a classifier script, but by a judgment the issue reviewer (`reviewer-issue`) makes once, at issue-review time, since it already reads the issue and every path in its `Touches` list. The reviewer emits exactly one of `AWARD sonnet-only` or `DENY sonnet-only` as part of its verdict, per `agents/reviewer-issue.md`.
+A ready-tier issue's implementation and review may run on Sonnet instead of the standard reviewer policy (`standards/pipeline/templates/model-tiers.md`), not by a classifier script, but by a judgment the issue reviewer (`reviewer-issue`) makes once, at issue-review time, since it already reads the issue and every path in its `Touches` list. The reviewer emits exactly one of `AWARD sonnet-only` or `DENY sonnet-only` as part of its verdict, per `agents/reviewer-issue.md`.
 
 An award requires all three gates to hold, stated once here:
 

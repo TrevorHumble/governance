@@ -52,14 +52,16 @@ away from problems you didn't anticipate. Say "assume failure, look hard."
 listed is itself a finding."
 
 **Sanctioned briefing fields.** The fields a briefing may carry that are never by themselves a
-bias finding are the single Objective line (defined in § "Spawning a reviewer"), a
-well-formed overage declaration (a measured number plus its atomic reason, defined in §
-"Review-size bound"), the notes-under-challenge field (the current issue's `## Notes`
-entries, each note with its set-aside justification, defined in § "Spawning a reviewer"), and
-the referee's dispute payload (the reviewer's finding and evidence, the implementer's dispute
-and evidence, presented without ranking or framing, plus the goals doc, the issue's user
-story and acceptance criteria, and the pre-review record or its stated absence, defined in §
-"Spawning a reviewer" and `agents/reviewer-referee.md`). The notes field does not lead the
+bias finding are the single Objective line (defined in
+`standards/pipeline/templates/spawn-skeleton.md`), a well-formed overage declaration (a
+measured number plus its atomic reason, defined in § "Review-size bound"), the
+notes-under-challenge field (the current issue's `## Notes` entries, each note with its
+set-aside justification, defined in `standards/pipeline/templates/spawn-skeleton.md`), and the
+referee's dispute payload (the reviewer's finding and evidence, the implementer's dispute and
+evidence, presented without ranking or framing, plus the goals doc, the issue's user story and
+acceptance criteria, and the pre-review record or its stated absence, defined in
+`standards/pipeline/templates/spawn-skeleton.md` and `agents/reviewer-referee.md`). The notes
+field does not lead the
 witness, which is why it is sanctioned: it declares a disposition the reviewer is asked to
 judge, rather than pointing at a part of the artifact suspected weak; judging deferrals is
 part of every reviewer's job (§ "Finding disposition", "Challenging a deferral"). The dispute
@@ -214,8 +216,8 @@ loop` below): **1** reviewer, a fresh instance with no context from any prior ro
   alike), before the end-of-run report is written, whenever any note lacks an explicit per-note
   ruling from a round reviewer (§ "Finding disposition", "Challenging a deferral"; a session
   that ran zero review rounds qualifies trivially). This bullet is the trigger's one home;
-  `agents/orchestrator.md` § "No agent files its own issue" rule 4 owns the dispatch mechanics
-  and points here rather than restating the trigger. It sits **outside** § "Referee and the
+  `standards/pipeline/steps/12-report.md` owns the dispatch mechanics and points here rather than
+  restating the trigger. It sits **outside** § "Referee and the
   eight-round loop"'s round counting and **outside** § "Review-size bound": an already-long run never skips
   it for being one round too many, and its input is notes, not a staged diff, so no shortstat
   measure applies. Its rulings dispose per § "Finding disposition", "Challenging a deferral".
@@ -233,7 +235,7 @@ loop` below): **1** reviewer, a fresh instance with no context from any prior ro
   or deferred like any other finding.
 
 Reviewer model tiers, the `sonnet-only` exception included, are set in
-`agents/orchestrator.md` § "Model policy"; the independence rule behind them (a
+`standards/pipeline/templates/model-tiers.md`; the independence rule behind them (a
 different, non-weaker model than the implementer) is `standards/agent-standards.md`'s.
 
 ---
@@ -243,11 +245,8 @@ different, non-weaker model than the implementer) is `standards/agent-standards.
 Round 1 of code review runs the PR reviewer and the design-philosophy reviewer together
 (`## Reviewer count by artifact`). What happens next depends on what they found:
 
-- **Minor and nit findings are fixed inline by the implementer and shipped with no
-  re-review.** They do not block the merge and do not need a second look once addressed.
-- **A blocker or major finding triggers a re-check**, scoped to that fix: the implementer
-  fixes it, and one fresh reviewer confirms the fix, not a full re-review of the whole
-  artifact again.
+- The ordinary per-round cadence (minors fixed inline with no re-review; a blocker or major
+  takes one scoped re-check with a fresh reviewer): `standards/pipeline/steps/09-pr-review.md`.
 - There is no severity adjudicator and no reviewer panel beyond the referee below. A PASS
   with an open blocker or major finding is never a PASS.
 
@@ -478,44 +477,8 @@ add to, trim, or reword what the command produced. A non-code-review artifact (a
 draft) lists that one file instead: this rule governs a code review's file list, not
 every artifact class.
 
-**Spawn-prompt skeleton.** Assemble every reviewer spawn prompt from this skeleton: static content
-first (see the ordering note below), volatile artifact last, framed exactly per § "De-bias the
-setup" above (goal only, never the mechanisms; no positive hints; no planted suspicions; full
-scope).
-
-```text
-You are the reviewer agent defined in <path to agents/reviewer-*.md>. Read that
-file first and follow it exactly, including its read-only rules.
-
-Standard(s) to judge against: <path to standards/*.md>; omit when spawning the referee, whose
-grounding artifacts ride in the Dispute payload
-Protocol: standards/adversarial-review-protocol.md
-Objective: <one-line goal the artifact is judged against, per § "De-bias the setup" -
-the goal only, never the mechanisms>
-Overage declaration (optional; state only when this round's measured size exceeds §
-"Review-size bound"): <measured number> lines under review, atomic reason: <the atomic reason>
-Notes under challenge (optional; state only when the linked issue carries `## Notes` entries):
-the issue's `## Notes` entries pasted verbatim, each note's substance and its set-aside
-justification, nothing added or trimmed
-Dispute payload (optional; state only when spawning the referee, `agents/reviewer-referee.md`):
-the reviewer's finding and evidence, the implementer's dispute and evidence, presented without
-ranking or framing, plus the goals doc (the doc named by `repo-profile.json`'s `goalsDoc`
-field; when that field is empty, a statement that no goals doc exists), the issue's user story
-and acceptance criteria, and, when this repo declares a pre-review process, the pre-reviewed
-decisions for the change; when this repo declares `preReview: "none"`, a statement that no
-pre-review record exists and that this is the normal case
-
-Artifact(s) under review (complete list, anything missing from the artifact
-itself is a finding):
-- <path to artifact>, or, for a code review: tree oid <oid> plus this round's file
-  list, the round's named git command's output (§ "Spawning a reviewer" -
-  Machine-generated scope, above) pasted verbatim; omit when spawning the referee, whose
-  input is the Dispute payload above
-
-Return your verdict in the output format your agent definition specifies
-(verdict token plus numbered defect list with severity and file:line evidence; a referee
-returns the ruling shape its definition specifies instead).
-```
+**Spawn-prompt skeleton.** See `standards/pipeline/templates/spawn-skeleton.md` for the exact
+skeleton every reviewer spawn prompt is assembled from.
 
 **No mutation authority.** Spawn every reviewer with no mutation authority: use a read-only agent
 type, or, if the reviewer's own spec grants a broader tool set, add an explicit no-mutation

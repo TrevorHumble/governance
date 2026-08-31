@@ -28,7 +28,7 @@ If the spawning prompt violates the de-bias rules owned by `standards/adversaria
 
 ## Input / output contract
 
-**Input:** the absolute path to the agent file under review. Read that file, `standards/agent-standards.md`, and `standards/adversarial-review-protocol.md`. Read nothing else.
+**Input:** the absolute path to the agent file under review. Read that file, `standards/agent-standards.md`, `standards/adversarial-review-protocol.md`, and `standards/pipeline/templates/spawn-skeleton.md`. Read nothing else.
 
 **Output:**
 
@@ -45,6 +45,6 @@ One token verdict followed by the numbered defect list. A PASS with any open blo
 
 - [ ] Frontmatter specifies a `tools` array limited to tools required for the agent's defined job.
 - [ ] System prompt states an explicit input/output contract (what comes in, what goes out).
-- [ ] `model` field is set to a tier appropriate to the job (see the task-type table in `standards/agent-standards.md`; which model fills each tier: `agents/orchestrator.md` § "Model policy").
+- [ ] `model` field is set to a tier appropriate to the job (see the task-type table in `standards/agent-standards.md`; which model fills each tier: `standards/pipeline/templates/model-tiers.md`).
 - [ ] Body contains a `## When to invoke` section with at least two bullet points.
 - [ ] No banned slop words appear in the file.

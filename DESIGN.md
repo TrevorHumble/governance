@@ -582,8 +582,8 @@ Issue #3 ships the mechanism `README.md`'s "Rules of the road" and this file's o
 stated as policy but left unbuilt: `tools/governance-sync.ps1` (the wrapper: the only file that
 mutates git or GitHub state) and `tools/governance-sync-core.ps1` (the planning logic, which runs
 read-only git commands but performs no mutation), wired into
-`.claude/commands/build.md` step 0b and `agents/orchestrator.md`'s Operating rules, reviewed per
-the new `standards/governance-sync.md`.
+`standards/pipeline/PIPELINE.md` steps 01 and 02, reviewed per the new
+`standards/governance-sync.md`.
 
 **Pull, not push.** A child repo runs the sync tool against this repo at build start, rather than
 this repo pushing changes out to a registry of children. This was the owner's settled design
@@ -1064,3 +1064,20 @@ confident-drop agreement are instruction-enforced, unmechanized (`WHAT-IT-CHECKS
 The 70-percent confident-drop bar is the owner's own number; a reviewer's agreement is what makes
 a drop legitimate, because an agent silently dropping its own findings is the same unaudited exit
 this design closes.
+
+## The pipeline packets (issues #61 and #62)
+
+The build pipeline's step rules are moving into `standards/pipeline/`: `PIPELINE.md`, the
+numbered checklist and the one authority on step order; `steps/`, one self-contained chunk per
+step; `templates/`, formats shared by more than one step. A step's packet is its chunk plus the
+templates its chunk names. The packet is the rule's single home; old homes keep at most a
+one-line pointer.
+
+The reason is agent behavior, not taste: an agent reliably runs a rule handed to it at the step,
+and reliably drops a rule that lives deep in a long, cross-referenced file. Three drift incidents
+in child repos traced to exactly that failure mode. The owner decided the restructure on
+2026-08-30, recorded on issue #61.
+
+`PIPELINE.md` arrives at child repos classed as structure
+(`governance-manifest.json` `arrivesAsStructure`), because a child must repoint its own
+`CLAUDE.md` on the tree's first arrival.

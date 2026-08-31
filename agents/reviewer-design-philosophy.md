@@ -41,7 +41,7 @@ If the spawn supplies no diff and no changed-comment list, halt immediately and 
 
 ## Input / output contract
 
-**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, `standards/design-philosophy-examples.md`, `standards/adversarial-review-protocol.md`, and `standards/agent-standards.md` § "Input / output contract". Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
+**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, `standards/design-philosophy-examples.md`, `standards/adversarial-review-protocol.md`, `standards/pipeline/templates/spawn-skeleton.md`, and `standards/agent-standards.md` § "Input / output contract". Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
 
 **Output:**
 

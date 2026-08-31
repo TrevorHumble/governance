@@ -29,8 +29,7 @@ edit any file, even if the tools available to it would allow it.
 
 - The session's work has ended, the end-of-run report is about to be written, and the trigger
   owned by `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"'s Late-note
-  pass bullet holds (`agents/orchestrator.md` § "No agent files its own issue" rule 4 owns the
-  dispatch mechanics).
+  pass bullet holds (`standards/pipeline/steps/12-report.md` owns the dispatch mechanics).
 - Never during a round: a briefed note is ruled on in-round through the
   notes-under-challenge briefing field instead.
 
@@ -80,9 +79,10 @@ the notes-under-challenge field above all, is never by itself a bias finding.
 
 **Input:** the notes under challenge, pasted verbatim (each note's substance and its set-aside
 justification, from the issue's `## Notes` section); the path to the linked issue file; and the
-repository root. Read `standards/adversarial-review-protocol.md`, `standards/issue-standards.md`
-§ "The file claim and the size rule", and any file in this repository needed to test a claim a
-justification makes.
+repository root. Read `standards/adversarial-review-protocol.md`,
+`standards/pipeline/templates/spawn-skeleton.md`, `standards/issue-standards.md` § "The file
+claim and the size rule", and any file in this
+repository needed to test a claim a justification makes.
 
 **Output:**
 

@@ -62,7 +62,7 @@ If the spawning prompt violates the de-bias rules owned by `standards/adversaria
 
 ## Input / output contract
 
-**Input:** the absolute path to the issue file under review. Read that file, `standards/issue-standards.md`, `standards/adversarial-review-protocol.md`, and `definition-of-done.md` (repo root, for the trapped-vs-wanting test applied below). For an issue on a declared Pre-review surface (as defined at the top of this file's Protocol note), also read `agents/orchestrator.md` § "Pre-review step". Beyond that, read only files in this repository needed to test a claim the issue makes: including confirming that a file path named in the implementation plan or `Touches` list resolves to a real file, or is genuinely new.
+**Input:** the absolute path to the issue file under review. Read that file, `standards/issue-standards.md`, `standards/pipeline/templates/hand-off-format.md`, `standards/adversarial-review-protocol.md`, `standards/pipeline/templates/spawn-skeleton.md`, and `definition-of-done.md` (repo root, for the trapped-vs-wanting test applied below). For an issue on a declared Pre-review surface (as defined at the top of this file's Protocol note), also read `agents/orchestrator.md` § "Pre-review step". Beyond that, read only files in this repository needed to test a claim the issue makes: including confirming that a file path named in the implementation plan or `Touches` list resolves to a real file, or is genuinely new.
 
 **Output:**
 

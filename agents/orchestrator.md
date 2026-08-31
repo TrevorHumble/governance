@@ -38,120 +38,33 @@ the end of the session, carrying every note every segment collected.
 
 ## Operating rules
 
-1. **Isolation precondition: run in your own worktree, never the primary checkout.** Before any
-   research or file mutation, the session must be running inside its own linked git worktree, not
-   the shared primary checkout: `powershell -File tools/assert-worktree.ps1`. If it exits non-zero,
-   create and enter a worktree with `powershell -File tools/new-agent-worktree.ps1 -Branch <name>`
-   and continue the entire pipeline from inside it. Two sessions sharing one working directory can
-   stash, revert, or switch-branch under each other's uncommitted work (an incident from the
-   wedding-scavenger-hunt repo, issue #113, is why this rule exists). This is enforced by
-   `.claude/commands/build.md` Step 0, not opt-in prose; a session invoked directly (not via
-   `/build`) must still satisfy it before proceeding.
-
-   **Fresh base, not just isolation.** `tools/new-agent-worktree.ps1` fetches the default branch
-   (`repo-profile.json`'s `defaultBranch` field) first and cuts a new branch from it, never from
-   local HEAD, so the worktree starts 0 commits behind regardless of how stale the primary
-   checkout's local default branch is (this pattern traces to the wedding-scavenger-hunt repo's
-   issue #357, where a worktree cut from a 76-commits-stale local main produced a review that
-   certified work against an already-abandoned base). Once inside the worktree, run
-   `powershell -File tools/check-freshness.ps1` against it before any further step: expect
-   `0 commits behind` for a freshly-cut one. If the check reports drift, its output names the
-   count with the literal phrase `commits behind`; resync per its instructions before continuing.
-
-   **Governance sync, same as `.claude/commands/build.md` Step 0b.** After isolation, run
-   `powershell -File tools/governance-sync.ps1` and follow `standards/governance-sync.md` for
-   what its outcome means, so a session invoked directly (not via `/build`) is bound to the
-   same pull.
+1. **Isolation precondition: run in your own worktree, never the primary checkout.** See
+   `standards/pipeline/steps/01-isolate.md` for worktree isolation, fresh base, and unconditional
+   check-freshness, and `standards/pipeline/steps/02-sync.md` for the governance sync that follows.
 
 ---
 
 ## Pipeline (ordered)
 
-1. **Research**: delegate to `agents/researcher.md`.
-   Local prior art first, then the relevant dependency/framework documentation, then a short web check only
-   if needed. Do not research what prior art already answers.
-2. **Pre-review step**: if this repo declares a Pre-review process (`repo-profile.json`'s
-   `preReview` field, for example a live visual-approval loop, or `"none"`), it runs **before**
-   the issue is drafted, before it is reviewed, and before an implementer is ever spawned for the
-   declared pre-review surface (`repo-profile.json`'s `surfaceGlobs`): the orchestrator settles
-   the artifact live against the owner, freezes it, and only then does step 2b run the owner
-   hand-off (itself subject to 2b's inherited-epic exception), followed by step 3 drafting the
-   now-transcribed issue and step 5's implementation getting written. Before the owner approves,
-   only the paths named in `surfaceGlobs` may be edited; routes, services, and non-surface logic
-   must not be written during this step. A repo declaring `preReview: "none"` skips this step
-   entirely and proceeds to 2b, then step 3. A change the declaring process file's
-   unchanged-artifact exemption covers also proceeds straight to 2b and step 3, per § "Pre-review
-   step"'s "The unchanged-artifact exemption" paragraph below; the rest of this pipeline still runs
-   on it. No shared doc here names which pre-review process any particular repo uses; each repo's
-   own `repo-profile.json` and its named process file (if any) are the source of truth.
+Numbered to match `standards/pipeline/PIPELINE.md`: entries 01-02 live in § "Operating rules"
+rule 1 above, and entry 12 lives in § "No agent files its own issue" rule 4 below, so this list
+starting at 3 is deliberate, not a gap.
 
-**2b. Owner hand-off.** Before `gh issue create` runs, send the owner the hand-off message
-defined in `standards/issue-standards.md` § "Owner hand-off" (title, user story, acceptance
-criteria, in that order, nothing else) and wait for approval. One exception: a child of an epic
-whose acceptance criteria the owner already approved, and whose scope stays inside that epic's,
-inherits that approval and takes no hand-off of its own; the recorded form, its rules, and what a
-child needing wider scope does are owned by `standards/issue-standards.md` § "Owner hand-off", not
-restated here. Sizing note: "small" here means one agent session, and an agent's own estimate of
-what fits in a session runs low, so a story is not split merely because it feels large. The
-approval is recorded at step 3 per that section.
-**Return path:** owned by `standards/issue-standards.md` § "Owner hand-off"'s
-"Return path" paragraph, not restated here.
-
-3. **Issue**: read an existing issue, or create a new one per `standards/issue-standards.md`. For a new issue,
-   **open its GitHub issue first** (`gh issue create --label needs-issue-review`, plus any tier label),
-   capture the assigned number `N`, then write the local draft as `data/wip-issues/<N>-slug.md`, so the board
-   reflects it from the start carrying the `needs-issue-review` label. GitHub is the single source of truth
-   (see `.claude/skills/github-write/SKILL.md`). After the issue-review PASSes, clear the marker:
-   `gh issue edit <N> --remove-label needs-issue-review`.
-4. **Issue review**: spawn exactly **one** `agents/reviewer-issue.md` (Opus) per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Issues always use a single reviewer, never a panel. Fix every blocking defect. Re-review with a fresh reviewer instance. A FAIL is fixed, never overridden.
-   On PASS, apply the file claim per `standards/issue-standards.md` § "The file claim and the
-   size rule": stamp the issue's `active-<N>-*` claim label (shape owned by that section) in the
-   same breath as clearing
-   `needs-issue-review`, then check the board for competing claims on this issue's `Touches`
-   files. If another run's live claim holds any of them, this build has already banked its issue
-   review; it waits for the hold to release (or clears a stale one, per that section's release
-   rule) rather than starting implementation into a collision.
-5. **Implementation**: spawn `agents/implementation-agent.md` (Sonnet) with full handoff: the
-   passing issue and all prior-art file paths.
-6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per § "Model policy" below. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "Referee and the eight-round loop". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same eight-round-loop cadence. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated. Dispatching a review round is a claim re-stamp event: refresh the issue's `active-<N>-*` label per `standards/issue-standards.md` § "The file claim and the size rule" release rule.
-7. **Commit**: once per run, before the first commit, confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1`; never proceed assuming a gate that isn't on; an unconfigured clone enforces nothing). On the reviewers' PASS (and, for a blocker/major finding, once it is fixed and confirmed per `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"), `git commit` with a short message that includes `(#N)` referencing the issue. **`commit-msg` checks that the commit message names a GitHub issue**: a code commit with no `(#N)`, closing keyword, or `issue-N` branch is blocked; a doc-only (`*.md`) commit is exempt. **`pre-commit` checks that the commit stages no parent-owned governance path**, per `standards/ownership-map.md`; once the launcher probe and the profile parse both succeed, it exits cleanly on a governance-sync branch (the exemption that applies in a child, since `governanceHome` is never `self` there) or in the governance home itself. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
-   Committing and pushing are both claim re-stamp events: refresh the issue's `active-<N>-*`
-   label at each, per `standards/issue-standards.md` § "The file claim and the size rule".
-   Then **close the GitHub issue** for this work (`gh issue close`, referencing the commit) so the board
-   matches reality, and delete the issue's `active-<N>-*` label per that same section's release
-   rule (clear on ship or close; a halt clears it too, per § "Stop condition"). The board is kept
-   current at every transition: issue created, `gh issue` opened;
-   committed to the default branch, `gh issue` closed.
-   - **Ship flow: defers to `repo-profile.json`'s `shipMode` field; no step here asserts which
-     mode is operative.** In `shipMode: "pr"`, push the branch and run `gh pr create` to open a
-     pull request, watch CI to green, then merge. In `shipMode: "direct"`, the commit above already
-     landed on the default branch; watch CI to green there, with no branch or PR step. Either way,
-     write the per-ship entry as a new file, `buildlog/<N>-<PR>.md` (`N` the issue number, `PR`
-     the pull request number `gh pr create` assigned in `pr` mode, or the commit's short SHA in
-     `direct` mode), in the shape `buildlog/README.md` defines, naming that identifier and never a
-     merge SHA that does not exist yet at this point, and push it as a commit on the same branch
-     (the default branch itself, in `direct` mode), so the fragment carries its own identifier and
-     the green CI run covers the final commit. Once the adversarial review has passed and CI is
-     green, merge the PR (or, in `direct` mode, consider the ship complete), for every
-     non-pre-review change type. A change on the declared pre-review surface additionally requires
-     step 2 to have reached explicit owner approval before this merge, unless the declaring process
-     file's unchanged-artifact exemption carries it, in which case § "Pre-review step"'s "The
-     unchanged-artifact exemption" paragraph states what it merges on instead. The owner does not
-     perform merges; owner control is upstream (issue-speccing), downstream (revert via git
-     history), and, for a declared pre-review surface only, the pre-merge pre-review step. The
-     default branch is never knowingly left red. If CI goes red, fix the cause or revert the commit
-     before proceeding: a red default branch is a stop-and-fix condition, not something to push
-     past.
+3.  **Research**: see `standards/pipeline/steps/03-research.md`.
+4.  **Pre-review step**: see `standards/pipeline/steps/04-pre-review.md`.
+5.  **Hand-off**: see `standards/pipeline/steps/05-hand-off.md`.
+6.  **Issue**: see `standards/pipeline/steps/06-issue.md`.
+7.  **Issue review**: see `standards/pipeline/steps/07-issue-review.md`.
+8.  **Implement**: see `standards/pipeline/steps/08-implement.md`.
+9.  **PR review**: see `standards/pipeline/steps/09-pr-review.md`.
+10. **Commit**: see `standards/pipeline/steps/10-commit.md`.
+11. **Ship**: see `standards/pipeline/steps/11-ship.md`.
 
 ---
 
 ## Pre-review step
 
-**Trigger.** Each repo declares its own pre-review surface in `repo-profile.json`'s `surfaceGlobs`
-field. A change touching, or that will touch, any declared surface path runs the pre-review step
-below before an issue is drafted, unless the exemption in the next paragraph carries it. A repo
-with an empty `surfaceGlobs` list, or `preReview: "none"`, skips the gate entirely: the change
-merges on adversarial-review PASS plus green CI, as always.
+**Trigger.** See `standards/pipeline/steps/04-pre-review.md`.
 
 **The unchanged-artifact exemption.** A repo's declared pre-review process file may define an
 exemption under which a change on the declared surface does not re-enter the live owner loop,
@@ -182,7 +95,7 @@ two-doors rule; no mechanism is asserted here as belonging to every repo.
 
 **Trigger.** When an implementation's diff touches any path in `repo-profile.json`'s
 `docCurrencyPaths` field, the orchestrator spawns a `doc-currency` step: an **inline pipeline step
-defined here**, not a new agent file, alongside step 6 (Artifact review). A repo with an empty
+defined here**, not a new agent file, alongside step 09 (PR review). A repo with an empty
 `docCurrencyPaths` list never triggers this step.
 
 **Dispatched concurrently, not serially.** The `doc-currency` step is spawned **concurrently** with
@@ -206,7 +119,7 @@ notices something it did not cause and cannot fix, that is an ordinary note, han
 agent files its own issue".
 
 **Staged before the PR is reviewed.** The doc-currency agent's `.md` corrections are staged into the
-working tree, and included in the diff, before the PR review in step 6 runs, so the single combined
+working tree, and included in the diff, before the PR review in step 09 runs, so the single combined
 review covers them too, and no separate re-confirm round is needed. Classification and rationale:
 `standards/adversarial-review-protocol.md` § "Wave governance".
 
@@ -214,7 +127,7 @@ review covers them too, and no separate re-confirm round is needed. Classificati
 
 ## Wave boundary
 
-**Not part of step 6's per-issue ship flow.** This section fires once at the boundary between waves,
+**Not part of step 09's per-issue ship flow.** This section fires once at the boundary between waves,
 not after every PR merge. After a wave's planned batch of issues merges, append a line to
 `BUILDLOG.md` (or the run's Live-log ledger, during a timed run) noting the wave is complete, closing
 with the literal closing line: **owner may run /post-wave-review**, a cross-PR regression,
@@ -372,62 +285,8 @@ settle an artifact's look or shape; production logic is not phase-1 work. The **
 the criteria are transcribed and an implementer adds wiring/tests, is not exempted**: it takes the
 normal `agents/implementation-agent.md` and reviewer bar below, unchanged.
 
-The orchestrator runs on **Opus**. Implementation agent and non-reviewer spawned agents (researcher,
-etc.) run on **Sonnet**. Reviewers (all `reviewer-*.md` agents) run on **Opus**, a different model
-from the implementer, per the independence rule in `standards/agent-standards.md`, on every issue by
-default. Set `model:` explicitly on every spawn call; never rely on defaults. Light-tier work
-(classification, routing, triage) runs on **Haiku**; no agent currently in `agents/` is light-tier.
-
-**`sonnet-only` award.** No tool classifies an issue into a model tier. The single exception is
-a judgment call the issue reviewer (`reviewer-issue`) makes once, at issue-review time, against the
-three gates in `standards/issue-standards.md` § "Sonnet tier eligibility": it emits `AWARD sonnet-only`
-or `DENY sonnet-only` as part of its verdict. On an `AWARD`, the orchestrator applies the
-`sonnet-only` GitHub label to the issue, then runs both the implementer (step 5) and the PR and
-design-philosophy reviewers (step 6) on **Sonnet** for that issue; the orchestrator itself stays
-Opus regardless. Every sonnet-tier reviewer spawn additionally carries a coverage-first instruction
-appended to its briefing: report every finding, tagged with its own severity and confidence, and never
-defer to a downstream filter; on the common single-round PASS path, no downstream filter runs to
-catch what an under-reporting reviewer left out. The briefing-audit lens (`agents/reviewer-briefing.md`)
-stays on Opus even for a sonnet-only issue: it judges the Opus orchestrator's own briefings, and the
-independence rule requires a reviewer non-weaker than the artifact's producer.
-
-**Mid-run escalation is manual, not automatic.** If implementation or PR review on a sonnet-tier issue
-turns up a governance-surface path the issue did not declare, the remainder of that
-run escalates to Opus, implementer and reviewers alike, by the manual judgment of the implementer or
-PR reviewer that spotted it. There is no automatic re-run and no script that re-checks the gates
-mid-flight; whoever notices makes the call and the orchestrator carries it out.
-
-**Fable.** Fable is an available model, used only on the owner's explicit per-use signal.
-Absent that signal, every implementer, Fable included, goes through the standard independent
-adversarial review per the tiers above; there is no standing Fable-specific review handling until the
-owner specifies one.
-
-**Gemini / Antigravity.** Running this pipeline under Google Antigravity / Gemini models maps
-tiers to these ecosystem defaults: the **Opus tier** (orchestrator plus reviewers) maps to **Gemini 3.6
-Flash (High)**; the **Implementer (Sonnet) tier** maps to **Gemini 3.5 (High) or Sonnet 4.6** (Antigravity
-exposes Sonnet 4.6). These are defaults, not an override of the tiers above: the reviewer must always run on a
-model that is different from, and non-weaker than, the implementer's. Where a Gemini pairing would
-violate that, for example an implementer on Sonnet 4.6 paired with a reviewer left on a lighter
-default, the reviewer is bumped to a non-weaker model rather than run under the default; the invariant
-governs, the mapping is illustrative.
-
----
-
-## Research-first rule
-
-Before any implementation step, prefer local prior art and the dependency/framework documentation over a web search.
-Delegate through `agents/researcher.md`. During normal implementation,
-web search is a last resort when local sources do not answer the question. **During an autonomous timed
-run's Done-Early Cascade** (`agents/orchestrator/autonomous-timed-run.md`), deep web research is a
-default activity, not a last resort: when there is no forced next task, researching better/standard
-practice and bringing back concrete improvements IS the work.
-
-**After receiving findings (caller duties).** Do not build anything the findings show already
-exists and is adaptable. If the findings doc's "Existing owner of a named rule" section surfaces
-an existing owner, hand that owner (the `file:line`) to the implementer before implementation
-starts: the change must extend or call that owner, not duplicate it. If the researcher found
-nothing adaptable, proceed with authoring per `standards/agent-standards.md` (agents) or
-`standards/skill-standards.md` (skills).
+Role tiers, the `sonnet-only` award, mid-run escalation, Fable, and the Gemini / Antigravity
+mapping: `standards/pipeline/templates/model-tiers.md`.
 
 ---
 
@@ -435,7 +294,7 @@ nothing adaptable, proceed with authoring per `standards/agent-standards.md` (ag
 
 These gates are additive to the existing `reviewer-issue` / `reviewer-pr` pipeline. They do not replace any existing step.
 
-**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 6 (Artifact review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the referee-and-eight-round-loop fork for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
+**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 09 (PR review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the referee-and-eight-round-loop fork for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
 
 **Design-philosophy gate (PR-review time):** Spawn `agents/reviewer-design-philosophy.md` (Opus) for every implementation artifact at PR-review time. What counts as an implementation artifact, and the cadence for a FAIL: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact" and § "Referee and the eight-round loop".
 
@@ -508,8 +367,9 @@ When an agent hits a problem mid-run:
    gating reviewer rules on it, and any
    reviewer can overrule the deferral per that protocol's § "Finding disposition".
    **The unit is the session, not the issue.** The pipeline creates one worktree per session
-   (§ "Isolation precondition" above; `.claude/commands/build.md` Step 0 cuts it once, and a Step
-   0b governance sync never re-cuts it, per `standards/governance-sync.md` § "After merge": a
+   (§ "Isolation precondition" above; `standards/pipeline/steps/01-isolate.md` cuts it once, and
+   `standards/pipeline/steps/02-sync.md`'s governance sync never re-cuts it, per
+   `standards/governance-sync.md` § "After merge": a
    content-classed sync PR merges on green CI on its own schedule, so this build stays on the tree
    it already has), so every later segment shares one `notes.md` across all of them. There is
    nothing to disambiguate: no header, no branch identity, no issue identity, no reading above or
@@ -518,11 +378,9 @@ When an agent hits a problem mid-run:
    four-option shape below. This is the old `fix-now` case: a defect that stops the current task's
    correctness or safety and cannot be worked around. The run halts, the halt is logged per §
    "Stop condition" above, and the owner decides. A blocked agent is never trapped and never files.
-4. **At the end of the session,** first run the late-note pass, then report.
-   **Late-note pass.** When the trigger owned by `standards/adversarial-review-protocol.md`
-   § "Reviewer count by artifact"'s Late-note pass bullet holds, dispatch `agents/reviewer-notes.md` (one instance,
-   over the notes only) before writing the report; the bullet also owns the pass's exemptions,
-   not restated here. Its rulings dispose exactly as an in-round challenge does: overruled means
+4. **At the end of the session,** first run the late-note pass, then report; dispatch mechanics:
+   `standards/pipeline/steps/12-report.md`.
+   **Late-note pass.** Its rulings dispose exactly as an in-round challenge does: overruled means
    handled now; agreed-drop means gone; upheld means reported. An `OVERRULE` ruled after this
    session already shipped is still handled in this session, in this worktree: the fix commits
    referencing the same issue, takes a scoped re-check, and ships through the same mode, unless
@@ -583,68 +441,11 @@ issue. The trigger is the agent noticing; no telemetry or automated detection is
 
 ## How to write the report
 
-The owner's standing words: **concise and precise.** They are two different tests, and every line
-must pass both.
-
-**Concise:** can you cut a word? Cut it. The owner is a functional/business tech, not a developer,
-and is often reading this at the end of a long day.
-
-**Precise:** could the owner act on the line without asking a question back? If not, it is too
-vague. Add the one missing fact and nothing else.
-
-Agents fail the second test while passing the first. Short and useless is the common failure, not
-long.
-
-- Too vague: `Delete: remove the conflicting rule. 20%`
-- Too long: `Delete: we could remove the sentence in the protocol standard that restricts briefing
-contents to a closed set of two items, which would resolve the contradiction described above and
-also shorten the standard by one line. 20%`
-- Right: `Delete: cut the "only two things" rule, the fight goes away. 20%`
-
-Size overall: enough to understand, not one word more. Too short and the owner cannot judge it. Too
-long and the owner skims, which is worse than not writing it.
-
-**Check for ghosts.** Before proposing any new gate, ask whether the failure it stops has ever
-happened. A gate that stops nothing still taxes every issue, forever. The same question is a named
-red flag reviewers cite at PR time, `ghost gate` in `standards/design-philosophy.md` § "Red flags";
-this paragraph is the report-writing moment of it, not a second rule.
-
-**Go look before you ask.** If a percentage needs a fact the agent does not have, it goes and finds
-it. Asking is allowed. Looking is better. Say which one happened.
+See `standards/pipeline/templates/report-template.md` for the concise/precise standard.
 
 ## Report template
 
-The `Fixed:` line appears only when something was fixed in place, and it carries no options: the
-problem is gone, so there is nothing left to price. A note with nothing fixed opens at `Saw:` and
-carries all four options.
-
-```
-Fixed: <what>, because <why>.
-
-Saw: <a short paragraph. What broke, why it matters, and whether it has ever done
-real damage. Say plainly when the answer is no.>
-
-Nothing: <the case for leaving it alone>. NN%
-Delete: <what of ours comes out>. NN%
-Small: <the line or two>. NN%
-Big: <the new thing, and its cost>. NN%
-```
-
-Add one more line only when it is needed: the thing that blocked the fix, or the one question the
-owner must answer before the numbers mean anything. If looking would answer it, look instead.
-
-Worked example, written by the owner on 2026-08-21:
-
-```
-Saw: when a reviewer fails something, I send a second one to check the fix. To check it,
-I must say what was broken. Another rule says briefings can only hold two things, and
-that is not one. So I get flagged every time. Nothing broke. The flag cannot stop a merge.
-
-Nothing: live with one flag per round. Costs zero. 70%
-Delete: cut the "only two things" rule, the fight goes away. 20%
-Small: one line saying the reviewer gets the code change plus the checklist. 8%
-Big: invent a new field, edit 3 files, every repo carries it forever. 2%
-```
+See `standards/pipeline/templates/report-template.md` for the template and the worked example.
 
 ---
 
