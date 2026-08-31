@@ -20,17 +20,17 @@ Packet: `standards/pipeline/steps/01-isolate.md`
 ## 02. Sync
 
 Pull governance updates from the parent repo before any other step touches a file. Read the sync
-outcome and act on what it means: in sync, a sync PR opened, an outage, or a structure change.
-Continue the build on the governance already in the tree either way; a merged sync lands on a
-later run, not this one.
+outcome and act on what it means; the packet lists every outcome. Continue the build on the
+governance already in the tree either way; a merged sync lands on a later run, not this one.
 
 Packet: `standards/pipeline/steps/02-sync.md`
 
 ## 03. Research
 
-Check local prior art first: the codebase, `standards/`, `agents/`, skill directories, `docs/`,
-and `DESIGN.md`. Consult installed package docs and existing tests for stack questions. Spawn
-`agents/researcher.md` for a web check only when local sources do not answer the question.
+Delegate research to `agents/researcher.md`. It checks local prior art first (the codebase,
+`standards/`, `agents/`, skill directories, `docs/`, `DESIGN.md`), then installed package docs and
+existing tests, and treats web search as a last resort. Do not research what prior art already
+answers.
 
 Packet: `standards/pipeline/steps/03-research.md`, `standards/pipeline/templates/model-tiers.md`
 
@@ -47,17 +47,18 @@ Packet: `standards/pipeline/steps/04-pre-review.md`
 
 Before creating the issue, send the owner the title, the user story, and the acceptance criteria,
 in that order, nothing else. Wait for approval before writing anything to GitHub, except for a
-child inheriting an approved epic's approval. Use the exact written format on every send. A change
-to any approved word afterward follows the return path in `standards/issue-standards.md` § "Owner
-hand-off".
+child inheriting an approved epic's approval. Use the written format in
+`standards/pipeline/templates/hand-off-format.md` on every send. A change to any approved word
+afterward follows the return path in `standards/issue-standards.md` § "Owner hand-off".
 
 Packet: `standards/pipeline/steps/05-hand-off.md`, `standards/pipeline/templates/hand-off-format.md`
 
 ## 06. Issue
 
-Open the GitHub issue first, capture the assigned number, then write the local draft naming that
-number. Write the issue per the issue standard: user story, acceptance criteria, implementation
-plan, dependency map. GitHub is the single source of truth from the moment the issue exists.
+Read the issue the run was handed, or open a new one first and capture the assigned number, then
+write the local draft naming that number. Write the issue per the issue standard: user story,
+acceptance criteria, implementation plan, dependency map. GitHub is the single source of truth
+from the moment the issue exists.
 
 Packet: `standards/pipeline/steps/06-issue.md`
 

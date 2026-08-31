@@ -19,32 +19,17 @@ Run goal: $ARGUMENTS
 
 Execute the steps below in order. Do not skip or reorder.
 
-**0: Isolate.** Before any research or file mutation, run `powershell -File tools/assert-worktree.ps1`. If it exits non-zero (the session is running in the shared primary checkout, not an isolated worktree), run `powershell -File tools/new-agent-worktree.ps1 -Branch <session-branch>`, which fetches the remote default branch (`repo-profile.json`'s `defaultBranch` field; this repo: `origin/main`) first and cuts the new branch from it, never from local HEAD, so the worktree starts 0 commits behind regardless of how stale the primary checkout's local default branch is (the wedding-scavenger-hunt repo's issue #357 records the incident and rationale behind this design, an explicitly-marked provenance note); then `cd` into the returned worktree path and run every remaining step of this pipeline from inside it. If it exits `0`, the session is already isolated: continue in place.
+**0: Isolate.** See `standards/pipeline/steps/01-isolate.md`.
 
-Either way, once inside the worktree, run `powershell -File tools/check-freshness.ps1` **against this worktree** before proceeding to step 0b. Expect `0 commits behind` the remote default branch for a freshly-cut one. **This bypasses the primary checkout's own behind-count entirely: the primary checkout being stale never aborts the build**, because the worktree was cut straight from the remote default branch, not from the primary checkout's local copy. If the check instead reports drift (its output names the count with the literal phrase `commits behind`), resync per its instructions before continuing.
+**0b: Governance sync.** See `standards/pipeline/steps/02-sync.md`.
 
-**0b: Governance sync.** Run `powershell -File tools/governance-sync.ps1`. Merge-on-green mechanics defer to `standards/governance-sync.md`, not restated here: the tool itself arms a content-classed sync PR for auto-merge once it confirms the child's declared CI guard is actually required on the default branch, and this build never waits for that merge. Continue to step 1 regardless of what it reports (the governance home, `not declared`, `in sync`, or a sync PR opened or already open): the merged governance, once GitHub actually merges the PR, arrives at the next build, not this one.
+**1: Research.** See `standards/pipeline/steps/03-research.md`.
 
-When it prints a line starting with the literal prefix `structure change:` (the rule checker classified the run as structure, per `standards/governance-sync.md` § "What a sync is" and § "The standing-issue rule"), report the named child issue in the session and carry it into the end-of-run report: a structure change opens no PR (`structure change: no sync PR`) or ships only what was not withheld (`structure change: partial withhold`), with every withheld path named in the child issue rather than in a PR body, and either way the build just continues on the governance already in the tree, the same posture the sync-outage branch below already takes.
+**2: Pre-review (if declared).** See `standards/pipeline/steps/04-pre-review.md`.
 
-When it exits non-zero, report the failure in the session and continue the build on the governance already in the tree: a sync outage never bricks a build, and the next successful sync closes the gap.
+**2b: Owner hand-off.** See `standards/pipeline/steps/05-hand-off.md`.
 
-**1: Research.** Before drafting anything, check local prior art: the codebase itself, `standards/`, `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `docs/`, `DESIGN.md`. For questions about the project's own stack and dependencies, consult the installed package docs and existing tests in `tests/`. Web search is a last resort when local sources do not answer the question: delegate through `agents/researcher.md`.
-
-**2: Pre-review (if declared).** Before issue-drafting, run this repo's declared Pre-review step (see `repo-profile.json`'s `preReview` field, a repo may name its own pre-review process file, such as a live visual-approval loop, or declare `none`; `surfaceGlobs` names the pre-review surface when one is declared), unless that process file's own unchanged-artifact exemption covers the change, in which case the live owner loop is not re-entered and the rest of this pipeline runs on the change unchanged (`agents/orchestrator.md` § "Pre-review step" owns the exemption). No shared command doc here asserts which pre-review process any particular repo uses.
-
-When `preReview` is `none`, or the work falls outside `surfaceGlobs`, skip this step entirely and go straight to 2b, then step 3. Otherwise, follow the declared process file for its own edit-scope, approval, exemption, and hand-off rules: this shared pipeline doc does not restate them here.
-
-Only once that declared process reports approval does step 2b run the owner hand-off, then step 3 (issue) draft the transcribed criteria and step 5 (implement) spawn an implementer for the remaining work, per `standards/issue-standards.md` for how an approved pre-review result becomes an acceptance criterion. A change carried by the unchanged-artifact exemption reaches no fresh approval by design: it proceeds to 2b and step 3 on the standing approval, and its criteria cite the exemption and that standing approval rather than transcribing a fresh outcome, per `standards/issue-standards.md` § "Acceptance criteria".
-
-**2b: Owner hand-off.** Before `gh issue create` runs, send the owner the hand-off message defined
-in `standards/issue-standards.md` § "Owner hand-off" (title, user story, acceptance criteria, in
-that order, nothing else) and wait for approval, except for a child inheriting an approved epic's
-approval. The approval is recorded at step 3 per that section. Mechanics, including the return path
-for a post-approval change and the recorded form of an inherited approval, are owned there, not
-restated here.
-
-**3: Issue.** Create the GitHub issue first (`gh issue create --label needs-issue-review`, labelled by tier, using the gh CLI at the path declared in `repo-profile.json`'s `ghPath` field, default `gh` on PATH; a machine where gh lives elsewhere records the absolute path in that machine's own `CLAUDE.local.md`, never committed), and capture the assigned number `N`. Then write the draft as `data/wip-issues/<N>-slug.md` per `standards/issue-standards.md`. GitHub is the single source of truth: the board reflects the task from creation.
+**3: Issue.** See `standards/pipeline/steps/06-issue.md`.
 
 **4: Issue review.** Spawn `agents/reviewer-issue.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". A FAIL is fixed, never overridden. Re-review with a fresh instance. `agents/reviewer-architecture.md` is not part of this step; its automatic PR-review trigger and on-request entry point are `standards/adversarial-review-protocol.md` § "Reviewer count by artifact" (see also `agents/orchestrator.md` § "Architecture lens (automatic on structural changes)"). On PASS, stamp the issue's `active-<N>-*` claim label (shape owned by `standards/issue-standards.md` § "The file claim and the size rule") and check the board for competing claims on its `Touches` files, per `standards/issue-standards.md` § "The file claim and the size rule"; if another run's live claim holds any of them, wait there (the issue review is already banked) instead of implementing into a collision.
 

@@ -38,71 +38,20 @@ the end of the session, carrying every note every segment collected.
 
 ## Operating rules
 
-1. **Isolation precondition: run in your own worktree, never the primary checkout.** Before any
-   research or file mutation, the session must be running inside its own linked git worktree, not
-   the shared primary checkout: `powershell -File tools/assert-worktree.ps1`. If it exits non-zero,
-   create and enter a worktree with `powershell -File tools/new-agent-worktree.ps1 -Branch <name>`
-   and continue the entire pipeline from inside it. Two sessions sharing one working directory can
-   stash, revert, or switch-branch under each other's uncommitted work (an incident from the
-   wedding-scavenger-hunt repo, issue #113, is why this rule exists). This is enforced by
-   `.claude/commands/build.md` Step 0, not opt-in prose; a session invoked directly (not via
-   `/build`) must still satisfy it before proceeding.
-
-   **Fresh base, not just isolation.** `tools/new-agent-worktree.ps1` fetches the default branch
-   (`repo-profile.json`'s `defaultBranch` field) first and cuts a new branch from it, never from
-   local HEAD, so the worktree starts 0 commits behind regardless of how stale the primary
-   checkout's local default branch is (this pattern traces to the wedding-scavenger-hunt repo's
-   issue #357, where a worktree cut from a 76-commits-stale local main produced a review that
-   certified work against an already-abandoned base). Once inside the worktree, run
-   `powershell -File tools/check-freshness.ps1` against it before any further step: expect
-   `0 commits behind` for a freshly-cut one. If the check reports drift, its output names the
-   count with the literal phrase `commits behind`; resync per its instructions before continuing.
-
-   **Governance sync, same as `.claude/commands/build.md` Step 0b.** After isolation, run
-   `powershell -File tools/governance-sync.ps1` and follow `standards/governance-sync.md` for
-   what its outcome means, so a session invoked directly (not via `/build`) is bound to the
-   same pull.
+1. **Isolation precondition: run in your own worktree, never the primary checkout.** See
+   `standards/pipeline/steps/01-isolate.md` for worktree isolation, fresh base, and unconditional
+   check-freshness, and `standards/pipeline/steps/02-sync.md` for the governance sync that follows.
 
 ---
 
 ## Pipeline (ordered)
 
-1. **Research**: delegate to `agents/researcher.md`.
-   Local prior art first, then the relevant dependency/framework documentation, then a short web check only
-   if needed. Do not research what prior art already answers.
-2. **Pre-review step**: if this repo declares a Pre-review process (`repo-profile.json`'s
-   `preReview` field, for example a live visual-approval loop, or `"none"`), it runs **before**
-   the issue is drafted, before it is reviewed, and before an implementer is ever spawned for the
-   declared pre-review surface (`repo-profile.json`'s `surfaceGlobs`): the orchestrator settles
-   the artifact live against the owner, freezes it, and only then does step 2b run the owner
-   hand-off (itself subject to 2b's inherited-epic exception), followed by step 3 drafting the
-   now-transcribed issue and step 5's implementation getting written. Before the owner approves,
-   only the paths named in `surfaceGlobs` may be edited; routes, services, and non-surface logic
-   must not be written during this step. A repo declaring `preReview: "none"` skips this step
-   entirely and proceeds to 2b, then step 3. A change the declaring process file's
-   unchanged-artifact exemption covers also proceeds straight to 2b and step 3, per § "Pre-review
-   step"'s "The unchanged-artifact exemption" paragraph below; the rest of this pipeline still runs
-   on it. No shared doc here names which pre-review process any particular repo uses; each repo's
-   own `repo-profile.json` and its named process file (if any) are the source of truth.
+1. **Research**: see `standards/pipeline/steps/03-research.md`.
+2. **Pre-review step**: see `standards/pipeline/steps/04-pre-review.md`.
 
-**2b. Owner hand-off.** Before `gh issue create` runs, send the owner the hand-off message
-defined in `standards/issue-standards.md` § "Owner hand-off" (title, user story, acceptance
-criteria, in that order, nothing else) and wait for approval. One exception: a child of an epic
-whose acceptance criteria the owner already approved, and whose scope stays inside that epic's,
-inherits that approval and takes no hand-off of its own; the recorded form, its rules, and what a
-child needing wider scope does are owned by `standards/issue-standards.md` § "Owner hand-off", not
-restated here. Sizing note: "small" here means one agent session, and an agent's own estimate of
-what fits in a session runs low, so a story is not split merely because it feels large. The
-approval is recorded at step 3 per that section.
-**Return path:** owned by `standards/issue-standards.md` § "Owner hand-off"'s
-"Return path" paragraph, not restated here.
+**2b. Owner hand-off.** See `standards/pipeline/steps/05-hand-off.md`.
 
-3. **Issue**: read an existing issue, or create a new one per `standards/issue-standards.md`. For a new issue,
-   **open its GitHub issue first** (`gh issue create --label needs-issue-review`, plus any tier label),
-   capture the assigned number `N`, then write the local draft as `data/wip-issues/<N>-slug.md`, so the board
-   reflects it from the start carrying the `needs-issue-review` label. GitHub is the single source of truth
-   (see `.claude/skills/github-write/SKILL.md`). After the issue-review PASSes, clear the marker:
-   `gh issue edit <N> --remove-label needs-issue-review`.
+3. **Issue**: see `standards/pipeline/steps/06-issue.md`.
 4. **Issue review**: spawn exactly **one** `agents/reviewer-issue.md` (Opus) per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Issues always use a single reviewer, never a panel. Fix every blocking defect. Re-review with a fresh reviewer instance. A FAIL is fixed, never overridden.
    On PASS, apply the file claim per `standards/issue-standards.md` § "The file claim and the
    size rule": stamp the issue's `active-<N>-*` claim label (shape owned by that section) in the
@@ -147,11 +96,7 @@ approval is recorded at step 3 per that section.
 
 ## Pre-review step
 
-**Trigger.** Each repo declares its own pre-review surface in `repo-profile.json`'s `surfaceGlobs`
-field. A change touching, or that will touch, any declared surface path runs the pre-review step
-below before an issue is drafted, unless the exemption in the next paragraph carries it. A repo
-with an empty `surfaceGlobs` list, or `preReview: "none"`, skips the gate entirely: the change
-merges on adversarial-review PASS plus green CI, as always.
+**Trigger.** See `standards/pipeline/steps/04-pre-review.md`.
 
 **The unchanged-artifact exemption.** A repo's declared pre-review process file may define an
 exemption under which a change on the declared surface does not re-enter the live owner loop,
@@ -374,24 +319,6 @@ normal `agents/implementation-agent.md` and reviewer bar below, unchanged.
 
 Role tiers, the `sonnet-only` award, mid-run escalation, Fable, and the Gemini / Antigravity
 mapping: `standards/pipeline/templates/model-tiers.md`.
-
----
-
-## Research-first rule
-
-Before any implementation step, prefer local prior art and the dependency/framework documentation over a web search.
-Delegate through `agents/researcher.md`. During normal implementation,
-web search is a last resort when local sources do not answer the question. **During an autonomous timed
-run's Done-Early Cascade** (`agents/orchestrator/autonomous-timed-run.md`), deep web research is a
-default activity, not a last resort: when there is no forced next task, researching better/standard
-practice and bringing back concrete improvements IS the work.
-
-**After receiving findings (caller duties).** Do not build anything the findings show already
-exists and is adaptable. If the findings doc's "Existing owner of a named rule" section surfaces
-an existing owner, hand that owner (the `file:line`) to the implementer before implementation
-starts: the change must extend or call that owner, not duplicate it. If the researcher found
-nothing adaptable, proceed with authoring per `standards/agent-standards.md` (agents) or
-`standards/skill-standards.md` (skills).
 
 ---
 

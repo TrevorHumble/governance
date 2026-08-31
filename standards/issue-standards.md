@@ -114,8 +114,8 @@ issue's number, labels, and `Touches:` line in one call. A result of exactly the
 count may be truncated: re-run with a higher `--limit` until the count comes back below it,
 never treating a full page as complete, before treating any file as free.
 
-An issue whose `Touches` line is `none` stamps no claim label: there is nothing for the label to
-protect.
+An issue whose `Touches` is none and whose implementation plan files child issues is an epic; it
+stamps no claim label, since there is nothing for the label to protect.
 
 ### The release rule
 
@@ -205,8 +205,7 @@ create` runs. No issue is created, and no issue's title, story, or acceptance cr
 until the owner has approved, with the same inherited-approval exception. An objection
 rewrites the whole message, title included, in chat, and it is re-sent; nothing is recorded until
 he approves. Neither the GitHub issue nor the `data/wip-issues/<N>-slug.md` draft exists yet at
-that point, so the approval carries forward: once both are created (`agents/orchestrator.md` §
-"Pipeline (ordered)" step 3), the agent records `Owner-approved: yes` on its own line, immediately
+that point, so the approval carries forward: once both are created (`standards/pipeline/steps/06-issue.md`), the agent records `Owner-approved: yes` on its own line, immediately
 after the `**Type:**` line, in the GitHub issue body and in the draft, carrying the approval given
 at hand-off. The GitHub issue body's copy is the board record; the draft's copy is the one a reviewer
 checks, per § "Reviewer checklist" below and `agents/reviewer-issue.md`, since that agent is handed
