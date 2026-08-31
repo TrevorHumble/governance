@@ -27,7 +27,8 @@ Delegate research to `agents/researcher.md`. It checks local prior art first (th
 existing tests, and treats web search as a last resort. Do not research what prior art already
 answers.
 
-Packet: `standards/pipeline/steps/03-research.md`, `standards/pipeline/templates/model-tiers.md`
+Packet: `standards/pipeline/steps/03-research.md`, `standards/pipeline/templates/model-tiers.md`,
+`standards/pipeline/edge/timed-run.md`
 
 ## 04. Pre-review
 
@@ -36,7 +37,8 @@ issue is drafted or an implementer runs. A repo declaring no pre-review process,
 declaring process's own unchanged-artifact exemption covers, skips straight to hand-off. Edit only
 the declared surface paths while nothing has merged yet.
 
-Packet: `standards/pipeline/steps/04-pre-review.md`
+Packet: `standards/pipeline/steps/04-pre-review.md`,
+`standards/pipeline/edge/unchanged-artifact-exemption.md`
 
 ## 05. Hand-off
 
@@ -45,7 +47,8 @@ in that order, nothing else. Wait for approval before writing anything to GitHub
 format in `standards/pipeline/templates/hand-off-format.md` on every send. A change to any approved
 word afterward follows the return path in `standards/issue-standards.md` § "Owner hand-off".
 
-Packet: `standards/pipeline/steps/05-hand-off.md`, `standards/pipeline/templates/hand-off-format.md`
+Packet: `standards/pipeline/steps/05-hand-off.md`, `standards/pipeline/templates/hand-off-format.md`,
+`standards/pipeline/edge/timed-run.md`
 
 ## 06. Issue
 
@@ -72,7 +75,8 @@ Spawn the implementation agent with the passing issue and every prior-art path i
 implementer satisfies each acceptance criterion, confirms API signatures against real
 documentation, and hands back the required self-check fields alongside the artifact.
 
-Packet: `standards/pipeline/steps/08-implement.md`, `standards/pipeline/templates/model-tiers.md`
+Packet: `standards/pipeline/steps/08-implement.md`, `standards/pipeline/templates/model-tiers.md`,
+`standards/pipeline/edge/ac-amendment.md`
 
 ## 09. PR review
 
@@ -82,7 +86,7 @@ with a fresh reviewer, and route a disputed repeat finding to the referee. Every
 is machine-generated and audited before its verdict is accepted.
 
 Packet: `standards/pipeline/steps/09-pr-review.md`, `standards/pipeline/templates/spawn-skeleton.md`,
-`standards/pipeline/templates/model-tiers.md`
+`standards/pipeline/templates/model-tiers.md`, `standards/pipeline/edge/referee-loop.md`
 
 ## 10. Commit
 
@@ -101,7 +105,8 @@ merge; never leave the default branch red. Write the per-ship fragment naming th
 identifier before the merge. Then close the GitHub issue and release its claim label, per
 `standards/issue-standards.md` § "The release rule".
 
-Packet: `standards/pipeline/steps/11-ship.md`
+Packet: `standards/pipeline/steps/11-ship.md`,
+`standards/pipeline/edge/unchanged-artifact-exemption.md`
 
 ## 12. Report
 
@@ -110,4 +115,4 @@ Every surviving note carries all four priced options, summing to 100, and the ag
 for the owner. A session with zero notes still reports, in one line.
 
 Packet: `standards/pipeline/steps/12-report.md`, `standards/pipeline/templates/report-template.md`,
-`standards/pipeline/templates/model-tiers.md`
+`standards/pipeline/templates/model-tiers.md`, `standards/pipeline/edge/timed-run.md`

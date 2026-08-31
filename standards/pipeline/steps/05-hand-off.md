@@ -16,3 +16,6 @@ text changes, and the message is re-sent.
 If the operator's environment defines an attention signal for blocked-on-owner moments, fire it
 first; the signal is the operator's own machine configuration, not this tree's. The hand-off text
 is the last thing in the turn: no tool call and no further text follow it in the same turn.
+
+Rare case: an autonomous timed run sends the hand-off but never waits on it:
+`standards/pipeline/edge/timed-run.md`.

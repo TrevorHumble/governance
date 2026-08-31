@@ -42,7 +42,7 @@ Apply these charter questions to the diff:
 
 ## Blocker/major findings
 
-A finding of severity **major** or **blocker** takes the standard `## Referee and the eight-round loop` in `standards/adversarial-review-protocol.md`, exactly like a major/blocker finding from any other reviewer. State it plainly in the verdict: "SECURITY: <severity>" followed by the triggering finding number, so the orchestrator can prioritize the fix.
+A finding of severity **major** or **blocker** takes the standard dispute-and-ceiling process in `standards/pipeline/edge/referee-loop.md`, exactly like a major/blocker finding from any other reviewer. State it plainly in the verdict: "SECURITY: <severity>" followed by the triggering finding number, so the orchestrator can prioritize the fix.
 
 ## Bias check
 

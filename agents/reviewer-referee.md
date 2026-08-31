@@ -6,8 +6,7 @@ description: >
   ruling only from the goals doc, the issue's user story and acceptance criteria, and this
   repo's pre-review record (or its stated absence). Invoke only when
   `agents/implementation-agent.md`'s `Finding-dispute:` field disputes a finding the fresh
-  reviewer raised again, per `standards/adversarial-review-protocol.md` § "Referee and the
-  eight-round loop".
+  reviewer raised again, per `standards/pipeline/edge/referee-loop.md`.
 model: opus
 tools: [Read]
 ---
@@ -35,8 +34,7 @@ write, edit, or create any file.
   finding itself, with evidence, per `agents/implementation-agent.md`.
 - A given finding is disputed at most once: after a `SUSTAIN` ruling it re-enters the ordinary
   fix-and-fresh-reviewer loop as undisputed, and this agent is never invoked a second time on
-  that same finding (`standards/adversarial-review-protocol.md` § "Referee and the eight-round
-  loop").
+  that same finding (`standards/pipeline/edge/referee-loop.md`).
 
 ## Protocol
 

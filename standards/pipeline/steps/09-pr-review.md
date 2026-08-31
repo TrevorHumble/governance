@@ -38,8 +38,7 @@ Dispatching a review round re-stamps the issue's `active-<N>-*` claim label, per
 `standards/issue-standards.md` § "The release rule".
 
 Rare case: a blocker or major finding that survives a second round, disputed or not, the
-eight-round ceiling, and the referee's ruling: `standards/adversarial-review-protocol.md` §
-"Referee and the eight-round loop".
+eight-round ceiling, and the referee's ruling: `standards/pipeline/edge/referee-loop.md`.
 
 Rare case: the architecture lens gates round 1 automatically when the change adds a new component
 or makes a significant structural change: `standards/adversarial-review-protocol.md` § "Reviewer

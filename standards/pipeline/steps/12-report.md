@@ -17,3 +17,7 @@ taken afterward.
 Rare case: what counts as a note, where it is written, the four-option report shape, confident
 drops, and how an owner decline is recorded: `agents/orchestrator.md` § "No agent files its own
 issue".
+
+Rare case: in an autonomous timed run, a per-segment halt folds its report into the session's
+end-of-run report, per `agents/orchestrator.md` § "Stop condition"; the timed run's own
+mechanics: `standards/pipeline/edge/timed-run.md`.
