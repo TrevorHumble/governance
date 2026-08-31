@@ -88,7 +88,7 @@ entirely. Every other file that needs either rule points here: `standards/decisi
 § "Scope discipline", `standards/adversarial-review-protocol.md` § "Finding disposition",
 `agents/orchestrator.md` § "No agent files its own issue", `agents/reviewer-issue.md`,
 `agents/reviewer-pr.md`, `agents/implementation-agent.md`,
-`.claude/skills/capture-system-defect/SKILL.md`, `.claude/commands/build.md`, and
+`.claude/skills/capture-system-defect/SKILL.md`, `standards/pipeline/PIPELINE.md`, and
 `.claude/commands/post-wave-review.md`.
 
 Why it exists: the `Touches` lock guards a collision between two concurrent runs. When no other
@@ -113,6 +113,9 @@ starts: `gh issue list --state open --limit 100 --json number,labels,body` retur
 issue's number, labels, and `Touches:` line in one call. A result of exactly the limit's row
 count may be truncated: re-run with a higher `--limit` until the count comes back below it,
 never treating a full page as complete, before treating any file as free.
+
+An issue whose `Touches` line is `none` stamps no claim label: there is nothing for the label to
+protect.
 
 ### The release rule
 
@@ -218,7 +221,7 @@ the owner approves that re-sent message. A change confined to the implementation
 dependency map, or the context does not re-trigger this. This paragraph binds `Owner-approved: yes`
 text only: an inherited child's agent-written title, story, and criteria carry no such line, so
 changing them removes nothing and re-sends nothing. `agents/orchestrator.md` and
-`.claude/commands/build.md` point at this paragraph rather than restating it; so does §
+`standards/pipeline/PIPELINE.md` point at this paragraph rather than restating it; so does §
 "Acceptance-criteria amendment" above for the mid-flight case.
 
 **Inherited approval.** An epic whose acceptance criteria the owner approved through the hand-off
@@ -248,42 +251,8 @@ telling them apart: **only the exact string `Owner-approved: yes` grants the sto
 exemptions; any other line in that slot, the inherited line included, grants none.** The two are
 mutually exclusive on one issue: an issue carries one or the other, never both.
 
-**Written format.** The line breaks below are part of the format. The wording is a suggested
-shape, not a character-exact template: "As a / I need / so that" is convenience, not doctrine
-(Ron Jeffries, https://ronjeffries.com/xprog/blog/how-should-user-stories-be-written/, checked
-2026-08-22).
-
-- **Title:** one line, plain language, naming what is needed, not how it is built.
-- **User story:** three lines, each on its own line:
-  ```
-  **As a** [persona],
-  **I need** [thing],
-  **so that** [outcome].
-  ```
-- **Acceptance criteria:** one fenced block holding one or more scenarios. Each scenario opens
-  with `Scenario <n>: <short description>` on its own line, followed by `GIVEN`, `WHEN`, `THEN`
-  each on its own line, with optional `AND` lines after any of them. Keywords in capitals, one
-  keyword per line, a blank line between scenarios.
-
-Filled example:
-
-> **Title:** Every rider sees their own trip, not the whole schedule
->
-> **As a** rider,
-> **I need** my trip list to show only the trips I booked,
-> **so that** I never wonder whose trip is whose.
->
-> ```
-> Scenario 1: I see my own trip
-> GIVEN I have booked a trip
-> WHEN I open my trip list
-> THEN my trip is there
->
-> Scenario 2: I do not see another rider's trip
-> GIVEN another rider has booked a trip
-> WHEN I open my trip list
-> THEN their trip is not there
-> ```
+**Written format.** See `standards/pipeline/templates/hand-off-format.md` for the exact format and
+the filled example.
 
 **Count.** § "Acceptance criteria" above binds what an agent writes; this section restates none of
 that count. A criterion the owner adds himself is not bounded by it and is not counted against

@@ -28,7 +28,7 @@ If the spawning prompt violates the de-bias rules owned by `standards/adversaria
 
 ## Input / output contract
 
-**Input:** the absolute path to the SKILL.md under review. Read that file, `standards/skill-standards.md`, and `standards/adversarial-review-protocol.md`. Read nothing else. Do not read files referenced inside SKILL.md; if a referenced path's existence matters, express it as a checklist finding ("the skill asserts a reference path that does not resolve") rather than by reading those files. **Existence-check boundary:** confirming a referenced path resolves may use a directory listing or glob (existence only: `git ls-files`, a Glob pattern, or a directory listing); opening the referenced file's contents stays forbidden. Checking that a path exists is not "reading" it.
+**Input:** the absolute path to the SKILL.md under review. Read that file, `standards/skill-standards.md`, `standards/adversarial-review-protocol.md`, and `standards/pipeline/templates/spawn-skeleton.md`. Read nothing else. Do not read files referenced inside SKILL.md; if a referenced path's existence matters, express it as a checklist finding ("the skill asserts a reference path that does not resolve") rather than by reading those files. **Existence-check boundary:** confirming a referenced path resolves may use a directory listing or glob (existence only: `git ls-files`, a Glob pattern, or a directory listing); opening the referenced file's contents stays forbidden. Checking that a path exists is not "reading" it.
 
 **Output:**
 

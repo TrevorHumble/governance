@@ -104,7 +104,11 @@
     "governance-manifest.json": "content"
   },
   "classesDefault": "structure",
-  "arrivesAsStructure": ["standards/ownership-map.md", ".githooks/pre-commit"],
+  "arrivesAsStructure": [
+    "standards/ownership-map.md",
+    ".githooks/pre-commit",
+    "standards/pipeline/PIPELINE.md"
+  ],
   "repoProfileFields": [
     {
       "name": "preReview",

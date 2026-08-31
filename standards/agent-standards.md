@@ -69,8 +69,9 @@ The `sonnet-only` exception: `standards/issue-standards.md` § "Sonnet tier elig
 `agents/orchestrator.md` § "Model policy".
 
 A reviewer agent's prompt must carry no task-specific bias, and this standard owns the
-minimum-context rule: a reviewer's briefing carries only what the protocol's spawn-prompt skeleton
-names, nothing more; any task-specific addition beyond the skeleton's own lines is bias. What counts
+minimum-context rule: a reviewer's briefing carries only what the spawn-prompt skeleton
+(`standards/pipeline/templates/spawn-skeleton.md`) names, nothing more; any task-specific addition
+beyond the skeleton's own lines is bias. What counts
 as spawner bias and the sanctioned briefing fields are owned by
 `standards/adversarial-review-protocol.md` § "De-bias the setup" and § "Spawning a reviewer"; this
 standard does not restate them.

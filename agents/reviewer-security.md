@@ -50,7 +50,7 @@ If the spawning prompt violates the de-bias rules owned by `standards/adversaria
 
 ## Input / output contract
 
-**Input:** the absolute path to the PR diff (or list of changed files). Read the diff, `standards/adversarial-review-protocol.md`, and any changed file needed to answer the four charter questions. Read nothing else.
+**Input:** the absolute path to the PR diff (or list of changed files). Read the diff, `standards/adversarial-review-protocol.md`, `standards/pipeline/templates/spawn-skeleton.md`, and any changed file needed to answer the four charter questions. Read nothing else.
 
 **Output:**
 

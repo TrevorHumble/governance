@@ -1064,3 +1064,20 @@ confident-drop agreement are instruction-enforced, unmechanized (`WHAT-IT-CHECKS
 The 70-percent confident-drop bar is the owner's own number; a reviewer's agreement is what makes
 a drop legitimate, because an agent silently dropping its own findings is the same unaudited exit
 this design closes.
+
+## The pipeline packets (issues #61 and #62)
+
+The build pipeline's step rules are moving into `standards/pipeline/`: `PIPELINE.md`, the
+numbered checklist and the one authority on step order; `steps/`, one self-contained chunk per
+step; `templates/`, formats shared by more than one step. A step's packet is its chunk plus the
+templates its chunk names. The packet is the rule's single home; old homes keep at most a
+one-line pointer.
+
+The reason is agent behavior, not taste: an agent reliably runs a rule handed to it at the step,
+and reliably drops a rule that lives deep in a long, cross-referenced file. Three drift incidents
+in child repos traced to exactly that failure mode. The owner decided the restructure on
+2026-08-30, recorded on issue #61.
+
+`PIPELINE.md` arrives at child repos classed as structure
+(`governance-manifest.json` `arrivesAsStructure`), because a child must repoint its own
+`CLAUDE.md` on the tree's first arrival.

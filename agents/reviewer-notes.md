@@ -80,9 +80,10 @@ the notes-under-challenge field above all, is never by itself a bias finding.
 
 **Input:** the notes under challenge, pasted verbatim (each note's substance and its set-aside
 justification, from the issue's `## Notes` section); the path to the linked issue file; and the
-repository root. Read `standards/adversarial-review-protocol.md`, `standards/issue-standards.md`
-§ "The file claim and the size rule", and any file in this repository needed to test a claim a
-justification makes.
+repository root. Read `standards/adversarial-review-protocol.md`,
+`standards/pipeline/templates/spawn-skeleton.md`, `standards/issue-standards.md` § "The file
+claim and the size rule", and any file in this
+repository needed to test a claim a justification makes.
 
 **Output:**
 

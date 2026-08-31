@@ -28,7 +28,7 @@ If the spawning prompt violates the de-bias rules owned by `standards/adversaria
 
 ## Input / output contract
 
-**Input:** the absolute path to the agent file under review. Read that file, `standards/agent-standards.md`, and `standards/adversarial-review-protocol.md`. Read nothing else.
+**Input:** the absolute path to the agent file under review. Read that file, `standards/agent-standards.md`, `standards/adversarial-review-protocol.md`, and `standards/pipeline/templates/spawn-skeleton.md`. Read nothing else.
 
 **Output:**
 
