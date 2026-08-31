@@ -16,4 +16,4 @@ adaptable, proceed with authoring per `standards/agent-standards.md` (agents) or
 `standards/skill-standards.md` (skills).
 
 Rare case: an autonomous timed run's Done-Early Cascade makes deep web research a default activity
-rather than a last resort. See `agents/orchestrator/autonomous-timed-run.md`.
+rather than a last resort: `standards/pipeline/edge/timed-run.md`.

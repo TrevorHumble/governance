@@ -27,7 +27,8 @@ Delegate research to `agents/researcher.md`. It checks local prior art first (th
 existing tests, and treats web search as a last resort. Do not research what prior art already
 answers.
 
-Packet: `standards/pipeline/steps/03-research.md`, `standards/pipeline/templates/model-tiers.md`
+Packet: `standards/pipeline/steps/03-research.md`, `standards/pipeline/templates/model-tiers.md`,
+`standards/pipeline/edge/timed-run.md`
 
 ## 04. Pre-review
 
@@ -46,7 +47,8 @@ in that order, nothing else. Wait for approval before writing anything to GitHub
 format in `standards/pipeline/templates/hand-off-format.md` on every send. A change to any approved
 word afterward follows the return path in `standards/issue-standards.md` § "Owner hand-off".
 
-Packet: `standards/pipeline/steps/05-hand-off.md`, `standards/pipeline/templates/hand-off-format.md`
+Packet: `standards/pipeline/steps/05-hand-off.md`, `standards/pipeline/templates/hand-off-format.md`,
+`standards/pipeline/edge/timed-run.md`
 
 ## 06. Issue
 
@@ -113,4 +115,4 @@ Every surviving note carries all four priced options, summing to 100, and the ag
 for the owner. A session with zero notes still reports, in one line.
 
 Packet: `standards/pipeline/steps/12-report.md`, `standards/pipeline/templates/report-template.md`,
-`standards/pipeline/templates/model-tiers.md`
+`standards/pipeline/templates/model-tiers.md`, `standards/pipeline/edge/timed-run.md`

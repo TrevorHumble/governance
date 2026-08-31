@@ -185,7 +185,7 @@ time-driven, not task-driven, loop that ends only when real elapsed time reaches
 and progress in one place. It has no note field: a note taken during a timed run lives only in
 `.run_state/notes.md`, per § "No agent files its own issue" rule 2, not on the ledger line. Full
 procedure, the harness enforcement, the selector, and the cascade:
-`agents/orchestrator/autonomous-timed-run.md`.
+`standards/pipeline/edge/timed-run.md`.
 
 ---
 
@@ -220,16 +220,15 @@ Review follows **the referee and the eight-round loop** in
   tried and why each failed: a halt is not an acceptance; the work is not committed. A halt also
   clears the halted issue's `active-<N>-*` claim label, per `standards/issue-standards.md` § "The
   file claim and the size rule" release rule: a stopped run releases its files. **When the halt
-  ends the session** (a single-segment run, or the last segment still standing), the `[HALT]`
-  entry carries the session's end-of-run report, in § "Report template"'s shape, folding in every
-  note this worktree collected across every segment the session ran; it is not a bare halt
-  notice, and it is written only after the late-note pass has run when its trigger holds (§ "No
-  agent files its own issue" rule 4): a
-  halt hands the owner no unchallenged note either. **When the halt is per-segment inside a run
-  that keeps going** (`agents/orchestrator/autonomous-timed-run.md` § "A halt is per-segment,
-  never a run exit"), the `[HALT]` entry logs the halt only; the session continues with its next
-  segment inside the same worktree, and the end-of-run report is not emitted until the session
-  itself ends, per rule 4 below.
+  ends the session** (a single-segment run, or the last segment still standing), the `[HALT]` entry
+  carries the session's end-of-run report, in § "Report template"'s shape, folding in every
+  note this worktree collected across every segment the session ran; it is not a bare halt notice,
+  and it is written only after the late-note pass has run when its trigger holds (§ "No
+  agent files its own issue" rule 4): a halt hands the owner no unchallenged note either. **When the
+  halt is per-segment inside a run that keeps going** (`standards/pipeline/edge/timed-run.md`
+  § "A halt is per-segment, never a run exit"), the `[HALT]` entry logs the halt only; the
+  session continues with its next segment inside the same worktree, and the end-of-run report is not
+  emitted until the session itself ends, per rule 4 below.
 - **Recording a referee ruling.** The ship's `buildlog/<N>-<PR>.md` fragment names which side
   won and which owner-settled artifact grounded the ruling, or the `[HALT]` entry does, if the
   segment later halts. On a segment that ends with neither a ship nor a halt (a wrap or an
