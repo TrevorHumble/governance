@@ -12,10 +12,8 @@ user story, acceptance criteria, implementation plan, dependency map. GitHub is 
 of truth from the moment the issue exists: the board reflects the task from creation.
 
 **Record the hand-off approval.** Immediately after the `**Type:**` line, on its own line, record
-the approval carried from the hand-off step: the exact line `Owner-approved: yes`, or, for a child
-inheriting an epic's approval, `Inherited-approval: from #N - <date>` (or, for an epic in another
-repository, `Inherited-approval: from <owner>/<repo>#N - <date>`). Write it in both the GitHub
-issue body and the local draft, per `standards/issue-standards.md` § "Owner hand-off".
+the approval carried from the hand-off step: the exact line `Owner-approved: yes`. Write it in both
+the GitHub issue body and the local draft, per `standards/issue-standards.md` § "Owner hand-off".
 
 Rare case: an epic skips the implement, artifact-review, commit, and ship steps and closes when its
 last child merges; what makes an issue an epic: `standards/issue-standards.md` § "The file claim

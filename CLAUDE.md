@@ -57,9 +57,8 @@ full mechanics are owned by `agents/orchestrator.md` § "Pre-review step", not r
 repo's own profile declares `"preReview": "none"`.
 
 **Owner hand-off.** Before step 1 files the issue, the owner receives the title, the user story,
-and the acceptance criteria as one short message and approves them, except for a child inheriting
-an approved epic's approval; full mechanics are owned by `standards/issue-standards.md` § "Owner
-hand-off", not restated here.
+and the acceptance criteria as one short message and approves them; full mechanics are owned by
+`standards/issue-standards.md` § "Owner hand-off", not restated here.
 
 ## Model policy
 

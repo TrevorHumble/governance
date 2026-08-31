@@ -41,10 +41,9 @@ Packet: `standards/pipeline/steps/04-pre-review.md`
 ## 05. Hand-off
 
 Before creating the issue, send the owner the title, the user story, and the acceptance criteria,
-in that order, nothing else. Wait for approval before writing anything to GitHub, except for a
-child inheriting an approved epic's approval. Use the written format in
-`standards/pipeline/templates/hand-off-format.md` on every send. A change to any approved word
-afterward follows the return path in `standards/issue-standards.md` § "Owner hand-off".
+in that order, nothing else. Wait for approval before writing anything to GitHub. Use the written
+format in `standards/pipeline/templates/hand-off-format.md` on every send. A change to any approved
+word afterward follows the return path in `standards/issue-standards.md` § "Owner hand-off".
 
 Packet: `standards/pipeline/steps/05-hand-off.md`, `standards/pipeline/templates/hand-off-format.md`
 

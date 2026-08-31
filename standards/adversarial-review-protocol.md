@@ -27,11 +27,6 @@ intent, not attacked. The hostile default above and the ownership rule in that s
 contradict each other: this stance governs the plan, the dependency map, and every other artifact
 in this protocol's scope; it does not reach back into words the owner has already settled.
 
-A child issue inheriting an approved epic's approval has no owner approval of its own words: its
-title, user story, and acceptance criteria are agent-written and stay fully inside the artifact
-under review, attacked like any other. `standards/issue-standards.md` § "Owner hand-off" owns the
-recorded form and which exact line grants this carve-out.
-
 ---
 
 ## De-bias the setup
@@ -405,8 +400,7 @@ held dependency PR under `agents/orchestrator/dependabot-pr-path.md`'s `review` 
 whether it merges. It never resolves a finding's severity or verdict, and it does not touch
 disposition 1 or disposition 2 above. A fourth sanctioned owner-decision point is the owner
 hand-off, `standards/issue-standards.md` § "Owner hand-off": product direction settled before the
-issue it governs exists, whether that is the issue's own hand-off or the approved epic whose scope
-a child inherits it from, it carries no reviewer finding to the owner, and it resolves no defect,
+issue it governs exists, it carries no reviewer finding to the owner, and it resolves no defect,
 so it sits outside this section's findings-resolution rule, the same way the Pre-review step
 above does.
 
