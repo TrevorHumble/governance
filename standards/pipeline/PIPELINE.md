@@ -36,7 +36,8 @@ issue is drafted or an implementer runs. A repo declaring no pre-review process,
 declaring process's own unchanged-artifact exemption covers, skips straight to hand-off. Edit only
 the declared surface paths while nothing has merged yet.
 
-Packet: `standards/pipeline/steps/04-pre-review.md`
+Packet: `standards/pipeline/steps/04-pre-review.md`,
+`standards/pipeline/edge/unchanged-artifact-exemption.md`
 
 ## 05. Hand-off
 
@@ -72,7 +73,8 @@ Spawn the implementation agent with the passing issue and every prior-art path i
 implementer satisfies each acceptance criterion, confirms API signatures against real
 documentation, and hands back the required self-check fields alongside the artifact.
 
-Packet: `standards/pipeline/steps/08-implement.md`, `standards/pipeline/templates/model-tiers.md`
+Packet: `standards/pipeline/steps/08-implement.md`, `standards/pipeline/templates/model-tiers.md`,
+`standards/pipeline/edge/ac-amendment.md`
 
 ## 09. PR review
 
@@ -82,7 +84,7 @@ with a fresh reviewer, and route a disputed repeat finding to the referee. Every
 is machine-generated and audited before its verdict is accepted.
 
 Packet: `standards/pipeline/steps/09-pr-review.md`, `standards/pipeline/templates/spawn-skeleton.md`,
-`standards/pipeline/templates/model-tiers.md`
+`standards/pipeline/templates/model-tiers.md`, `standards/pipeline/edge/referee-loop.md`
 
 ## 10. Commit
 
@@ -101,7 +103,8 @@ merge; never leave the default branch red. Write the per-ship fragment naming th
 identifier before the merge. Then close the GitHub issue and release its claim label, per
 `standards/issue-standards.md` § "The release rule".
 
-Packet: `standards/pipeline/steps/11-ship.md`
+Packet: `standards/pipeline/steps/11-ship.md`,
+`standards/pipeline/edge/unchanged-artifact-exemption.md`
 
 ## 12. Report
 

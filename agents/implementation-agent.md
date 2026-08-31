@@ -50,11 +50,10 @@ tools: [Read, Write, Edit, Bash, Glob, Grep]
   finding being disputed (by number or verbatim) and a stated argument against the finding
   itself, with evidence: a bare "fixing is hard" or "this is fine" is not a valid dispute, and
   the orchestrator treats a hand-off carrying no such argument as undisputed, per
-  `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop". Raising a
-  dispute asks the orchestrator to route the finding to a referee
-  (`agents/reviewer-referee.md`); it never settles the finding itself, and it is not an exception
-  to Build rule 9 below: a dispute is not a self-approval. The field rides alongside the fix,
-  never instead of it.
+  `standards/pipeline/edge/referee-loop.md`. Raising a dispute asks the orchestrator to route the
+  finding to a referee (`agents/reviewer-referee.md`); it never settles the finding itself, and it
+  is not an exception to Build rule 9 below: a dispute is not a self-approval. The field rides
+  alongside the fix, never instead of it.
 
 **Bash scope:** Bash is held for CODE artifacts only: running the test gates (the unit/integration
 suites and the mutation/tamper harness) as required by the PR lifecycle. It is not used for documentation,

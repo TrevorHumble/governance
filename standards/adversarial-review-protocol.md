@@ -182,10 +182,11 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
 - **Code, rounds 2+** -> see `## Referee and the eight-round loop` below: a re-check fires only
   for a blocker/major finding, and is scoped to the fix, with **1 fresh reviewer** per round.
 - **Referee** (`agents/reviewer-referee.md`) -> dispatched exactly when a blocker or major
-  finding is formally disputed at round 2 or any later round (`## Referee and the eight-round
-loop` below): **1** reviewer, a fresh instance with no context from any prior round. A
-  referee dispatch is not a code-review round: it sits **outside** § "Referee and the
-  eight-round loop"'s round counting and **outside** § "Review-size bound", the same way the
+  finding is formally disputed at round 2 or any later round
+  (`standards/pipeline/edge/referee-loop.md`): **1** reviewer, a fresh instance with no context
+  from any prior round. A referee dispatch is not a code-review round: it sits **outside**
+  `standards/pipeline/edge/referee-loop.md`'s round counting and **outside** § "Review-size
+  bound", the same way the
   late-note pass does; no briefing audit runs on it, since its input is the dispute payload,
   not a staged diff. The dispatch still re-stamps the issue's `active-<N>-*` claim label, like
   any other review-round dispatch, per `standards/issue-standards.md` § "The file claim and
@@ -212,8 +213,8 @@ loop` below): **1** reviewer, a fresh instance with no context from any prior ro
   ruling from a round reviewer (§ "Finding disposition", "Challenging a deferral"; a session
   that ran zero review rounds qualifies trivially). This bullet is the trigger's one home;
   `standards/pipeline/steps/12-report.md` owns the dispatch mechanics and points here rather than
-  restating the trigger. It sits **outside** § "Referee and the
-  eight-round loop"'s round counting and **outside** § "Review-size bound": an already-long run never skips
+  restating the trigger. It sits **outside** `standards/pipeline/edge/referee-loop.md`'s round
+  counting and **outside** § "Review-size bound": an already-long run never skips
   it for being one round too many, and its input is notes, not a staged diff, so no shortstat
   measure applies. Its rulings dispose per § "Finding disposition", "Challenging a deferral".
 - **Architecture lens** (`agents/reviewer-architecture.md`) -> runs alongside the code,
@@ -242,37 +243,12 @@ Round 1 of code review runs the PR reviewer and the design-philosophy reviewer t
 
 - The ordinary per-round cadence (minors fixed inline with no re-review; a blocker or major
   takes one scoped re-check with a fresh reviewer): `standards/pipeline/steps/09-pr-review.md`.
-- There is no severity adjudicator and no reviewer panel beyond the referee below. A PASS
-  with an open blocker or major finding is never a PASS.
+- There is no severity adjudicator and no reviewer panel beyond the referee
+  (`standards/pipeline/edge/referee-loop.md`). A PASS with an open blocker or major finding is
+  never a PASS.
 
-**The fork, at two or more rounds on the same finding.** Round 1 raises a blocker or major
-finding; the scoped re-check above is round 2 on that finding, and a further undisputed
-re-check advances the same finding to round 3, round 4, and onward. When the fresh reviewer
-raises the same finding again at round 2 or any later round, which side the finding takes
-next depends on whether the implementer disputes it:
-
-- **Disputed**: the implementer has stated, on the record, an argument against the finding
-  itself, with evidence, and the fresh reviewer raised the same finding again. Routes to the
-  referee, `agents/reviewer-referee.md`. "Fixing is hard" is never a dispute: a dispute
-  requires a stated argument against the finding itself, not a statement about the difficulty
-  of fixing it. A dispute does not suspend the round-2 fix attempt: the implementer still
-  produces its best fix and carries the dispute in the same hand-off, so round 2 has a real
-  scoped diff to review. It is the fresh reviewer raising the same finding again against that
-  fix that routes the dispute to the referee.
-- **Undisputed** (the default: the implementer accepts the finding as a real defect, or
-  raises no dispute at all): the fix-and-fresh-reviewer loop keeps running, one round at a
-  time, to a ceiling of **eight** re-review rounds on that finding. The counting basis: the
-  scoped re-check at round 2 is re-review round 1, and each further re-check advances the
-  re-review count by one. If the eighth re-review round (round 9 overall) still has not
-  produced a PASS on it, the segment halts (`agents/orchestrator.md` § "Stop condition").
-
-**The referee's ruling is final on that finding.** A given finding is disputed at most once,
-never a second time, regardless of which round raises the dispute. A **SUSTAIN** ruling (the
-referee ruled for the reviewer) becomes undisputed for the rest of the run and re-enters the
-loop above at its current ledger count, pre-referee rounds included, never reset to zero. An
-**OVERTURN** ruling (the referee ruled for the implementer) drops the finding and closes its
-ledger entry; the implementer does no further work on it. Full referee mechanics, input, and
-output: `agents/reviewer-referee.md`.
+The dispute fork, the eight-round ceiling, and the referee's ruling moved to
+`standards/pipeline/edge/referee-loop.md`.
 
 This is a deliberately lean process: no multi-round soft-cap-and-severity-gate machinery of
 the pre-teardown shape sits behind it (see the governance repo's `DESIGN.md` § "Lean review
@@ -390,8 +366,8 @@ Only after the owner approves is that surface's acceptance criteria written and 
 pipeline (issue review, implementation, PR review) runs, unless that process file's own
 unchanged-artifact exemption carries the change, in which case the criteria are written and the
 normal pipeline runs on the standing approval, with no fresh trip through the live loop
-(`agents/orchestrator.md` § "Pre-review step" owns the exemption). The loop carries no review
-finding to the owner and resolves no defect; it is exactly the "product direction, taste"
+(`standards/pipeline/edge/unchanged-artifact-exemption.md` owns the exemption). The loop carries
+no review finding to the owner and resolves no defect; it is exactly the "product direction, taste"
 carve-out this section already reserves for human judgment, made into an explicit step. A second
 sanctioned owner-decision point is the end-of-run report defined in `agents/orchestrator.md`
 § "No agent files its own issue". It decides, for example, whether an already-disposed, genuinely
@@ -565,8 +541,8 @@ A finding is _in-scope-fixable_ when both hold:
 - fixing it changes only the work under review, its own diff, its touched files, or a direct
   consequence of the change, and the fix is bounded: not a new feature, not a large refactor.
 
-An in-scope-fixable defect **must** be fixed in the current change before it merges: the
-`## Referee and the eight-round loop` above covers exactly this case. It may **never** be deferred to a
+An in-scope-fixable defect **must** be fixed in the current change before it merges:
+`standards/pipeline/edge/referee-loop.md` covers exactly this case. It may **never** be deferred to a
 new GitHub issue or a `spawn_task` chip. **"I do not want another review round" is never a
 valid reason to defer.** Neither is "it's trivial"; see the anti-pattern below.
 

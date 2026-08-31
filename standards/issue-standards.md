@@ -30,11 +30,11 @@ A criterion need only be answerable yes/no by a competent reviewer against real 
 
 **Readable without the code.** A criterion is written so the owner can check it without reading code, file paths, or tool names, and it states the outcome for the end user rather than the implementation detail or technical change that delivers it. § "Owner hand-off" below states the written form the owner receives; this paragraph states what makes a criterion fit for that form in the first place.
 
-**For a declared Pre-review surface only, the approved artifact is the acceptance criterion.** Taste is discovered, not specified: nobody knows a decoration is clutter until they see it. So for work on the surface named in `repo-profile.json`'s `surfaceGlobs` that goes through the phase-1 live pre-review loop (`agents/orchestrator.md` § "Pre-review step"), the written criteria **transcribe** what the owner already approved on the seeded preview, rather than **defining** it up front the way every other criterion in this standard does. Any behavior phase 1 faked to settle the shape (for example a hard-coded count just to see the layout) becomes real, specified work in the phase-2 criteria: the faked shortcut is not shipped as-is. **This transcription rule applies only to a declared Pre-review surface.** Logic, data, and tests, everything that is not the approved artifact itself, still take spec-first, adversarial criteria written before implementation, exactly as the rest of this standard describes; a criterion that is not about how the pre-reviewed artifact looks or reads does not get to claim this exemption.
+**For a declared Pre-review surface only, the approved artifact is the acceptance criterion.** Taste is discovered, not specified: nobody knows a decoration is clutter until they see it. So for work on the surface named in `repo-profile.json`'s `surfaceGlobs` that goes through the phase-1 live pre-review loop (`standards/pipeline/edge/unchanged-artifact-exemption.md`), the written criteria **transcribe** what the owner already approved on the seeded preview, rather than **defining** it up front the way every other criterion in this standard does. Any behavior phase 1 faked to settle the shape (for example a hard-coded count just to see the layout) becomes real, specified work in the phase-2 criteria: the faked shortcut is not shipped as-is. **This transcription rule applies only to a declared Pre-review surface.** Logic, data, and tests, everything that is not the approved artifact itself, still take spec-first, adversarial criteria written before implementation, exactly as the rest of this standard describes; a criterion that is not about how the pre-reviewed artifact looks or reads does not get to claim this exemption.
 
 **A change carried by the unchanged-artifact exemption has no fresh outcome to transcribe.** When
 the declared pre-review process file's own unchanged-artifact exemption covers a change
-(`agents/orchestrator.md` § "Pre-review step"), no new pre-review pass ran, so its criteria cite the
+(`standards/pipeline/edge/unchanged-artifact-exemption.md`), no new pre-review pass ran, so its criteria cite the
 exemption and the standing approval record the process file names, instead of transcribing an
 outcome that does not exist. Such an issue also records, in so many words, the claim that the change
 leaves the pre-reviewed artifact's output unchanged: that claim is what the pull-request reviewer's
@@ -48,33 +48,9 @@ No criterion of the form "an agent can understand X": that is unfalsifiable and 
 
 ## Acceptance-criteria amendment (bounded, mid-flight)
 
-An issue's acceptance criteria are not frozen the instant the issue passes review. They may be amended mid-flight, but only under two conditions together: **owner approval plus one reviewer** sign off on the amended text before the implementer treats it as the new contract. Neither alone is sufficient: owner approval without a reviewer skips the adversarial check this whole standard exists to force; a reviewer alone cannot authorize spending the owner's scope without the owner's own approval.
-
-The amendment is bounded to the issue's existing footprint: it may only add work **inside files already on the issue's `Touches` list**. Put plainly, an amendment never adds a file. The `Touches` list is a hard line set at issue-review time (it is what makes concurrent waves safe, since two agents must never share a file). An amendment that needs a file outside that list is not an amendment, it is a new issue: the owner directs it off the end-of-run report, filed and reviewed on its own.
-
-**A widening is not an amendment.** `standards/adversarial-review-protocol.md` § "Finding
-disposition" disposition 1's widening adds a file outside `Touches` to repair a defect the change
-itself caused. It changes no acceptance criterion and needs no owner-plus-reviewer sign-off,
-unlike an amendment, which spends new scope on purpose. It also does not get the concurrency
-property the `Touches` lock exists for, the same way: a widening lands after the mechanisms keyed
-off the declared list have already run against the shorter list, both the by-hand in-batch
-collision check at issue-review time and the `/realign` overlap report run through
-`tools/check-freshness.ps1` (`.claude/commands/realign.md`), so file exclusivity for the
-widened file rests on the widening being recorded, not on tooling that ran before it existed.
-
-Example: an issue touching one service file may be amended to also validate a field's format inside that same file, with owner + reviewer sign-off. It may not be amended to also touch an unrelated admin route to add a moderation control: that is a new, separately-reviewed issue, even if the owner wants it done "at the same time."
-
-The "never adds a file" line above has exactly two exceptions, and neither is an amendment: the
-disposition-1 widening (the paragraph above), and a size-rule claim under § "The file claim and the
-size rule" below, the one sanctioned way a `Touches` list grows mid-run without owner-plus-reviewer
-sign-off. Both are recorded on the `Touches` line, so the list a reviewer reads is still the whole
-truth.
-
-A change to the title, the user story, or an acceptance criterion after the owner has approved it
-is not this section's amendment: it re-triggers the owner hand-off's approval step instead, per §
-"Owner hand-off" below. This re-trigger keys off the `Owner-approved: yes` marker. This section's
-`Touches` bound still binds any implementation work the amended text creates; its
-owner-plus-reviewer sign-off does not apply to the owner's own approved words.
+**What it is.** An issue's approved acceptance criteria may be amended mid-flight, bounded by
+owner sign-off and the issue's existing footprint. Full mechanics and both bounds:
+`standards/pipeline/edge/ac-amendment.md`.
 
 ---
 
@@ -216,8 +192,8 @@ the moment the changed text is written, so the marker never certifies text the o
 The hand-off message is re-sent with the changed text, and the line is recorded again only once
 the owner approves that re-sent message. A change confined to the implementation plan, the
 dependency map, or the context does not re-trigger this. `agents/orchestrator.md` and
-`standards/pipeline/PIPELINE.md` point at this paragraph rather than restating it; so does §
-"Acceptance-criteria amendment" above for the mid-flight case.
+`standards/pipeline/PIPELINE.md` point at this paragraph rather than restating it; so does
+`standards/pipeline/edge/ac-amendment.md` for the mid-flight case.
 
 **Written format.** See `standards/pipeline/templates/hand-off-format.md` for the exact format and
 the filled example.

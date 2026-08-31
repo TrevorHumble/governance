@@ -20,5 +20,5 @@ the now-settled criteria, and implementation proceed on the remaining work, per
 criterion.
 
 Rare case: a change carried by the declared process's unchanged-artifact exemption reaches no fresh
-approval and proceeds on the standing one instead. See `agents/orchestrator.md` § "Pre-review
-step", "The unchanged-artifact exemption" for that exemption.
+approval and proceeds on the standing one instead. See
+`standards/pipeline/edge/unchanged-artifact-exemption.md` for that exemption.

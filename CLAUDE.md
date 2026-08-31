@@ -53,7 +53,8 @@ and do not skip steps.
 **Pre-review step.** A repo may declare its own pre-review process in its `repo-profile.json`'s
 `preReview` field (for example a live visual-approval loop, or `"none"`). When declared, it runs
 before the issue is drafted, except where that process file's unchanged-artifact exemption applies;
-full mechanics are owned by `agents/orchestrator.md` § "Pre-review step", not restated here. This
+full mechanics are owned by `standards/pipeline/steps/04-pre-review.md`, and the exemption by
+`standards/pipeline/edge/unchanged-artifact-exemption.md`, not restated here. This
 repo's own profile declares `"preReview": "none"`.
 
 **Owner hand-off.** Before step 1 files the issue, the owner receives the title, the user story,

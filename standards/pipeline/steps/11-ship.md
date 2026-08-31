@@ -28,9 +28,9 @@ what review found, and what CI confirmed.
 
 Once the review has passed and CI is green (and, for a declared Pre-review surface, once that
 step has also reached explicit owner approval, or the process file's unchanged-artifact
-exemption carries it), merge (or, in `direct` mode, consider the ship complete). The owner does
-not perform merges; owner control is upstream (issue-speccing) and downstream (revert via git
-history).
+exemption carries it, per `standards/pipeline/edge/unchanged-artifact-exemption.md`), merge (or,
+in `direct` mode, consider the ship complete). The owner does not perform merges; owner control is
+upstream (issue-speccing) and downstream (revert via git history).
 
 Then `gh issue close <N>`, referencing the merged PR, or the commit in `direct` mode, and release
 its `active-<N>-*` claim label, per `standards/issue-standards.md` § "The release rule".

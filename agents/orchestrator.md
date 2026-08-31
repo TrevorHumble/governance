@@ -74,28 +74,8 @@ starting at 3 is deliberate, not a gap.
 
 **Trigger.** See `standards/pipeline/steps/04-pre-review.md`.
 
-**The unchanged-artifact exemption.** A repo's declared pre-review process file may define an
-exemption under which a change on the declared surface does not re-enter the live owner loop,
-because the change leaves the pre-reviewed artifact's output unchanged and the owner's standing
-approval of that artifact therefore still holds. The rest of the pipeline runs on such a change
-unchanged: the issue is drafted, the issue is reviewed, an implementer is spawned, the pull request
-is reviewed, and CI gates it, exactly as for any other change. **Such a change merges on the
-standing approval plus the reviewer evidence the exemption requires, in place of a fresh owner
-approval**, with adversarial-review PASS and green CI still required; this paragraph is the one
-home for that merge rule, and the other statements of the merge gate point here. What evidence the
-exemption rests on is the declaring process file's to set, not this file's, and it sets that bar
-above, never below, the per-file floor `agents/reviewer-pr.md` imposes on any change asserting the
-artifact is unchanged: no exemption is named or enumerated here, and a repo whose process file
-defines none has none. This is a different thing from § "Model policy"'s "The carve-out is a fence,
-not a blanket permission" paragraph: that paragraph fences which paths may be edited during phase 1,
-while this exemption decides whether phase 1 is re-entered at all.
-
-**Phase 1** is the settle-the-artifact-live loop run before an implementer is spawned for the
-declared surface; nothing commits until the owner approves, except for a change the
-unchanged-artifact exemption above carries, which merges as that paragraph states. When a repo
-declares a pre-review process file (named in `repo-profile.json`'s `preReview` field, for example
-a live visual-approval loop), that file owns the full mechanics, the freeze, phase 2, and any
-two-doors rule; no mechanism is asserted here as belonging to every repo.
+The unchanged-artifact exemption and Phase 1 moved to
+`standards/pipeline/edge/unchanged-artifact-exemption.md`.
 
 ---
 
@@ -212,8 +192,7 @@ procedure, the harness enforcement, the selector, and the cascade:
 ## Stop condition
 
 Review follows **the referee and the eight-round loop** in
-`standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"; full mechanics
-live there, not restated here.
+`standards/pipeline/edge/referee-loop.md`; full mechanics live there, not restated here.
 
 - Every FAIL is fixed by the implementation agent and re-reviewed with a fresh reviewer instance.
   The author never decides a finding is a "nitpick"; see `standards/adversarial-review-protocol.md` §
@@ -234,19 +213,18 @@ live there, not restated here.
   the same finding again) routes to the referee (`agents/reviewer-referee.md`); undisputed (the
   implementer accepts it as a real defect, or raises no dispute) keeps the
   fix-and-fresh-reviewer loop running. Full mechanics, the disputed-once rule, and what a
-  SUSTAIN or OVERTURN ruling does to the ledger: `standards/adversarial-review-protocol.md` §
-  "Referee and the eight-round loop".
+  SUSTAIN or OVERTURN ruling does to the ledger: `standards/pipeline/edge/referee-loop.md`.
 - **The eight-round halt.** If an undisputed finding still has not produced a PASS at the
-  ceiling set by `standards/adversarial-review-protocol.md` § "Referee and the eight-round
-  loop", halt the segment and log it in `BUILDLOG.md`, assembled from the ledger
-  above so the `[HALT]` entry lists every fix approach tried and why each failed: a halt is not
-  an acceptance; the work is not committed. A halt also clears the halted issue's `active-<N>-*`
-  claim label, per `standards/issue-standards.md` § "The file claim and the size rule" release
-  rule: a stopped run releases its files. **When the halt ends the session** (a single-segment
-  run, or the last segment still standing), the `[HALT]` entry carries the session's end-of-run
-  report, in § "Report template"'s shape, folding in every note this worktree collected across
-  every segment the session ran; it is not a bare halt notice, and it is written only after the
-  late-note pass has run when its trigger holds (§ "No agent files its own issue" rule 4): a
+  ceiling set by `standards/pipeline/edge/referee-loop.md`, halt the segment and log it in
+  `BUILDLOG.md`, assembled from the ledger above so the `[HALT]` entry lists every fix approach
+  tried and why each failed: a halt is not an acceptance; the work is not committed. A halt also
+  clears the halted issue's `active-<N>-*` claim label, per `standards/issue-standards.md` § "The
+  file claim and the size rule" release rule: a stopped run releases its files. **When the halt
+  ends the session** (a single-segment run, or the last segment still standing), the `[HALT]`
+  entry carries the session's end-of-run report, in § "Report template"'s shape, folding in every
+  note this worktree collected across every segment the session ran; it is not a bare halt
+  notice, and it is written only after the late-note pass has run when its trigger holds (§ "No
+  agent files its own issue" rule 4): a
   halt hands the owner no unchallenged note either. **When the halt is per-segment inside a run
   that keeps going** (`agents/orchestrator/autonomous-timed-run.md` § "A halt is per-segment,
   never a run exit"), the `[HALT]` entry logs the halt only; the session continues with its next
@@ -277,8 +255,9 @@ fix-it doors before any note exists: a fix in this run or a report note, never a
 
 ## Model policy
 
-**Pre-review phase-1 edits are orchestrator-authored, directly.** During the "Pre-review step"
-§ phase 1, when a repo declares a pre-review process, the orchestrator (Opus) edits the declared
+**Pre-review phase-1 edits are orchestrator-authored, directly.** During the phase 1 defined in
+`standards/pipeline/edge/unchanged-artifact-exemption.md`, when a repo declares a pre-review
+process, the orchestrator (Opus) edits the declared
 `surfaceGlobs` paths itself rather than spawning `agents/implementation-agent.md` for each
 owner-requested tweak. Reason: the implementer has none of the phase-1 conversation, so it cannot
 remember what the owner already rejected two refreshes ago; spawning it per tweak would
@@ -477,8 +456,8 @@ See `standards/pipeline/templates/report-template.md` for the template and the w
   declared pre-review surface is the one deliberate exception:** it passes the "Pre-review step"
   (above), the owner settling the artifact live against a seeded preview or equivalent, never by
   reading a diff, before its criteria are even written. A change the declaring process file's
-  unchanged-artifact exemption carries is that exception's own limit, merging on what § "Pre-review
-  step"'s "The unchanged-artifact exemption" paragraph states, with every other pipeline gate
+  unchanged-artifact exemption carries is that exception's own limit, merging on what
+  `standards/pipeline/edge/unchanged-artifact-exemption.md` states, with every other pipeline gate
   applying to it in full. See the governance repo's `DESIGN.md` § "Merge policy and pre-review
   rationale" for the merge policy and pre-review rationale recorded there.
 - Verify every PASS: confirm every cited `file:line` reference exists, every URL resolves, every

@@ -422,12 +422,12 @@ The referee that replaces the flat halt is lighter than the pre-teardown severit
 echoes: it fires only on a genuine, formally stated dispute, never on a defect the implementer
 already accepts, and it carries no severity taxonomy, no concede/contest fork, and no
 evidence-artifact machinery. An undisputed defect never reaches it at all; it loops instead, to
-the ceiling `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"
-sets. Unlike a new advisory lens, which enters on an advisory trial per that protocol's §
+the ceiling `standards/pipeline/edge/referee-loop.md` sets. Unlike a new advisory lens, which
+enters on an advisory trial per `standards/adversarial-review-protocol.md`'s §
 "Advisory-lens lifecycle", the referee enters the pipeline gating from its first dispatch: it
 rules only a dispute already raised through the normal cadence, not a fresh judgment call on
 an unreviewed surface, so there is nothing for an advisory trial to de-risk. Full mechanics:
-that same section.
+`standards/pipeline/edge/referee-loop.md`.
 
 ## Branch-protection strictness
 
@@ -447,11 +447,12 @@ is declared, not silently forked per checkout.
 This repo's merge policy: a change off the declared Pre-review surface merges once adversarial
 review passes and CI is green, with owner control staying upstream (which work is specced, via
 issues) and downstream (revert, via git history); a change on the declared Pre-review surface is
-the deliberate exception, passing the Pre-review step (`agents/orchestrator.md` § "Pre-review
-step") before its criteria are even written, unless the declaring process file's
-unchanged-artifact exemption carries it, in which case it merges on the standing approval plus the
-per-file reviewer evidence that exemption requires. This repo's own profile declares `"preReview":
-"none"` and `"surfaceGlobs": []` (see hazard 4's disposition above), so the Pre-review step never
+the deliberate exception, passing the Pre-review step
+(`standards/pipeline/steps/04-pre-review.md`) before its criteria are even written,
+unless the declaring process file's unchanged-artifact exemption carries it, in which case it
+merges on the standing approval plus the per-file reviewer evidence that exemption requires. This
+repo's own profile declares `"preReview": "none"` and `"surfaceGlobs": []` (see hazard 4's
+disposition above), so the Pre-review step never
 triggers here today; the mechanism stays documented so a child repo that declares a real
 pre-review process (for example a live visual-approval loop) has somewhere generic to defer to.
 
@@ -1071,9 +1072,12 @@ this design closes.
 
 The build pipeline's step rules are moving into `standards/pipeline/`: `PIPELINE.md`, the
 numbered checklist and the one authority on step order; `steps/`, one self-contained chunk per
-step; `templates/`, formats shared by more than one step. A step's packet is its chunk plus the
-templates its chunk names. The packet is the rule's single home; old homes keep at most a
-one-line pointer.
+step; `templates/`, formats shared by more than one step; `edge/`, a rare-case rule (one that
+changes what a step does but arises in fewer than roughly one run in five), reached from a step
+chunk by a one-line "Rare case:" pointer. An edge file is part of its step's packet and appears
+on that step's `Packet:` line, the same as a template. A step's packet is its chunk plus the
+templates and edge files its chunk names. The packet is the rule's single home; old homes keep
+at most a one-line pointer.
 
 The reason is agent behavior, not taste: an agent reliably runs a rule handed to it at the step,
 and reliably drops a rule that lives deep in a long, cross-referenced file. Three drift incidents
