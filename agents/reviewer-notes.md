@@ -29,8 +29,7 @@ edit any file, even if the tools available to it would allow it.
 
 - The session's work has ended, the end-of-run report is about to be written, and the trigger
   owned by `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"'s Late-note
-  pass bullet holds (`agents/orchestrator.md` § "No agent files its own issue" rule 4 owns the
-  dispatch mechanics).
+  pass bullet holds (`standards/pipeline/steps/12-report.md` owns the dispatch mechanics).
 - Never during a round: a briefed note is ruled on in-round through the
   notes-under-challenge briefing field instead.
 

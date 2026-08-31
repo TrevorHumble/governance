@@ -88,8 +88,10 @@ entirely. Every other file that needs either rule points here: `standards/decisi
 § "Scope discipline", `standards/adversarial-review-protocol.md` § "Finding disposition",
 `agents/orchestrator.md` § "No agent files its own issue", `agents/reviewer-issue.md`,
 `agents/reviewer-pr.md`, `agents/implementation-agent.md`,
-`.claude/skills/capture-system-defect/SKILL.md`, `standards/pipeline/PIPELINE.md`, and
-`.claude/commands/post-wave-review.md`.
+`.claude/skills/capture-system-defect/SKILL.md`, `standards/pipeline/PIPELINE.md`,
+`.claude/commands/post-wave-review.md`, `standards/pipeline/steps/06-issue.md`,
+`standards/pipeline/steps/07-issue-review.md`, `standards/pipeline/steps/09-pr-review.md`,
+`standards/pipeline/steps/10-commit.md`, and `standards/pipeline/steps/11-ship.md`.
 
 Why it exists: the `Touches` lock guards a collision between two concurrent runs. When no other
 run holds a file, there is no collision to guard, and the lock was turning two-line fixes into

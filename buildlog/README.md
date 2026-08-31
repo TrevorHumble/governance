@@ -18,20 +18,14 @@ its own earlier fragment.
 
 ## Contents
 
-Exactly one line, in the shape:
-
-```
-- YYYY-MM-DD - #N <summary> (PR #M). <evidence, recorded omissions, CI expectation>
-```
-
-The parenthetical closes the summary clause; it does not end the entry. Carry the substance a
-`BUILDLOG.md` entry has always carried: what shipped, why, what review found, what CI confirmed.
-A title-only stub is not an entry. `scripts/buildlog-glue-core.js` enforces a 200-character
-minimum on this line by default (`foldFragments`'s `minEntryLength` option, overridable only for
-a test fixture); a shorter line is refused as `stub` and the fold does not proceed on it.
+The one-line entry shape: `standards/pipeline/steps/11-ship.md`. A title-only stub is not an
+entry. `scripts/buildlog-glue-core.js` enforces a 200-character minimum on this line by default
+(`foldFragments`'s `minEntryLength` option, overridable only for a test fixture); a shorter line
+is refused as `stub` and the fold does not proceed on it.
 
 A fragment of more than one line is not rejected for that alone. Only the first line is
-validated against the shape above; the rest is appended whole. One line is the convention here,
+validated against the shape `standards/pipeline/steps/11-ship.md` defines; the rest is appended
+whole. One line is the convention here,
 not an enforced ceiling.
 
 ## Formatting

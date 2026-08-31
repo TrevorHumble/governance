@@ -216,8 +216,8 @@ loop` below): **1** reviewer, a fresh instance with no context from any prior ro
   alike), before the end-of-run report is written, whenever any note lacks an explicit per-note
   ruling from a round reviewer (§ "Finding disposition", "Challenging a deferral"; a session
   that ran zero review rounds qualifies trivially). This bullet is the trigger's one home;
-  `agents/orchestrator.md` § "No agent files its own issue" rule 4 owns the dispatch mechanics
-  and points here rather than restating the trigger. It sits **outside** § "Referee and the
+  `standards/pipeline/steps/12-report.md` owns the dispatch mechanics and points here rather than
+  restating the trigger. It sits **outside** § "Referee and the
   eight-round loop"'s round counting and **outside** § "Review-size bound": an already-long run never skips
   it for being one round too many, and its input is notes, not a staged diff, so no shortstat
   measure applies. Its rulings dispose per § "Finding disposition", "Challenging a deferral".
@@ -245,11 +245,8 @@ different, non-weaker model than the implementer) is `standards/agent-standards.
 Round 1 of code review runs the PR reviewer and the design-philosophy reviewer together
 (`## Reviewer count by artifact`). What happens next depends on what they found:
 
-- **Minor and nit findings are fixed inline by the implementer and shipped with no
-  re-review.** They do not block the merge and do not need a second look once addressed.
-- **A blocker or major finding triggers a re-check**, scoped to that fix: the implementer
-  fixes it, and one fresh reviewer confirms the fix, not a full re-review of the whole
-  artifact again.
+- The ordinary per-round cadence (minors fixed inline with no re-review; a blocker or major
+  takes one scoped re-check with a fresh reviewer): `standards/pipeline/steps/09-pr-review.md`.
 - There is no severity adjudicator and no reviewer panel beyond the referee below. A PASS
   with an open blocker or major finding is never a PASS.
 

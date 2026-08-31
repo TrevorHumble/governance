@@ -3,11 +3,6 @@
 Each entry below summarizes its step. The step's packet is the authoritative home of every rule;
 where the two differ, the packet wins.
 
-Chunks and templates for these steps land in this same pull request's later rounds. Until a file
-named on a step's Packet: line exists, read that step's rules from its old home:
-`.claude/commands/build.md` and `agents/orchestrator.md`, which keep their full step text until
-the chunk that replaces it lands.
-
 ## 01. Isolate
 
 Run every step inside your own git worktree, never the shared primary checkout. If you are not
@@ -92,19 +87,20 @@ Packet: `standards/pipeline/steps/09-pr-review.md`, `standards/pipeline/template
 
 ## 10. Commit
 
-Confirm isolation, cut the run's per-issue branch, and confirm the commit hooks are live before
-the run's first commit. Commit only after every gating reviewer has passed, with a message naming
-the issue, and re-stamp the claim label on commit.
+Confirm isolation, cut the run's per-issue branch in `pr` mode, and confirm the commit hooks are
+live before the run's first commit. Commit only after every gating reviewer has passed, with a
+message naming the issue, and re-stamp the claim label on commit.
 
 Packet: `standards/pipeline/steps/10-commit.md`
 
 ## 11. Ship
 
-Push (re-stamping the claim label) and open a pull request, or commit straight to the default
-branch, per this repo's declared ship mode. Watch CI to green, then merge; never leave the
-default branch red. Write the per-ship fragment naming the shipped identifier before the merge.
-Then close the GitHub issue and release its claim label, per `standards/issue-standards.md` §
-"The release rule".
+Push (re-stamping the claim label) and open a pull request, or push the default branch (`git
+push`, re-stamping the claim label) so the commit is published, per this repo's declared ship
+mode. Watch CI to green, then
+merge; never leave the default branch red. Write the per-ship fragment naming the shipped
+identifier before the merge. Then close the GitHub issue and release its claim label, per
+`standards/issue-standards.md` § "The release rule".
 
 Packet: `standards/pipeline/steps/11-ship.md`
 

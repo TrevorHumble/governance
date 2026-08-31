@@ -582,8 +582,8 @@ Issue #3 ships the mechanism `README.md`'s "Rules of the road" and this file's o
 stated as policy but left unbuilt: `tools/governance-sync.ps1` (the wrapper: the only file that
 mutates git or GitHub state) and `tools/governance-sync-core.ps1` (the planning logic, which runs
 read-only git commands but performs no mutation), wired into
-`.claude/commands/build.md` step 0b and `agents/orchestrator.md`'s Operating rules, reviewed per
-the new `standards/governance-sync.md`.
+`standards/pipeline/PIPELINE.md` steps 01 and 02, reviewed per the new
+`standards/governance-sync.md`.
 
 **Pull, not push.** A child repo runs the sync tool against this repo at build start, rather than
 this repo pushing changes out to a registry of children. This was the owner's settled design

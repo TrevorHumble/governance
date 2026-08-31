@@ -46,51 +46,19 @@ the end of the session, carrying every note every segment collected.
 
 ## Pipeline (ordered)
 
-1. **Research**: see `standards/pipeline/steps/03-research.md`.
-2. **Pre-review step**: see `standards/pipeline/steps/04-pre-review.md`.
+Numbered to match `standards/pipeline/PIPELINE.md`: entries 01-02 live in § "Operating rules"
+rule 1 above, and entry 12 lives in § "No agent files its own issue" rule 4 below, so this list
+starting at 3 is deliberate, not a gap.
 
-**2b. Owner hand-off.** See `standards/pipeline/steps/05-hand-off.md`.
-
-3. **Issue**: see `standards/pipeline/steps/06-issue.md`.
-4. **Issue review**: spawn exactly **one** `agents/reviewer-issue.md` (Opus) per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Issues always use a single reviewer, never a panel. Fix every blocking defect. Re-review with a fresh reviewer instance. A FAIL is fixed, never overridden.
-   On PASS, apply the file claim per `standards/issue-standards.md` § "The file claim and the
-   size rule": stamp the issue's `active-<N>-*` claim label (shape owned by that section) in the
-   same breath as clearing
-   `needs-issue-review`, then check the board for competing claims on this issue's `Touches`
-   files. If another run's live claim holds any of them, this build has already banked its issue
-   review; it waits for the hold to release (or clears a stale one, per that section's release
-   rule) rather than starting implementation into a collision.
-5. **Implementation**: spawn `agents/implementation-agent.md` (Sonnet) with full handoff: the
-   passing issue and all prior-art file paths.
-6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per `standards/pipeline/templates/model-tiers.md`. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "Referee and the eight-round loop". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same eight-round-loop cadence. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated. Dispatching a review round is a claim re-stamp event: refresh the issue's `active-<N>-*` label per `standards/issue-standards.md` § "The file claim and the size rule" release rule.
-7. **Commit**: once per run, before the first commit, confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1`; never proceed assuming a gate that isn't on; an unconfigured clone enforces nothing). On the reviewers' PASS (and, for a blocker/major finding, once it is fixed and confirmed per `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"), `git commit` with a short message that includes `(#N)` referencing the issue. **`commit-msg` checks that the commit message names a GitHub issue**: a code commit with no `(#N)`, closing keyword, or `issue-N` branch is blocked; a doc-only (`*.md`) commit is exempt. **`pre-commit` checks that the commit stages no parent-owned governance path**, per `standards/ownership-map.md`; once the launcher probe and the profile parse both succeed, it exits cleanly on a governance-sync branch (the exemption that applies in a child, since `governanceHome` is never `self` there) or in the governance home itself. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
-   Committing and pushing are both claim re-stamp events: refresh the issue's `active-<N>-*`
-   label at each, per `standards/issue-standards.md` § "The file claim and the size rule".
-   Then **close the GitHub issue** for this work (`gh issue close`, referencing the commit) so the board
-   matches reality, and delete the issue's `active-<N>-*` label per that same section's release
-   rule (clear on ship or close; a halt clears it too, per § "Stop condition"). The board is kept
-   current at every transition: issue created, `gh issue` opened;
-   committed to the default branch, `gh issue` closed.
-   - **Ship flow: defers to `repo-profile.json`'s `shipMode` field; no step here asserts which
-     mode is operative.** In `shipMode: "pr"`, push the branch and run `gh pr create` to open a
-     pull request, watch CI to green, then merge. In `shipMode: "direct"`, the commit above already
-     landed on the default branch; watch CI to green there, with no branch or PR step. Either way,
-     write the per-ship entry as a new file, `buildlog/<N>-<PR>.md` (`N` the issue number, `PR`
-     the pull request number `gh pr create` assigned in `pr` mode, or the commit's short SHA in
-     `direct` mode), in the shape `buildlog/README.md` defines, naming that identifier and never a
-     merge SHA that does not exist yet at this point, and push it as a commit on the same branch
-     (the default branch itself, in `direct` mode), so the fragment carries its own identifier and
-     the green CI run covers the final commit. Once the adversarial review has passed and CI is
-     green, merge the PR (or, in `direct` mode, consider the ship complete), for every
-     non-pre-review change type. A change on the declared pre-review surface additionally requires
-     step 2 to have reached explicit owner approval before this merge, unless the declaring process
-     file's unchanged-artifact exemption carries it, in which case § "Pre-review step"'s "The
-     unchanged-artifact exemption" paragraph states what it merges on instead. The owner does not
-     perform merges; owner control is upstream (issue-speccing), downstream (revert via git
-     history), and, for a declared pre-review surface only, the pre-merge pre-review step. The
-     default branch is never knowingly left red. If CI goes red, fix the cause or revert the commit
-     before proceeding: a red default branch is a stop-and-fix condition, not something to push
-     past.
+3.  **Research**: see `standards/pipeline/steps/03-research.md`.
+4.  **Pre-review step**: see `standards/pipeline/steps/04-pre-review.md`.
+5.  **Hand-off**: see `standards/pipeline/steps/05-hand-off.md`.
+6.  **Issue**: see `standards/pipeline/steps/06-issue.md`.
+7.  **Issue review**: see `standards/pipeline/steps/07-issue-review.md`.
+8.  **Implement**: see `standards/pipeline/steps/08-implement.md`.
+9.  **PR review**: see `standards/pipeline/steps/09-pr-review.md`.
+10. **Commit**: see `standards/pipeline/steps/10-commit.md`.
+11. **Ship**: see `standards/pipeline/steps/11-ship.md`.
 
 ---
 
@@ -127,7 +95,7 @@ two-doors rule; no mechanism is asserted here as belonging to every repo.
 
 **Trigger.** When an implementation's diff touches any path in `repo-profile.json`'s
 `docCurrencyPaths` field, the orchestrator spawns a `doc-currency` step: an **inline pipeline step
-defined here**, not a new agent file, alongside step 6 (Artifact review). A repo with an empty
+defined here**, not a new agent file, alongside step 09 (PR review). A repo with an empty
 `docCurrencyPaths` list never triggers this step.
 
 **Dispatched concurrently, not serially.** The `doc-currency` step is spawned **concurrently** with
@@ -151,7 +119,7 @@ notices something it did not cause and cannot fix, that is an ordinary note, han
 agent files its own issue".
 
 **Staged before the PR is reviewed.** The doc-currency agent's `.md` corrections are staged into the
-working tree, and included in the diff, before the PR review in step 6 runs, so the single combined
+working tree, and included in the diff, before the PR review in step 09 runs, so the single combined
 review covers them too, and no separate re-confirm round is needed. Classification and rationale:
 `standards/adversarial-review-protocol.md` § "Wave governance".
 
@@ -159,7 +127,7 @@ review covers them too, and no separate re-confirm round is needed. Classificati
 
 ## Wave boundary
 
-**Not part of step 6's per-issue ship flow.** This section fires once at the boundary between waves,
+**Not part of step 09's per-issue ship flow.** This section fires once at the boundary between waves,
 not after every PR merge. After a wave's planned batch of issues merges, append a line to
 `BUILDLOG.md` (or the run's Live-log ledger, during a timed run) noting the wave is complete, closing
 with the literal closing line: **owner may run /post-wave-review**, a cross-PR regression,
@@ -326,7 +294,7 @@ mapping: `standards/pipeline/templates/model-tiers.md`.
 
 These gates are additive to the existing `reviewer-issue` / `reviewer-pr` pipeline. They do not replace any existing step.
 
-**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 6 (Artifact review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the referee-and-eight-round-loop fork for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
+**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 09 (PR review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the referee-and-eight-round-loop fork for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
 
 **Design-philosophy gate (PR-review time):** Spawn `agents/reviewer-design-philosophy.md` (Opus) for every implementation artifact at PR-review time. What counts as an implementation artifact, and the cadence for a FAIL: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact" and § "Referee and the eight-round loop".
 
@@ -399,8 +367,9 @@ When an agent hits a problem mid-run:
    gating reviewer rules on it, and any
    reviewer can overrule the deferral per that protocol's § "Finding disposition".
    **The unit is the session, not the issue.** The pipeline creates one worktree per session
-   (§ "Isolation precondition" above; `.claude/commands/build.md` Step 0 cuts it once, and a Step
-   0b governance sync never re-cuts it, per `standards/governance-sync.md` § "After merge": a
+   (§ "Isolation precondition" above; `standards/pipeline/steps/01-isolate.md` cuts it once, and
+   `standards/pipeline/steps/02-sync.md`'s governance sync never re-cuts it, per
+   `standards/governance-sync.md` § "After merge": a
    content-classed sync PR merges on green CI on its own schedule, so this build stays on the tree
    it already has), so every later segment shares one `notes.md` across all of them. There is
    nothing to disambiguate: no header, no branch identity, no issue identity, no reading above or
@@ -409,11 +378,9 @@ When an agent hits a problem mid-run:
    four-option shape below. This is the old `fix-now` case: a defect that stops the current task's
    correctness or safety and cannot be worked around. The run halts, the halt is logged per §
    "Stop condition" above, and the owner decides. A blocked agent is never trapped and never files.
-4. **At the end of the session,** first run the late-note pass, then report.
-   **Late-note pass.** When the trigger owned by `standards/adversarial-review-protocol.md`
-   § "Reviewer count by artifact"'s Late-note pass bullet holds, dispatch `agents/reviewer-notes.md` (one instance,
-   over the notes only) before writing the report; the bullet also owns the pass's exemptions,
-   not restated here. Its rulings dispose exactly as an in-round challenge does: overruled means
+4. **At the end of the session,** first run the late-note pass, then report; dispatch mechanics:
+   `standards/pipeline/steps/12-report.md`.
+   **Late-note pass.** Its rulings dispose exactly as an in-round challenge does: overruled means
    handled now; agreed-drop means gone; upheld means reported. An `OVERRULE` ruled after this
    session already shipped is still handled in this session, in this worktree: the fix commits
    referencing the same issue, takes a scoped re-check, and ships through the same mode, unless
