@@ -5,10 +5,6 @@ acceptance criteria, in that order, nothing else. Use the written format in
 `standards/pipeline/templates/hand-off-format.md` every time. Wait for explicit approval before
 writing anything to GitHub.
 
-Rare case: a child inheriting an approved epic's approval takes no hand-off of its own. See
-`standards/issue-standards.md` § "Owner hand-off" for the inheritance rule and its exact-string
-guard.
-
 Sizing note: "small" here means one agent session. An agent's own estimate of what fits in a
 session runs low, so a story is not split merely because it feels large.
 

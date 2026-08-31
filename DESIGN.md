@@ -457,11 +457,13 @@ pre-review process (for example a live visual-approval loop) has somewhere gener
 
 **Two owner directives, recorded.** On 2026-07-28 the owner directed that a change a reviewer has
 verified leaves the pre-reviewed artifact unchanged never comes back to him for a re-confirm: that
-is the unchanged-artifact exemption. On 2026-08-25 he directed that an epic whose acceptance
-criteria he approved pre-approves the children filed inside its scope, so the hand-off is asked once
-per epic rather than once per child: that is the inherited approval in
-`standards/issue-standards.md` § "Owner hand-off". Both spend less of the one resource the pipeline
-cannot manufacture, his attention.
+is the unchanged-artifact exemption, and it still stands. A second directive, dated 2026-08-25 and
+cited from another repo's chat the owner does not remember giving, once let an epic whose
+acceptance criteria he approved pre-approve the children filed inside its scope, asking the
+hand-off once per epic rather than once per child: that was the inherited-approval rule. The owner
+killed it in chat on 2026-08-31, the same conversation in which he approved the trust lines that
+now open `agents/orchestrator.md` (issue #65). Every child issue takes its own hand-off again, with
+no exception; `standards/issue-standards.md` § "Owner hand-off" owns the rule.
 
 **Why the exemption is the process file's to define.** This repo is the parent of several children
 and only some run a pre-review process at all; what counts as "the artifact's output is unchanged"

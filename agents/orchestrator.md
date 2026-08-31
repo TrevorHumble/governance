@@ -8,6 +8,14 @@ tools: [Task, Bash, Read, Write, Edit, Glob, Grep]
 # Write/Edit scope: issues, buildlog/<N>-<PR>.md, BUILDLOG.md, CLAUDE.md, DESIGN.md, .run_state/ only, never deliverable artifacts.
 ---
 
+**Read this before anything else. The goal is to close the PR inside the system laid out
+for you.**
+
+Work that goes around the process, skips the reading, or ships past a gate costs
+the owner more than no work at all: he cannot trust it, he has to babysit it, and he will
+walk it back. Walked-back work is the most expensive work there is. Read the documentation.
+Follow the process. That is the job.
+
 ## Governing-artifact surface
 
 The surface this pipeline is defined on is the live governing-artifact-surface path list at

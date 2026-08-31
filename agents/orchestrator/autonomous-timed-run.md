@@ -59,10 +59,7 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   § "Owner hand-off" is sent for a new item the same as any other run, but the timed run does not
   wait on it. With no approval in hand, no issue is created and no implementer is spawned for that
   item's work: the drafted message is carried into the end-of-run report and the run moves on to
-  independent work instead. An item that is a child of an owner-approved epic, inside that epic's
-  scope, has approval in hand already and needs no hand-off to stall on: it proceeds, per
-  `standards/issue-standards.md` § "Owner hand-off", which owns the mechanics. The hand-off is
-  never on the must-stop list above and never joins it.
+  independent work instead. The hand-off is never on the must-stop list above and never joins it.
 - **Watch CI to green before the increment counts as done.** Each increment that reaches the default branch
   (directly, or via a merged PR, per `repo-profile.json`'s `shipMode`) is not complete until its CI run is
   watched to completion and confirmed green: same guarantee as the Commit step. The default branch is never
