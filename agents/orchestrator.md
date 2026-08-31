@@ -113,7 +113,7 @@ approval is recorded at step 3 per that section.
    rule) rather than starting implementation into a collision.
 5. **Implementation**: spawn `agents/implementation-agent.md` (Sonnet) with full handoff: the
    passing issue and all prior-art file paths.
-6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per § "Model policy" below. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "Referee and the eight-round loop". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same eight-round-loop cadence. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated. Dispatching a review round is a claim re-stamp event: refresh the issue's `active-<N>-*` label per `standards/issue-standards.md` § "The file claim and the size rule" release rule.
+6. **Artifact review**: spawn the appropriate reviewer agent from `agents/reviewer-*.md` per `standards/adversarial-review-protocol.md` § "Spawning a reviewer", with model tiers per `standards/pipeline/templates/model-tiers.md`. Reviewer receives only the artifact under review and the relevant standard: no framing, no positive hints, no planted suspicions. **Reviewer count and cadence follow `standards/adversarial-review-protocol.md` § "Reviewer count by artifact"** (authoritative; not restated here to avoid drift), including which finding triggers a re-check under § "Referee and the eight-round loop". **For every implementation artifact, also spawn `agents/reviewer-design-philosophy.md`** at this step, per that same section of the protocol. **If the change adds a new component or makes a significant structural change, also spawn `agents/reviewer-architecture.md` at this step**, per § "Architecture lens (automatic on structural changes)" below; its blocker/major findings take the same eight-round-loop cadence. **If the diff touches the source surface defined in § "Doc-currency step", dispatch the `doc-currency` step concurrently with this review**, per § "Doc-currency step" below. **Every code-review round's briefing file list is machine-generated, and `agents/reviewer-briefing.md` audits the round's briefings concurrently**, per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Round-scoping against the review-size bound (measure the round, split or declare before dispatch) is owned by `standards/adversarial-review-protocol.md` § "Review-size bound"; cited here, not restated. Dispatching a review round is a claim re-stamp event: refresh the issue's `active-<N>-*` label per `standards/issue-standards.md` § "The file claim and the size rule" release rule.
 7. **Commit**: once per run, before the first commit, confirm the hooks are live: `git config core.hooksPath` should print `.githooks` (if not, run `tools/setup-hooks.ps1`; never proceed assuming a gate that isn't on; an unconfigured clone enforces nothing). On the reviewers' PASS (and, for a blocker/major finding, once it is fixed and confirmed per `standards/adversarial-review-protocol.md` § "Referee and the eight-round loop"), `git commit` with a short message that includes `(#N)` referencing the issue. **`commit-msg` checks that the commit message names a GitHub issue**: a code commit with no `(#N)`, closing keyword, or `issue-N` branch is blocked; a doc-only (`*.md`) commit is exempt. **`pre-commit` checks that the commit stages no parent-owned governance path**, per `standards/ownership-map.md`; once the launcher probe and the profile parse both succeed, it exits cleanly on a governance-sync branch (the exemption that applies in a child, since `governanceHome` is never `self` there) or in the governance home itself. There is no review-evidence file to record; review practice is unmechanized (see `WHAT-IT-CHECKS.md`).
    Committing and pushing are both claim re-stamp events: refresh the issue's `active-<N>-*`
    label at each, per `standards/issue-standards.md` § "The file claim and the size rule".
@@ -372,44 +372,8 @@ settle an artifact's look or shape; production logic is not phase-1 work. The **
 the criteria are transcribed and an implementer adds wiring/tests, is not exempted**: it takes the
 normal `agents/implementation-agent.md` and reviewer bar below, unchanged.
 
-The orchestrator runs on **Opus**. Implementation agent and non-reviewer spawned agents (researcher,
-etc.) run on **Sonnet**. Reviewers (all `reviewer-*.md` agents) run on **Opus**, a different model
-from the implementer, per the independence rule in `standards/agent-standards.md`, on every issue by
-default. Set `model:` explicitly on every spawn call; never rely on defaults. Light-tier work
-(classification, routing, triage) runs on **Haiku**; no agent currently in `agents/` is light-tier.
-
-**`sonnet-only` award.** No tool classifies an issue into a model tier. The single exception is
-a judgment call the issue reviewer (`reviewer-issue`) makes once, at issue-review time, against the
-three gates in `standards/issue-standards.md` § "Sonnet tier eligibility": it emits `AWARD sonnet-only`
-or `DENY sonnet-only` as part of its verdict. On an `AWARD`, the orchestrator applies the
-`sonnet-only` GitHub label to the issue, then runs both the implementer (step 5) and the PR and
-design-philosophy reviewers (step 6) on **Sonnet** for that issue; the orchestrator itself stays
-Opus regardless. Every sonnet-tier reviewer spawn additionally carries a coverage-first instruction
-appended to its briefing: report every finding, tagged with its own severity and confidence, and never
-defer to a downstream filter; on the common single-round PASS path, no downstream filter runs to
-catch what an under-reporting reviewer left out. The briefing-audit lens (`agents/reviewer-briefing.md`)
-stays on Opus even for a sonnet-only issue: it judges the Opus orchestrator's own briefings, and the
-independence rule requires a reviewer non-weaker than the artifact's producer.
-
-**Mid-run escalation is manual, not automatic.** If implementation or PR review on a sonnet-tier issue
-turns up a governance-surface path the issue did not declare, the remainder of that
-run escalates to Opus, implementer and reviewers alike, by the manual judgment of the implementer or
-PR reviewer that spotted it. There is no automatic re-run and no script that re-checks the gates
-mid-flight; whoever notices makes the call and the orchestrator carries it out.
-
-**Fable.** Fable is an available model, used only on the owner's explicit per-use signal.
-Absent that signal, every implementer, Fable included, goes through the standard independent
-adversarial review per the tiers above; there is no standing Fable-specific review handling until the
-owner specifies one.
-
-**Gemini / Antigravity.** Running this pipeline under Google Antigravity / Gemini models maps
-tiers to these ecosystem defaults: the **Opus tier** (orchestrator plus reviewers) maps to **Gemini 3.6
-Flash (High)**; the **Implementer (Sonnet) tier** maps to **Gemini 3.5 (High) or Sonnet 4.6** (Antigravity
-exposes Sonnet 4.6). These are defaults, not an override of the tiers above: the reviewer must always run on a
-model that is different from, and non-weaker than, the implementer's. Where a Gemini pairing would
-violate that, for example an implementer on Sonnet 4.6 paired with a reviewer left on a lighter
-default, the reviewer is bumped to a non-weaker model rather than run under the default; the invariant
-governs, the mapping is illustrative.
+Role tiers, the `sonnet-only` award, mid-run escalation, Fable, and the Gemini / Antigravity
+mapping: `standards/pipeline/templates/model-tiers.md`.
 
 ---
 
@@ -583,68 +547,11 @@ issue. The trigger is the agent noticing; no telemetry or automated detection is
 
 ## How to write the report
 
-The owner's standing words: **concise and precise.** They are two different tests, and every line
-must pass both.
-
-**Concise:** can you cut a word? Cut it. The owner is a functional/business tech, not a developer,
-and is often reading this at the end of a long day.
-
-**Precise:** could the owner act on the line without asking a question back? If not, it is too
-vague. Add the one missing fact and nothing else.
-
-Agents fail the second test while passing the first. Short and useless is the common failure, not
-long.
-
-- Too vague: `Delete: remove the conflicting rule. 20%`
-- Too long: `Delete: we could remove the sentence in the protocol standard that restricts briefing
-contents to a closed set of two items, which would resolve the contradiction described above and
-also shorten the standard by one line. 20%`
-- Right: `Delete: cut the "only two things" rule, the fight goes away. 20%`
-
-Size overall: enough to understand, not one word more. Too short and the owner cannot judge it. Too
-long and the owner skims, which is worse than not writing it.
-
-**Check for ghosts.** Before proposing any new gate, ask whether the failure it stops has ever
-happened. A gate that stops nothing still taxes every issue, forever. The same question is a named
-red flag reviewers cite at PR time, `ghost gate` in `standards/design-philosophy.md` § "Red flags";
-this paragraph is the report-writing moment of it, not a second rule.
-
-**Go look before you ask.** If a percentage needs a fact the agent does not have, it goes and finds
-it. Asking is allowed. Looking is better. Say which one happened.
+See `standards/pipeline/templates/report-template.md` for the concise/precise standard.
 
 ## Report template
 
-The `Fixed:` line appears only when something was fixed in place, and it carries no options: the
-problem is gone, so there is nothing left to price. A note with nothing fixed opens at `Saw:` and
-carries all four options.
-
-```
-Fixed: <what>, because <why>.
-
-Saw: <a short paragraph. What broke, why it matters, and whether it has ever done
-real damage. Say plainly when the answer is no.>
-
-Nothing: <the case for leaving it alone>. NN%
-Delete: <what of ours comes out>. NN%
-Small: <the line or two>. NN%
-Big: <the new thing, and its cost>. NN%
-```
-
-Add one more line only when it is needed: the thing that blocked the fix, or the one question the
-owner must answer before the numbers mean anything. If looking would answer it, look instead.
-
-Worked example, written by the owner on 2026-08-21:
-
-```
-Saw: when a reviewer fails something, I send a second one to check the fix. To check it,
-I must say what was broken. Another rule says briefings can only hold two things, and
-that is not one. So I get flagged every time. Nothing broke. The flag cannot stop a merge.
-
-Nothing: live with one flag per round. Costs zero. 70%
-Delete: cut the "only two things" rule, the fight goes away. 20%
-Small: one line saying the reviewer gets the code change plus the checklist. 8%
-Big: invent a new field, edit 3 files, every repo carries it forever. 2%
-```
+See `standards/pipeline/templates/report-template.md` for the template and the worked example.
 
 ---
 

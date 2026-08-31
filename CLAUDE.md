@@ -64,9 +64,9 @@ hand-off", not restated here.
 ## Model policy
 
 Every spawned agent sets its `model` explicitly; never rely on a default that may escalate
-silently. Role tiers, the `sonnet-only` exception, the Pre-review-surface carve-out, the
-Fable policy, and the Gemini / Antigravity mapping are all authoritative in
-`agents/orchestrator.md` § "Model policy".
+silently. Role tiers, the `sonnet-only` exception, the Fable policy, and the Gemini / Antigravity
+mapping are all authoritative in `standards/pipeline/templates/model-tiers.md`. The
+Pre-review-surface carve-out stays authoritative in `agents/orchestrator.md` § "Model policy".
 
 ## Adversarial review
 

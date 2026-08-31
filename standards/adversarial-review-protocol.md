@@ -235,7 +235,7 @@ loop` below): **1** reviewer, a fresh instance with no context from any prior ro
   or deferred like any other finding.
 
 Reviewer model tiers, the `sonnet-only` exception included, are set in
-`agents/orchestrator.md` § "Model policy"; the independence rule behind them (a
+`standards/pipeline/templates/model-tiers.md`; the independence rule behind them (a
 different, non-weaker model than the implementer) is `standards/agent-standards.md`'s.
 
 ---

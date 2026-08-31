@@ -184,7 +184,7 @@ rule change.
 
 ## The Haiku bar
 
-The implementation plan is a clarity heuristic: it must be clear and unambiguous enough that following it would not send a weak model off the rails. It is a thought experiment about plan clarity, not a requirement to inline every fact. Current implementer/reviewer tiers: `agents/orchestrator.md` § "Model policy".
+The implementation plan is a clarity heuristic: it must be clear and unambiguous enough that following it would not send a weak model off the rails. It is a thought experiment about plan clarity, not a requirement to inline every fact. Current implementer/reviewer tiers: `standards/pipeline/templates/model-tiers.md`.
 
 If a step says "do the thing," rewrite it. Each step names what to create, read, or write and where.
 
@@ -353,7 +353,7 @@ ready-issue and close the backlog issue.
 
 ## Sonnet tier eligibility
 
-A ready-tier issue's implementation and review may run on Sonnet instead of the standard reviewer policy (`agents/orchestrator.md` § "Model policy"), not by a classifier script, but by a judgment the issue reviewer (`reviewer-issue`) makes once, at issue-review time, since it already reads the issue and every path in its `Touches` list. The reviewer emits exactly one of `AWARD sonnet-only` or `DENY sonnet-only` as part of its verdict, per `agents/reviewer-issue.md`.
+A ready-tier issue's implementation and review may run on Sonnet instead of the standard reviewer policy (`standards/pipeline/templates/model-tiers.md`), not by a classifier script, but by a judgment the issue reviewer (`reviewer-issue`) makes once, at issue-review time, since it already reads the issue and every path in its `Touches` list. The reviewer emits exactly one of `AWARD sonnet-only` or `DENY sonnet-only` as part of its verdict, per `agents/reviewer-issue.md`.
 
 An award requires all three gates to hold, stated once here:
 

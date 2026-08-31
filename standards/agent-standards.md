@@ -54,7 +54,7 @@ Use the tier appropriate to the job:
 | Implementation, transformation  | Implementation tier                     |
 | Classification, routing, triage | Light tier                              |
 
-Which model currently fills each tier: `agents/orchestrator.md` § "Model policy".
+Which model currently fills each tier: `standards/pipeline/templates/model-tiers.md`.
 
 **Tie-break for mixed jobs:** when an agent's job spans rows, tier to the **highest-judgment task** the agent performs, not its most frequent one. Example: an agent that mostly routes incoming defects (light-tier work) but also judges whether each is consequential (judgment) is a judgment-tier agent: the routing does not need the judgment tier, but the judgment call is the part that fails silently on a weaker tier.
 
@@ -62,11 +62,11 @@ Which model currently fills each tier: `agents/orchestrator.md` § "Model policy
 Reviewers must run on a different, non-weaker model than the implementer, on every issue by default.
 A reviewer running on the same model as the implementer inherits the implementer's correlated blind
 spots: the errors the author makes are the ones the reviewer misses. Current tier assignments:
-`agents/orchestrator.md` § "Model policy". The cost tradeoff of a more expensive reviewer is noted
-and deferred as a separate decision.
+`standards/pipeline/templates/model-tiers.md`. The cost tradeoff of a more expensive reviewer is
+noted and deferred as a separate decision.
 
 The `sonnet-only` exception: `standards/issue-standards.md` § "Sonnet tier eligibility" and
-`agents/orchestrator.md` § "Model policy".
+`standards/pipeline/templates/model-tiers.md`.
 
 A reviewer agent's prompt must carry no task-specific bias, and this standard owns the
 minimum-context rule: a reviewer's briefing carries only what the spawn-prompt skeleton
