@@ -43,3 +43,8 @@ is not this section's amendment: it re-triggers the owner hand-off's approval st
 `standards/issue-standards.md` § "Owner hand-off". This re-trigger keys off the `Owner-approved:
 yes` marker. This section's `Touches` bound still binds any implementation work the amended text
 creates; its owner-plus-reviewer sign-off does not apply to the owner's own approved words.
+
+A night-pass issue's criteria take this section's amendment, not the re-trigger above: they are
+agent-written words the owner never approved, so no `Owner-approved: yes` marker exists to
+remove. The pass does not supply the amendment's owner half, per
+`standards/pipeline/edge/night-pass.md`.

@@ -18,3 +18,6 @@ the GitHub issue body and the local draft, per `standards/issue-standards.md` §
 Rare case: an epic skips the implement, artifact-review, commit, and ship steps and closes when its
 last child merges; what makes an issue an epic: `standards/issue-standards.md` § "The file claim
 and the size rule".
+
+Rare case: a night-pass issue records the pass marker instead of `Owner-approved: yes`:
+`standards/pipeline/edge/night-pass.md`.

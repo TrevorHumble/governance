@@ -19,3 +19,6 @@ is the last thing in the turn: no tool call and no further text follow it in the
 
 Rare case: an autonomous timed run sends the hand-off but never waits on it:
 `standards/pipeline/edge/timed-run.md`.
+
+Rare case: an owner-granted night pass substitutes for this step's approval, for an issue inside
+its scope: `standards/pipeline/edge/night-pass.md`.

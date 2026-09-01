@@ -60,6 +60,8 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   wait on it. With no approval in hand, no issue is created and no implementer is spawned for that
   item's work: the drafted message is carried into the end-of-run report and the run moves on to
   independent work instead. The hand-off is never on the must-stop list above and never joins it.
+  No hand-off is sent for an item a live night pass covers; it is created carrying the marker
+  instead of being parked in the report, per `standards/pipeline/edge/night-pass.md`.
 - **Watch CI to green before the increment counts as done.** Each increment that reaches the default branch
   (directly, or via a merged PR, per `repo-profile.json`'s `shipMode`) is not complete until its CI run is
   watched to completion and confirmed green: same guarantee as the Commit step. The default branch is never

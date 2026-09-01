@@ -18,3 +18,6 @@ than starting implementation into a collision.
 Rare case: `agents/reviewer-architecture.md` is not part of this step; its automatic trigger and
 on-request entry point are `standards/adversarial-review-protocol.md` § "Reviewer count by
 artifact".
+
+Rare case: an issue carrying a `Night-pass:` marker takes the full checklist plus the marker
+check: `standards/pipeline/edge/night-pass.md`.

@@ -25,7 +25,11 @@ story, and acceptance criteria, once the owner has approved them per
 `standards/issue-standards.md` § "Owner hand-off", are read as a whole for their meaning and
 intent, not attacked. The hostile default above and the ownership rule in that section do not
 contradict each other: this stance governs the plan, the dependency map, and every other artifact
-in this protocol's scope; it does not reach back into words the owner has already settled.
+in this protocol's scope; it does not reach back into words the owner has already settled. This
+carve-out keys off the literal `Owner-approved: yes` line: a night-pass issue's agent-written
+story and criteria carry a `Night-pass:` marker instead, per
+`standards/pipeline/edge/night-pass.md`, and are never covered by this carve-out, whatever scope
+the pass grants.
 
 ---
 
