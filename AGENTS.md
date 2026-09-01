@@ -7,7 +7,8 @@ convention. Read it before doing anything, and follow it exactly.
 Everything an agent needs lives there or in the files it points to:
 
 - Operating rules and the pipeline: `CLAUDE.md`.
-- Model-tier equivalents, including Gemini / Antigravity: `CLAUDE.md` § "Model policy".
+- Model-tier equivalents, including Gemini / Antigravity:
+  `standards/pipeline/templates/model-tiers.md`.
 - Checkable standards (issues, reviews, agents, skills, docs): `standards/`.
 - Agent definitions: `agents/` (its `agents/orchestrator/` subfolder holds the orchestrator's
   load-conditional procedure files, not agent charters; charter requirements do not apply to them).

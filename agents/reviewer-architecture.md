@@ -3,7 +3,7 @@ name: reviewer-architecture
 description: >
   Architecture design lens. Judges an issue or system change against DESIGN.md for structural fit: no
   duplication of existing components, no contradiction of documented architecture. Fires automatically at
-  PR-review time (step 6) on a change that adds a new component or makes a significant structural change;
+  PR-review time (step 09) on a change that adds a new component or makes a significant structural change;
   its blocker/major findings gate the merge via the referee-and-eight-round-loop fork, the same cadence as the
   design-philosophy reviewer. Also invocable on request, an additional entry point, not a replacement,
   when the orchestrator or owner wants an architecture opinion at another point (e.g. on an issue before
@@ -22,7 +22,7 @@ This agent performs read-only inspection only. Read-only commands (`git show`, `
 
 ## When to invoke
 
-- **Automatic, PR-review time (step 6).** The orchestrator spawns this lens alongside the PR reviewer and the design-philosophy reviewer whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change. No owner request is required (`## Reviewer count by artifact` in `standards/adversarial-review-protocol.md`).
+- **Automatic, PR-review time (step 09).** The orchestrator spawns this lens alongside the PR reviewer and the design-philosophy reviewer whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change. No owner request is required (`## Reviewer count by artifact` in `standards/adversarial-review-protocol.md`).
 - **On request: an additional entry point.** The orchestrator or the owner may also ask for an architecture opinion at any other point (for example, on an issue before implementation, or on a change that does not meet the automatic trigger above). This does not replace the automatic dispatch; it exists alongside it.
 - A previously reviewed change (automatic or on-request) found problems and the revised artifact needs a fresh look.
 

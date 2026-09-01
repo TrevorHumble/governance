@@ -27,28 +27,8 @@ governing-artifact surface" points here rather than repeating or paraphrasing it
 ## How work flows: the orchestrator pipeline
 
 All changes go through an enforced pipeline. Do not commit code straight to the default branch
-and do not skip steps.
-
-1. **Issue**: file the work as a GitHub issue meeting `standards/issue-standards.md` (user story,
-   Given/When/Then acceptance criteria, implementation plan, dependency map).
-2. **Adversarial review of the issue**: an independent reviewer attacks the issue against the
-   standard before any code is written. See `standards/adversarial-review-protocol.md`.
-3. **Implement**: an implementer agent writes the change to satisfy the issue's acceptance
-   criteria.
-4. **Adversarial review of the PR**: independent reviewers attack the implementation against the
-   issue and the standards. Which reviewers gate, and how a finding gets resolved:
-   `standards/adversarial-review-protocol.md`.
-5. **Commit / ship**: only after review passes. How the change reaches the default branch defers
-   to `repo-profile.json`'s `shipMode` field: a `"pr"`-mode repo branches, opens a pull request
-   (`gh pr create`), watches CI to green, then merges; a `"direct"`-mode repo commits straight to
-   the default branch and watches CI to green there. No file asserts which mode any particular
-   repo runs. Two local hooks run at commit time: `.githooks/commit-msg` (a code commit must name a
-   GitHub issue) and `.githooks/pre-commit` (a child repo commit cannot stage a parent-owned
-   governance path; see `standards/ownership-map.md`). CI is the rest of the gate. This repo's own
-   profile declares `"shipMode": "pr"`.
-6. **Report**: every session ends with a short priced report to the owner, notes only, never a new
-   board row filed on the session's own initiative. Full shape: `agents/orchestrator.md` § "No
-   agent files its own issue".
+and do not skip steps. The steps live in `standards/pipeline/PIPELINE.md`. No file asserts which
+ship mode any particular repo runs; this repo's own profile declares `"shipMode": "pr"`.
 
 **Pre-review step.** A repo may declare its own pre-review process in its `repo-profile.json`'s
 `preReview` field (for example a live visual-approval loop, or `"none"`). When declared, it runs
@@ -57,7 +37,7 @@ full mechanics are owned by `standards/pipeline/steps/04-pre-review.md`, and the
 `standards/pipeline/edge/unchanged-artifact-exemption.md`, not restated here. This
 repo's own profile declares `"preReview": "none"`.
 
-**Owner hand-off.** Before step 1 files the issue, the owner receives the title, the user story,
+**Owner hand-off.** Before the issue is filed, the owner receives the title, the user story,
 and the acceptance criteria as one short message and approves them; full mechanics are owned by
 `standards/issue-standards.md` § "Owner hand-off", not restated here.
 

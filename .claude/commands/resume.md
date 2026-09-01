@@ -6,7 +6,8 @@ Re-read these files in order, they carry the context you need:
 
 1. `CLAUDE.md`: this repo's operating contract (behavioral rules, model policy, pipeline). Read
    this first.
-2. `agents/orchestrator.md`: the pipeline, model policy, and ship flow for this repo.
+2. `standards/pipeline/PIPELINE.md` for the pipeline and ship flow; `agents/orchestrator.md`: the
+   orchestrator's own rules (stop condition, wave boundary, doc-currency, the end-of-run report).
 3. Where the work stands: `gh issue list` / `gh pr list` for live backlog priority, and, for the newest state, the five most recent pending files in `buildlog/` (excluding `README.md`), ordered by the date on each entry line rather than filename: each one a ship not yet folded into the archive. Note the total pending count alongside them; a count above five means older pending ships exist beyond what was read (`agents/orchestrator.md` § "Wave boundary" is what is supposed to keep that count small; if it is not, that is itself worth flagging). Fall back to the newest entry in `BUILDLOG.md` on the default branch only when no fragment is pending.
 4. This repo's own goals doc, if any (see `repo-profile.json`'s `goalsDoc` field): the goals every change must serve.
 
