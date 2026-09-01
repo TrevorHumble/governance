@@ -425,14 +425,6 @@ step misroutes, do not silently work around it. Use `.claude/skills/capture-syst
 to write it up; that skill routes the written note here (step 2 above) rather than filing an
 issue. The trigger is the agent noticing; no telemetry or automated detection is required.
 
-## How to write the report
-
-See `standards/pipeline/templates/report-template.md` for the concise/precise standard.
-
-## Report template
-
-See `standards/pipeline/templates/report-template.md` for the template and the worked example.
-
 ---
 
 ## Constraints
