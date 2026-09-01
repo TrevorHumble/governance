@@ -2,10 +2,10 @@
 name: github-write
 description: >-
   How to create/update GitHub issues and commit changes in this project using git
-  and the GitHub CLI (ship flow: branch, then pull request, then merge on green CI;
-  see agents/orchestrator.md). Triggers: "create an issue", "commit this", "push to
-  GitHub", "open a PR", "close the issue", any task that writes to git or GitHub
-  for this project.
+  and the GitHub CLI (ship flow: branch, then pull request, then merge on green
+  CI; see standards/pipeline/steps/11-ship.md). Triggers: "create an issue",
+  "commit this", "push to GitHub", "open a PR", "close the issue", any task that
+  writes to git or GitHub for this project.
 ---
 
 # github-write

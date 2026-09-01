@@ -220,15 +220,16 @@ Review follows **the referee and the eight-round loop** in
   tried and why each failed: a halt is not an acceptance; the work is not committed. A halt also
   clears the halted issue's `active-<N>-*` claim label, per `standards/issue-standards.md` § "The
   file claim and the size rule" release rule: a stopped run releases its files. **When the halt
-  ends the session** (a single-segment run, or the last segment still standing), the `[HALT]` entry
-  carries the session's end-of-run report, in § "Report template"'s shape, folding in every
-  note this worktree collected across every segment the session ran; it is not a bare halt notice,
-  and it is written only after the late-note pass has run when its trigger holds (§ "No
-  agent files its own issue" rule 4): a halt hands the owner no unchallenged note either. **When the
+  ends the session** (a single-segment run, or the last segment still
+  standing), the `[HALT]` entry carries the session's end-of-run report, in
+  `standards/pipeline/templates/report-template.md`'s shape, folding in every note this
+  worktree collected across every segment the session ran; it is not a bare halt notice, and
+  it is written only after the late-note pass has run when its trigger holds (§ "No agent
+  files its own issue" rule 4): a halt hands the owner no unchallenged note either. **When the
   halt is per-segment inside a run that keeps going** (`standards/pipeline/edge/timed-run.md`
-  § "A halt is per-segment, never a run exit"), the `[HALT]` entry logs the halt only; the
-  session continues with its next segment inside the same worktree, and the end-of-run report is not
-  emitted until the session itself ends, per rule 4 below.
+  § "A halt is per-segment, never a run exit"), the `[HALT]` entry logs the halt only;
+  the session continues with its next segment inside the same worktree, and the end-of-run
+  report is not emitted until the session itself ends, per rule 4 below.
 - **Recording a referee ruling.** The ship's `buildlog/<N>-<PR>.md` fragment names which side
   won and which owner-settled artifact grounded the ruling, or the `[HALT]` entry does, if the
   segment later halts. On a segment that ends with neither a ship nor a halt (a wrap or an
@@ -280,9 +281,9 @@ mapping: `standards/pipeline/templates/model-tiers.md`.
 
 These gates are additive to the existing `reviewer-issue` / `reviewer-pr` pipeline. They do not replace any existing step.
 
-**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 09 (PR review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. Full cadence, the referee-and-eight-round-loop fork for its findings, and the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
+**Architecture lens (automatic on structural changes):** `agents/reviewer-architecture.md` (Opus) is spawned automatically at step 09 (PR review), alongside the PR reviewer and the design-philosophy reviewer, whenever the change under review adds a new component (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change, no owner request required. The cadence: `standards/pipeline/steps/09-pr-review.md`; the referee fork for its findings: `standards/pipeline/edge/referee-loop.md`; the separate on-request entry point: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact".
 
-**Design-philosophy gate (PR-review time):** Spawn `agents/reviewer-design-philosophy.md` (Opus) for every implementation artifact at PR-review time. What counts as an implementation artifact, and the cadence for a FAIL: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact" and § "Referee and the eight-round loop".
+**Design-philosophy gate (PR-review time):** Spawn `agents/reviewer-design-philosophy.md` (Opus) for every implementation artifact at PR-review time. What counts as an implementation artifact: `standards/adversarial-review-protocol.md` § "Reviewer count by artifact". The cadence for a FAIL: `standards/pipeline/steps/09-pr-review.md`.
 
 **Briefing audit (concurrent with every code-review round):** the round's briefing file list is machine-generated, and the briefing itself is audited by `agents/reviewer-briefing.md` (Opus); duty and dispatch inputs: `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Status: its judgment findings are advisory per § "Advisory-lens lifecycle"; a scope-mismatch report is a round-validity condition under that same protocol section, not a lens verdict.
 
@@ -401,8 +402,7 @@ When an agent hits a problem mid-run:
    - **Big:** a new part, a rewrite, a new gate; real sometimes, last always.
 
    The agent shows all four every time and never picks for the owner. Showing only the option it
-   likes is what grew the queue. Full shape: § "How to write the report" and § "Report template"
-   below.
+   likes is what grew the queue. Full shape: `standards/pipeline/templates/report-template.md`.
 
    **Zero notes.** An absent or empty `.run_state/notes.md` in the current worktree is the
    zero-notes case, reported in one line rather than skipped.
@@ -452,13 +452,14 @@ See `standards/pipeline/templates/report-template.md` for the template and the w
   the declared pre-review surface is unaffected by any pre-merge human checkpoint: every such PR
   merges once adversarial review passes and CI is green, and owner control there stays upstream
   (which work is specced, via issues) and downstream (revert, via git history). **A change on the
-  declared pre-review surface is the one deliberate exception:** it passes the "Pre-review step"
-  (above), the owner settling the artifact live against a seeded preview or equivalent, never by
-  reading a diff, before its criteria are even written. A change the declaring process file's
-  unchanged-artifact exemption carries is that exception's own limit, merging on what
-  `standards/pipeline/edge/unchanged-artifact-exemption.md` states, with every other pipeline gate
-  applying to it in full. See the governance repo's `DESIGN.md` § "Merge policy and pre-review
-  rationale" for the merge policy and pre-review rationale recorded there.
+  declared pre-review surface is the one deliberate exception:** it passes
+  `standards/pipeline/steps/04-pre-review.md`, the owner settling the artifact live against a
+  seeded preview or equivalent, never by reading a diff, before its criteria are even written. A
+  change the declaring process file's unchanged-artifact exemption carries is that exception's
+  own limit, merging on what `standards/pipeline/edge/unchanged-artifact-exemption.md`
+  states, with every other pipeline gate applying to it in full. See the governance repo's
+  `DESIGN.md` § "Merge policy and pre-review rationale" for the merge policy and pre-review
+  rationale recorded there.
 - Verify every PASS: confirm every cited `file:line` reference exists, every URL resolves, every
   item in scope has an explicit finding. This check is the orchestrator's responsibility and is
   not delegated to the reviewer.

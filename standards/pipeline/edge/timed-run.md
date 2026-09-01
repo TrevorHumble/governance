@@ -66,8 +66,8 @@ start)/60`. **Never estimate, infer, or carry-forward `elapsed` by feel**: a led
   knowingly left red. This is part of completing the increment, not a new run-exit: if CI goes red, fix the
   cause or revert the commit _within the run_ before the selector advances to the next item. A red default
   branch is fixed in-loop; it never stops the timed run.
-- **A halt is per-segment, never a run exit.** An eight-round halt on a single _segment_ (§ "Referee and the
-  eight-round loop" in `standards/adversarial-review-protocol.md` cannot resolve it) still halts that segment;
+- **A halt is per-segment, never a run exit.** An eight-round halt on a single _segment_
+  (the loop in `standards/pipeline/edge/referee-loop.md` cannot resolve it) still halts that segment;
   during a timed run the orchestrator logs it, the halted work becomes a parked blocker (revisited in the
   Cascade), and control returns to the selector. The run still ends only at WRAP.
 - **Blockers are revisited, not parked forever.** Never accept a blocker on first contact; route around it

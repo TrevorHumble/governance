@@ -92,4 +92,4 @@ here:
 - Report the conflicting PR number and that this fold will re-run once it closes.
 
 Otherwise, watch CI to green and merge, exactly as any other change not gated by a declared
-Pre-review step, per `agents/orchestrator.md`'s ship flow.
+Pre-review step, per `standards/pipeline/steps/11-ship.md`.

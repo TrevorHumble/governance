@@ -113,7 +113,7 @@ was padding.
 **Necessity.** What breaks if this is not here? Name a thing that breaks, not a thing that might:
 "when X ships, Y breaks", never "someday someone might". Where it is unclear whether that evidence
 exists, go and look before raising the finding, and say which you did, looked or asked, the same
-duty `agents/orchestrator.md` § "How to write the report" places on the orchestrator. If the look
+duty `standards/pipeline/templates/report-template.md` places on the orchestrator. If the look
 turns up no instance, drop the finding rather than raising it hedged.
 
 **Cost of carry.** What will this cost in later bugs and follow-up work, weighed against what it
@@ -179,7 +179,7 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
   **The architecture lens also gates round 1** when its trigger applies, per the
   Architecture lens bullet below: round 1's gating reviewer count is not fixed at two, it
   grows by one whenever that trigger fires, so state it by condition, not by count.
-- **Code, rounds 2+** -> see `## Referee and the eight-round loop` below: a re-check fires only
+- **Code, rounds 2+** -> see `standards/pipeline/steps/09-pr-review.md`: a re-check fires only
   for a blocker/major finding, and is scoped to the fix, with **1 fresh reviewer** per round.
 - **Referee** (`agents/reviewer-referee.md`) -> dispatched exactly when a blocker or major
   finding is formally disputed at round 2 or any later round
@@ -199,7 +199,7 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
   "Advisory-lens lifecycle" below.
 - **Security lens** (`agents/reviewer-security.md`) -> a single advisory lens, dispatched
   per `## Which reviews does this change need?` below. A major/blocker finding from it
-  takes the standard cadence in `## Referee and the eight-round loop` like any other finding:
+  takes the standard cadence in `standards/pipeline/steps/09-pr-review.md` like any other finding:
   there is no separate reviewer-count escalation.
 - **Briefing-audit lens** (`agents/reviewer-briefing.md`) -> a single advisory lens,
   dispatched concurrent with every code-review round (round 1 and every rounds-2+ scoped
@@ -221,7 +221,7 @@ to the orchestrator, exercised sparingly, not to a mechanical rule.
   round-1 reviewers (above) at PR-review time whenever the change adds a new component
   (new service, route, agent, skill, standard, command, or tool) or makes a significant structural change,
   no owner request needed. A blocker/major finding from it takes the standard cadence in
-  `## Referee and the eight-round loop`, the same cadence as the design-philosophy gate. This promotion to gating is an
+  `standards/pipeline/steps/09-pr-review.md`, the same cadence as the design-philosophy gate. This promotion to gating is an
   owner decision, recorded in `DESIGN.md`, per § "Advisory-lens lifecycle" below: the owner
   approved restoring the lens as an automatic gate rather than requiring a
   further advisory trial. It is also invocable on
@@ -359,7 +359,7 @@ for what the human can actually judge (product direction, taste).
 **Findings-resolution vs. the Pre-review step.** This rule governs findings-resolution
 only: the owner never adjudicates a blocker/major/minor/nit an adversarial reviewer raised,
 and that stays true with no exception. It does not forbid the separately-decided
-**Pre-review step** (`agents/orchestrator.md` § "Pre-review step"): a product-taste
+**Pre-review step** (`standards/pipeline/steps/04-pre-review.md`): a product-taste
 loop, live and pre-implementation, for a repo's declared pre-review surface only, when one is
 declared; full mechanics live at the process file that repo's `repo-profile.json` names, if any.
 Only after the owner approves is that surface's acceptance criteria written and the normal
@@ -440,8 +440,9 @@ object store, though it may refresh the index's cache-tree under the index lock.
 **Machine-generated scope.** For a code review, the briefing's file list comes from the
 round's named git command, run against the round's declared scope, and is pasted verbatim:
 round 1 is `git diff --cached --name-status`, the staged change against HEAD, with the
-round bound to the `git write-tree` oid; a rounds-2+ scoped re-check per § "Referee and the
-eight-round loop" is `git diff --cached --name-status <round-1 bound tree oid>`, the fix's diff
+round bound to the `git write-tree` oid; a rounds-2+ scoped
+re-check per `standards/pipeline/steps/09-pr-review.md` is
+`git diff --cached --name-status <round-1 bound tree oid>`, the fix's diff
 relative to the round-1 tree. The orchestrator never hand-curates this list: it does not
 add to, trim, or reword what the command produced. A non-code-review artifact (an issue
 draft) lists that one file instead: this rule governs a code review's file list, not

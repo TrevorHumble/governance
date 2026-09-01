@@ -35,7 +35,7 @@ Write a one-paragraph description covering:
 - which artifact is affected (`agents/`, `standards/`, `.claude/skills/`, or a process step)
 - what triggered the observation
 - whether it has ever done real damage, stated plainly when the answer is no (per
-  `agents/orchestrator.md` § "How to write the report")
+  `standards/pipeline/templates/report-template.md`)
 
 ## Step 2: determine whether it blocks the run
 
