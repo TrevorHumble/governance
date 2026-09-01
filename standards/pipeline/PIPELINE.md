@@ -48,7 +48,7 @@ format in `standards/pipeline/templates/hand-off-format.md` on every send. A cha
 word afterward follows the return path in `standards/issue-standards.md` § "Owner hand-off".
 
 Packet: `standards/pipeline/steps/05-hand-off.md`, `standards/pipeline/templates/hand-off-format.md`,
-`standards/pipeline/edge/timed-run.md`
+`standards/pipeline/edge/timed-run.md`, `standards/pipeline/edge/night-pass.md`
 
 ## 06. Issue
 
@@ -57,7 +57,7 @@ write the local draft naming that number. Write the issue per the issue standard
 acceptance criteria, implementation plan, dependency map. GitHub is the single source of truth
 from the moment the issue exists.
 
-Packet: `standards/pipeline/steps/06-issue.md`
+Packet: `standards/pipeline/steps/06-issue.md`, `standards/pipeline/edge/night-pass.md`
 
 ## 07. Issue review
 
@@ -67,7 +67,7 @@ fresh instance; never override a FAIL. On PASS, stamp the claim label per
 competing claims on the issue's touched files before implementation starts.
 
 Packet: `standards/pipeline/steps/07-issue-review.md`, `standards/pipeline/templates/spawn-skeleton.md`,
-`standards/pipeline/templates/model-tiers.md`
+`standards/pipeline/templates/model-tiers.md`, `standards/pipeline/edge/night-pass.md`
 
 ## 08. Implement
 
@@ -115,4 +115,5 @@ Every surviving note carries all four priced options, summing to 100, and the ag
 for the owner. A session with zero notes still reports, in one line.
 
 Packet: `standards/pipeline/steps/12-report.md`, `standards/pipeline/templates/report-template.md`,
-`standards/pipeline/templates/model-tiers.md`, `standards/pipeline/edge/timed-run.md`
+`standards/pipeline/templates/model-tiers.md`, `standards/pipeline/edge/timed-run.md`,
+`standards/pipeline/edge/night-pass.md`

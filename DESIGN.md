@@ -465,8 +465,19 @@ the session that cited it filed issue #50 on its own initiative, as the owner co
 children filed inside its scope, asking the hand-off once per epic rather than once per child: that
 was the inherited-approval rule. The owner killed it in chat on 2026-08-31, the same conversation in
 which he approved the trust lines that now open `agents/orchestrator.md` (issue #65). Every child
-issue takes its own hand-off again, with no exception; `standards/issue-standards.md` § "Owner
-hand-off" owns the rule.
+issue takes its own hand-off again, with the one bounded, owner-created exception of a night pass;
+`standards/issue-standards.md` § "Owner hand-off" owns the rule.
+
+**The night pass (owner, evening of 2026-08-31).** In the same conversation that killed the
+inherited-approval rule above, the owner directed and hand-off-approved ("approved go ahead",
+scenario 5's no-power rule his own addition) a different, narrower mechanism: a one-night, one-session
+preapproval he grants in his own chat words, naming the scope it covers. The night
+pass is deliberately not the rule just killed: it requires the owner's own words, spoken fresh,
+every time, rather than one epic approval reaching forward into children he never saw; it is
+bounded to the session that granted it, with no agent-side revival or renewal; it keeps the full
+issue-review checklist, since the words it substitutes for were never the owner's own approved
+text; and it never reaches the governing-artifact surface or `definition-of-done.md`. Full
+mechanics: `standards/pipeline/edge/night-pass.md`.
 
 **Why the exemption is the process file's to define.** This repo is the parent of several children
 and only some run a pre-review process at all; what counts as "the artifact's output is unchanged"

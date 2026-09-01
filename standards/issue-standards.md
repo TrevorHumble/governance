@@ -171,6 +171,11 @@ The before step forces the implementer to decide which file, which mechanism, an
 
 ## Owner hand-off
 
+**Night-pass exception.** An owner-granted night pass substitutes for this section's per-issue
+approval, bounded to that session and to the scope the owner named in chat; full mechanics,
+including what it does and does not cover, live at `standards/pipeline/edge/night-pass.md`, the
+one home for the rule.
+
 Before an issue exists, the owner receives one short message: the title, the user story, and the
 acceptance criteria, in that order, and nothing else. The implementation plan, the dependency map,
 the context, and the prior-art list are never part of it; they still belong in the GitHub issue
@@ -226,12 +231,15 @@ sibling issue still open when a new rule lands, is already owned by
 `standards/adversarial-review-protocol.md` § "Wave governance: grandfathering, owner-invoked wave
 review, doc-currency step".
 
-**No row enforces the hand-off itself.** Neither § "Reviewer checklist" below nor
+**No row checks whether an ordinary hand-off happened.** Neither § "Reviewer checklist" below nor
 `agents/reviewer-issue.md` carries a row that checks whether the hand-off happened; the hand-off is
 deliberately unmechanized, and a reviewer does not fail an issue for it. `agents/reviewer-issue.md`
 does carry one row from this hand-off, judging the implementation plan against the criteria the
 owner approved; the rule and its tier scope are owned by § "Reviewer checklist" below's
-Ready-tier checklist, not restated here.
+Ready-tier checklist, not restated here. One exception: the night-pass marker is the one hand-off
+record a reviewer does check, and does FAIL on, both for well-formedness and for the issue meeting
+every condition in the edge file's § "What it covers", per
+`standards/pipeline/edge/night-pass.md`.
 
 ---
 
@@ -380,4 +388,4 @@ Free local tooling is in scope. An issue that requires an `external/paid API`, a
 
 `definition-of-done.md` (repo root) is not on the governing-artifact surface (`CLAUDE.md` § "Governing-artifact surface"), so changing it takes the routine one-reviewer bar like any other change. That placement is deliberate: the DoD needs to stay cheap to amend as the project learns what "done" actually requires.
 
-Cheap to review is not the same as unowned. Changing `definition-of-done.md` requires **owner approval** before it merges: the owner is the one person who can add or loosen a clause that every future PR review will be judged against. This is a recorded rule, not a mechanically enforced one: on a solo-maintainer repo (`required_approving_review_count = 0`), a CODEOWNERS-style gate cannot force owner sign-off, so the check is tamper-evident, not tamper-proof, the same honest posture as the rest of this pipeline (see the governance repo's `DESIGN.md` § "Lean review process rationale").
+Cheap to review is not the same as unowned. Changing `definition-of-done.md` requires **owner approval** before it merges: the owner is the one person who can add or loosen a clause that every future PR review will be judged against. This is a recorded rule, not a mechanically enforced one: on a solo-maintainer repo (`required_approving_review_count = 0`), a CODEOWNERS-style gate cannot force owner sign-off, so the check is tamper-evident, not tamper-proof, the same honest posture as the rest of this pipeline (see the governance repo's `DESIGN.md` § "Lean review process rationale"). A night pass never covers a `definition-of-done.md` change; that reservation stays the owner's alone, per `standards/pipeline/edge/night-pass.md`.

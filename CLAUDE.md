@@ -38,7 +38,8 @@ full mechanics are owned by `standards/pipeline/steps/04-pre-review.md`, and the
 repo's own profile declares `"preReview": "none"`.
 
 **Owner hand-off.** Before the issue is filed, the owner receives the title, the user story,
-and the acceptance criteria as one short message and approves them; full mechanics are owned by
+and the acceptance criteria as one short message and approves them, except where the owner's own
+night pass covers it, per `standards/pipeline/edge/night-pass.md`; full mechanics are owned by
 `standards/issue-standards.md` § "Owner hand-off", not restated here.
 
 ## Model policy

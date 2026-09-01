@@ -21,3 +21,6 @@ issue".
 Rare case: in an autonomous timed run, a per-segment halt folds its report into the session's
 end-of-run report, per `agents/orchestrator.md` § "Stop condition"; the timed run's own
 mechanics: `standards/pipeline/edge/timed-run.md`.
+
+Rare case: an issue rode a night pass this session; the report lists it, quoting the grant it
+rode on: `standards/pipeline/edge/night-pass.md`.

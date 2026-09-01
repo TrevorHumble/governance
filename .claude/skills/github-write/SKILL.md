@@ -29,14 +29,18 @@ status** (open/closed/labels). The file is the detail; the board is the state. T
 equal, see `CLAUDE.md` § "Repo conventions". The sync rule:
 
 - **On issue creation** → the owner hand-off message defined in `standards/issue-standards.md` §
-  "Owner hand-off" is sent and approved **before** `gh issue create` runs; an agent following this
-  recipe cannot file an issue around the hand-off. Then run `gh issue create`, plain title (no
-  locally-minted number prefix; GitHub assigns the number, per `standards/issue-standards.md` §
-  "Naming"), with `--label needs-issue-review` applied at creation time alongside the tier label:
+  "Owner hand-off" is sent and approved **before** `gh issue create` runs, except for an issue an
+  owner-granted night pass covers, per `standards/pipeline/edge/night-pass.md`; an agent following
+  this recipe cannot file an issue around the hand-off outside that one exception. Then run
+  `gh issue create`, plain title (no locally-minted number prefix; GitHub assigns the number, per
+  `standards/issue-standards.md` § "Naming"), with `--label needs-issue-review` applied at
+  creation time alongside the tier label:
   `ready` / `backlog` / `low priority`. Capture the number GitHub assigns before writing the local
   draft file, since that number is the draft's identity. The issue body can summarize and link the
   file. Record the approval in both the GitHub issue body and the draft as required by
-  `standards/issue-standards.md` § "Owner hand-off".
+  `standards/issue-standards.md` § "Owner hand-off"; for an issue a night pass covers, the
+  `Night-pass:` marker is recorded in both homes instead, per
+  `standards/pipeline/edge/night-pass.md`.
 - **On merge to the default branch** → close the matching card; the ship step's packet,
   `standards/pipeline/steps/11-ship.md`, carries the close command.
 - **On graduation/supersession** → update the card (re-label, or close with a pointer to the successor).
