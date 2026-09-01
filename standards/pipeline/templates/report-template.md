@@ -1,7 +1,6 @@
 # End-of-run report
 
-Moved from `agents/orchestrator.md` § "How to write the report" and § "Report template". Named
-by `standards/pipeline/steps/12-report.md`.
+Moved from `agents/orchestrator.md`. Named by `standards/pipeline/steps/12-report.md`.
 
 ## How to write it
 
