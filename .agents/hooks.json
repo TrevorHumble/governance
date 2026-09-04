@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "powershell -ExecutionPolicy Bypass -File .claude/hooks/session-greeting.ps1"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "ask_question",
+        "command": "powershell -ExecutionPolicy Bypass -File .claude/hooks/goal-gate.ps1"
+      }
+    ],
+    "Stop": [
+      {
+        "command": "powershell -ExecutionPolicy Bypass -File .claude/hooks/loop-gate.ps1"
+      }
+    ]
+  }
+}
