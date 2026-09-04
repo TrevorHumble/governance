@@ -33,7 +33,8 @@ its four roots are encoded by `shelfRoots`.
 
 **Parent owns:** the structure itself; the review process (`standards/`, the reviewer and
 pipeline agents including the orchestrator's playbook sub-tree, the five pipeline commands
-`/build` `/buildlog` `/post-wave-review` `/realign` `/resume`); `.githooks/`; its three named
+`/build` `/buildlog` `/post-wave-review` `/realign` `/resume`); `.githooks/`; `.agents/**` (the
+Antigravity runtime configuration, hooks, rules, and skills); its three named
 pipeline hooks under `.claude/hooks/` (the directory itself is split ownership, see below); the
 repo-level rule files it ships (`.claude/rules/dependencies.md`, `AGENTS.md`,
 `definition-of-done.md`, `buildlog/README.md`, `.gitattributes`); the ownership manifest itself
@@ -66,12 +67,13 @@ Four directories split ownership by named file rather than by directory:
 - `.claude/hooks/`: the parent owns exactly its three named pipeline hooks; a child may add its
   own Claude Code hooks there and owns them.
 
-`.githooks/` is deliberately not on this list and stays a blanket glob: the parent owns the
-commit-time pipeline outright, the manifest ships no named child file under it. Every one of the
-four directories above that is on this list is enumerated rather than globbed for the opposite
-reason: the manifest already ships named files under each, so a file a child adds there is
-child-owned in fact, and a glob would sweep it into the parent-owned set, locking a child out of
-its own hook or its own skill on every branch but a sync branch.
+`.githooks/` and `.agents/**` are deliberately not on this list and stay blanket globs: the
+parent owns the commit-time pipeline and Antigravity runtime configuration outright, the manifest
+ships no named child file under either. Every one of the four directories above that is on this
+list is enumerated rather than globbed for the opposite reason: the manifest already ships named
+files under each, so a file a child adds there is child-owned in fact, and a glob would sweep it
+into the parent-owned set, locking a child out of its own hook or its own skill on every branch
+but a sync branch.
 
 ---
 
