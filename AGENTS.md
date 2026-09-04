@@ -15,6 +15,10 @@ Everything an agent needs lives there or in the files it points to:
 - Path-scoped operating rules live in `.claude/rules/` and load automatically for the files they
   govern; which rules exist is per-repo. This is a Claude Code auto-load mechanism, so a
   non-Claude tool must read those files explicitly.
+- Git hooks arming: `.githooks` must be active for commit gates to fire. If `git config core.hooksPath`
+  is not yet `.githooks`, run `powershell -ExecutionPolicy Bypass -File tools/setup-hooks.ps1` before committing.
+- Antigravity customizations: `.agents/` points directly to `.claude/` for rules, operating skills,
+  workflow commands, and hooks.
 
 This file is deliberately a pointer, not a copy: duplicating `CLAUDE.md` here would let the
 two drift. There is one operating contract, and it is `CLAUDE.md`.
