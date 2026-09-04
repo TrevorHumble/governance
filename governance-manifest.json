@@ -1,6 +1,7 @@
 {
   "retired": [],
   "sharedPaths": [
+    ".agents/**",
     "standards/**",
     "agents/**",
     ".claude/commands/build.md",
@@ -64,6 +65,7 @@
     "owner-declines.md"
   ],
   "classes": {
+    ".agents/**": "content",
     "standards/**": "content",
     "agents/**": "content",
     ".claude/commands/build.md": "content",
