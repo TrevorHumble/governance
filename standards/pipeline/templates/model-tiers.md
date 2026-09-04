@@ -36,11 +36,11 @@ that signal, every implementer, Fable included, goes through the standard indepe
 review per the tiers above; there is no standing Fable-specific review handling until the owner
 specifies one.
 
-**Gemini / Antigravity.** Running this pipeline under Google Antigravity / Gemini models maps
-tiers to these ecosystem defaults: the **Opus tier** (orchestrator plus reviewers) maps to
-**Gemini 3.6 Flash (High)**; the **Implementer (Sonnet) tier** maps to **Gemini 3.5 (High) or
-Sonnet 4.6** (Antigravity exposes Sonnet 4.6). These are defaults, not an override of the tiers
-above: the reviewer must always run on a model that is different from, and non-weaker than, the
-implementer's. Where a Gemini pairing would violate that, for example an implementer on Sonnet
-4.6 paired with a reviewer left on a lighter default, the reviewer is bumped to a non-weaker model
-rather than run under the default; the invariant governs, the mapping is illustrative.
+**Gemini / Antigravity.** Running this pipeline under Google Antigravity / Gemini models uses
+**Gemini 3.8 Flash (High)** across all roles: orchestrator, implementer, and reviewers alike.
+Per owner explicit directive (2026-09-03), the requirement for distinct models between
+implementer and reviewer is waived for Gemini / Antigravity sessions: Gemini 3.8 Flash (High) is
+the single capable model for all seats. Review rounds remain hostile-by-default applying the
+authoritative reviewer checklists, but run under the unified Gemini 3.8 tier. Claude Code
+sessions continue enforcing the distinct-model independence rule and Opus/Sonnet/Haiku tiers
+above without change.

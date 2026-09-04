@@ -73,6 +73,8 @@ Co-Authored-By: <committing model> <noreply@anthropic.com>
 '@
 ```
 
+For Gemini / Antigravity sessions, use `<noreply@google.com>` (e.g. `Gemini 3.8 Flash <noreply@google.com>`).
+
 Run `git status` before staging to avoid committing `.env` or large binaries.
 
 ## Opening a PR
