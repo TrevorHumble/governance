@@ -3,10 +3,10 @@
 Moved from `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Named by
 `standards/pipeline/steps/07-issue-review.md` and `standards/pipeline/steps/09-pr-review.md`.
 
-Assemble every reviewer spawn prompt from this skeleton: static content first (see the ordering
-note in `standards/adversarial-review-protocol.md` § "Static-content-first ordering"), volatile
-artifact last, framed exactly per `standards/reviewer-conduct.md` § "De-bias the setup" (goal
-only, never the mechanisms; no positive hints; no planted suspicions; full scope).
+Assemble every reviewer spawn prompt from this skeleton, framed exactly per
+`standards/reviewer-conduct.md` § "De-bias the setup" (goal only, never the mechanisms; no
+positive hints; no planted suspicions; full scope). Content order below is not chosen for
+prompt caching: `standards/adversarial-review-protocol.md` § "Spawning a reviewer" - Static-content-first ordering records why.
 
 **Protocol line.** Name whichever protocol file(s) the target charter's own Input / output
 contract names: `standards/reviewer-conduct.md` alone for most reviewers, or both
