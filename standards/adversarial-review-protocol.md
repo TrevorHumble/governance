@@ -13,6 +13,11 @@ spawned (stance, de-bias, calibration, independence, research-first, no human in
 output discipline, what the spawner must never do, read-only conduct, and finding disposition).
 This file keeps the dispatch rules: who spawns reviewers, how many, and in what rounds.
 
+**Duplicated passages, tracked here.** The `**Scope:**` line and the lean-review rationale
+paragraph above both also appear, word for word, in `standards/reviewer-conduct.md`. This file is
+the single owner of both: an edit to either passage lands here first, and is carried into
+`standards/reviewer-conduct.md` in the same change.
+
 ---
 
 ## Right-sizing: should this be here, what does it cost, is this the smallest shape

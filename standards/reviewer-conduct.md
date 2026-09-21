@@ -11,6 +11,11 @@ artifacts, verdict capture, a severity adjudicator, reviewer panels, a system-le
 bar) sits between an artifact and its review. See the governance repo's `DESIGN.md` § "Lean
 review process rationale" for the rationale recorded there.
 
+**Duplicated passages, owned elsewhere.** The `**Scope:**` line and the lean-review rationale
+paragraph above are copied word for word from `standards/adversarial-review-protocol.md`, the
+single owner of both. Edit them there first; that edit is carried into this file in the same
+change.
+
 ---
 
 ## Stance
