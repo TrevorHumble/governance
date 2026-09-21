@@ -325,10 +325,17 @@ declaration present though the measure is within the bound) are
 advisory per § "Advisory-lens lifecycle" and disposed per
 `standards/reviewer-conduct.md` § "Finding disposition", exactly like any other advisory lens's findings.
 
-**Static-content-first ordering.** Place the static standard(s) and protocol first in every spawn
-prompt, and the volatile artifact (the diff, the skill draft, the issue text) after it. This
-ordering only matters for prompt caching, which activates only above a model-dependent minimum
-cached-prefix size; below that minimum the ordering has no effect.
+**Static-content-first ordering: tested, does not work.** A 2026-09-20/21 test (issue #85) ran
+three controlled same-session Sonnet spawns inside the 5-minute prompt-caching window. Two
+prompts (A, C) were byte-identical; A wrote 81,533 tokens to cache, C read all 81,533 back. A
+third prompt (B) shared the first 7,375 characters with A and differed only after that point; B
+wrote 30,219 tokens fresh and read only 51,342, the fixed system-and-tools prefix every Sonnet
+subagent in this repo already hits, not any part of the shared 7,375 characters. A cache
+breakpoint exists at the end of a subagent's first message, but no boundary sits inside it: only
+a byte-identical whole first message hits, which no reviewer round produces, since each
+reviewer's objective and artifact list differ. There is no spawn-prompt ordering that captures a
+saving from prompt caching here. This paragraph is kept, in place of an instruction, so a future
+agent with the same idea finds this record before re-running the experiment.
 
 ---
 
