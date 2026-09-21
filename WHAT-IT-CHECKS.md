@@ -123,7 +123,7 @@ experiment: review practice is real, only the "prove it happened" layer is delib
 
 **Note challenging is judgment, mostly unmechanized.** Every end-of-run note is meant to be
 challenged by a reviewer other than the agent that wrote it (`agents/orchestrator.md` § "No agent
-files its own issue"; `standards/adversarial-review-protocol.md` § "Finding disposition",
+files its own issue"; `standards/reviewer-conduct.md` § "Finding disposition",
 "Challenging a deferral"; `agents/reviewer-notes.md`). What is mechanized and tested is only the
 exact-match layer: a recorded decline in `owner-declines.md` suppressing a note, and an open
 issue's title or `Touches` line covering one, both on the normalized one-line substance key

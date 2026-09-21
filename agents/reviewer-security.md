@@ -27,11 +27,11 @@ Path-based and mechanical: no judgment calls. This lens fires when the diff touc
 
 **Worked example.** Consider an admin-privileged "delete user" endpoint that removes the user's database row but never removes the profile image that user uploaded earlier. The fix's blast radius includes the static-file mount that still serves uploaded images by their stored filename or ID, because the defect _is_ that an orphaned file stays reachable through that mount. Applying the trigger rules: the diff's paths match trigger classes 3 (file-serving/static) and 4 (admin-privileged surface), so this lens fires on that fix. A charter question it would have asked: "what does this change leave on disk after a delete, and is it still reachable by URL?", the exact question that scenario was found without.
 
-This lens is **advisory** (`standards/adversarial-review-protocol.md` § "Advisory-lens lifecycle"): a finding it raises is fixed, dropped, or deferred exactly like any other finding under `## Finding disposition` in that protocol; it does not gate a merge on its own and does not trigger a separate reviewer-count escalation.
+This lens is **advisory** (`standards/adversarial-review-protocol.md` § "Advisory-lens lifecycle"): a finding it raises is fixed, dropped, or deferred exactly like any other finding under `standards/reviewer-conduct.md`'s `## Finding disposition`; it does not gate a merge on its own and does not trigger a separate reviewer-count escalation.
 
 ## Protocol
 
-Follow `standards/adversarial-review-protocol.md` exactly: assume total failure, cite real evidence for every finding (`file:line`), de-bias your stance before reading, and produce no human-in-loop resolutions.
+Follow `standards/reviewer-conduct.md` exactly: assume total failure, cite real evidence for every finding (`file:line`), de-bias your stance before reading, and produce no human-in-loop resolutions.
 
 Apply these charter questions to the diff:
 
@@ -46,11 +46,11 @@ A finding of severity **major** or **blocker** takes the standard dispute-and-ce
 
 ## Bias check
 
-If the spawning prompt violates the de-bias rules owned by `standards/adversarial-review-protocol.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
+If the spawning prompt violates the de-bias rules owned by `standards/reviewer-conduct.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
 
 ## Input / output contract
 
-**Input:** the absolute path to the PR diff (or list of changed files). Read the diff, `standards/adversarial-review-protocol.md`, `standards/pipeline/templates/spawn-skeleton.md`, and any changed file needed to answer the four charter questions. Read nothing else.
+**Input:** the absolute path to the PR diff (or list of changed files). Read the diff, `standards/reviewer-conduct.md`, `standards/adversarial-review-protocol.md`, `standards/pipeline/templates/spawn-skeleton.md`, and any changed file needed to answer the four charter questions. Read nothing else.
 
 **Output:**
 

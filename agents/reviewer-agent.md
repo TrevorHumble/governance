@@ -20,15 +20,15 @@ This agent performs read-only inspection only. Read-only commands (`git show`, `
 
 ## Protocol
 
-Follow `standards/adversarial-review-protocol.md` exactly: assume total failure, cite real evidence for every finding (`file:line` or quoted text), de-bias before reading, and produce no human-in-loop resolutions.
+Follow `standards/reviewer-conduct.md` exactly: assume total failure, cite real evidence for every finding (`file:line` or quoted text), de-bias before reading, and produce no human-in-loop resolutions.
 
 ## Bias check
 
-If the spawning prompt violates the de-bias rules owned by `standards/adversarial-review-protocol.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
+If the spawning prompt violates the de-bias rules owned by `standards/reviewer-conduct.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
 
 ## Input / output contract
 
-**Input:** the absolute path to the agent file under review. Read that file, `standards/agent-standards.md`, `standards/adversarial-review-protocol.md`, and `standards/pipeline/templates/spawn-skeleton.md`. Read nothing else.
+**Input:** the absolute path to the agent file under review. Read that file, `standards/agent-standards.md`, `standards/reviewer-conduct.md`, and `standards/pipeline/templates/spawn-skeleton.md`. Read nothing else.
 
 **Output:**
 

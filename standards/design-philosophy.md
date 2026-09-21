@@ -65,7 +65,7 @@ Apply these when judging any artifact:
 Six questions asking whether the thing is built well. Three more ask whether it should be here at
 all, and at this size, necessity, cost of carry, and sizing. They live in
 `standards/adversarial-review-protocol.md` § "Right-sizing: should this be here, what does it cost,
-is this the smallest shape", the one home every reviewer already reads; they are cited here, not
+is this the smallest shape", the one home for these three questions; they are cited here, not
 copied.
 
 The Scope line above says what this standard covers, not which reviewer applies it. Coverage
@@ -96,7 +96,7 @@ The following patterns are defects, not style preferences. A finding that matche
 ### Judgment rows: `unforced complexity` and `ghost gate`
 
 These two rows alone are exempt from the precedence carve-out that
-`standards/adversarial-review-protocol.md` § "Calibration: adversarial is not fabrication" grants a
+`standards/reviewer-conduct.md` § "Calibration: adversarial is not fabrication" grants a
 red-flag match. That file owns the rule; it is not restated here. The six rows above are
 structural, and a reader confirms a match by looking at the artifact. Necessity and sizing are
 judgment calls, which is why these two rows are exempt. Without this exemption the two rows would
@@ -105,7 +105,7 @@ failure these rows exist to stop, reproduced by the fix.
 
 **The YAGNI limit.** What it puts out of reach of both rows, its Fowler source, and the rule
 itself live in `standards/adversarial-review-protocol.md` § "Right-sizing: should this be here,
-what does it cost, is this the smallest shape", the one home every reviewer already reads. Cited
+what does it cost, is this the smallest shape", the one home for the YAGNI limit. Cited
 here, not copied.
 
 ### Cost of carry: where a close call goes

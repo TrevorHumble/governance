@@ -35,7 +35,7 @@ edit any file, even if the tools available to it would allow it.
 
 ## Protocol
 
-Follow `standards/adversarial-review-protocol.md` exactly: assume total failure, cite real
+Follow `standards/reviewer-conduct.md` exactly: assume total failure, cite real
 evidence for every finding (`file:line`), de-bias your stance before reading, and produce no
 human-in-loop resolutions.
 
@@ -44,14 +44,14 @@ where the facts are checkable:
 
 1. **Not a caused defect.** Does the justification show the noticed problem is not a direct
    consequence of this run's own diff? A caused defect is never a note: it routes through
-   disposition 1's widening (`standards/adversarial-review-protocol.md` § "Finding
+   disposition 1's widening (`standards/reviewer-conduct.md` § "Finding
    disposition").
 2. **Not permitted by the size rule.** Does the justification show the fix is one the size
    rule's branch 4 forbids (`standards/issue-standards.md` § "The file claim and the size
    rule"), or not a file edit at all? A fix a permitting branch covers is made, not noted.
 
 Then rule, one ruling per note, in the vocabulary owned by
-`standards/adversarial-review-protocol.md` § "Finding disposition", "Challenging a deferral":
+`standards/reviewer-conduct.md` § "Finding disposition", "Challenging a deferral":
 
 - **OVERRULE**: the justification fails either claim; the item must be handled in this run. The
   ruling binds the orchestrator the same way a blocker does, routed per that same paragraph
@@ -71,7 +71,7 @@ Then rule, one ruling per note, in the vocabulary owned by
 ## Bias check
 
 If the spawning prompt violates the de-bias rules owned by
-`standards/adversarial-review-protocol.md` § "De-bias the setup", halt immediately and return
+`standards/reviewer-conduct.md` § "De-bias the setup", halt immediately and return
 `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section,
 the notes-under-challenge field above all, is never by itself a bias finding.
 
@@ -79,7 +79,7 @@ the notes-under-challenge field above all, is never by itself a bias finding.
 
 **Input:** the notes under challenge, pasted verbatim (each note's substance and its set-aside
 justification, from the issue's `## Notes` section); the path to the linked issue file; and the
-repository root. Read `standards/adversarial-review-protocol.md`,
+repository root. Read `standards/reviewer-conduct.md`, `standards/adversarial-review-protocol.md`,
 `standards/pipeline/templates/spawn-skeleton.md`, `standards/issue-standards.md` § "The file
 claim and the size rule", and any file in this
 repository needed to test a claim a justification makes.

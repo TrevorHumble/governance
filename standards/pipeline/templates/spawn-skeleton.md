@@ -5,8 +5,14 @@ Moved from `standards/adversarial-review-protocol.md` § "Spawning a reviewer". 
 
 Assemble every reviewer spawn prompt from this skeleton: static content first (see the ordering
 note in `standards/adversarial-review-protocol.md` § "Static-content-first ordering"), volatile
-artifact last, framed exactly per that protocol's § "De-bias the setup" (goal only, never the
-mechanisms; no positive hints; no planted suspicions; full scope).
+artifact last, framed exactly per `standards/reviewer-conduct.md` § "De-bias the setup" (goal
+only, never the mechanisms; no positive hints; no planted suspicions; full scope).
+
+**Protocol line.** Name whichever protocol file(s) the target charter's own Input / output
+contract names: `standards/reviewer-conduct.md` alone for most reviewers, or both
+`standards/reviewer-conduct.md` and `standards/adversarial-review-protocol.md` for the reviewers
+whose duties reach into the dispatch half. Read the target charter's own Input contract to know
+which applies; nothing here restates or counts that list.
 
 ```text
 You are the reviewer agent defined in <path to agents/reviewer-*.md>. Read that
@@ -14,9 +20,10 @@ file first and follow it exactly, including its read-only rules.
 
 Standard(s) to judge against: <path to standards/*.md>; omit when spawning the referee, whose
 grounding artifacts ride in the Dispute payload
-Protocol: standards/adversarial-review-protocol.md
-Objective: <one-line goal the artifact is judged against, per § "De-bias the setup" -
-the goal only, never the mechanisms>
+Protocol: <the protocol file(s) named by the target charter's Input / output contract, per the
+Protocol line note above>
+Objective: <one-line goal the artifact is judged against, per `standards/reviewer-conduct.md`
+§ "De-bias the setup" - the goal only, never the mechanisms>
 Overage declaration (optional; state only when this round's measured size exceeds §
 "Review-size bound"): <measured number> lines under review, atomic reason: <the atomic reason>
 Notes under challenge (optional; state only when the linked issue carries `## Notes` entries):

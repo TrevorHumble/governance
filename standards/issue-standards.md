@@ -58,7 +58,7 @@ owner sign-off and the issue's existing footprint. Full mechanics and both bound
 
 This section is the one home for how a run claims files and when a small fix skips the claim
 entirely. Every other file that needs either rule points here: `standards/decision-heuristics.md`
-§ "Scope discipline", `standards/adversarial-review-protocol.md` § "Finding disposition",
+§ "Scope discipline", `standards/reviewer-conduct.md` § "Finding disposition",
 `agents/orchestrator.md` § "No agent files its own issue", `agents/reviewer-issue.md`,
 `agents/reviewer-pr.md`, `agents/implementation-agent.md`,
 `.claude/skills/capture-system-defect/SKILL.md`, `standards/pipeline/PIPELINE.md`,
@@ -131,7 +131,7 @@ protection, so a `Touches` line writes paths the way `git ls-files` prints them.
    branch-2 change that skipped its required addition.
 2. **Ten lines or fewer, file free:** permitted. The acting run appends the file to its own
    issue's `Touches` line (both copies: the GitHub issue body and the local draft), recorded as a
-   size-rule claim per `standards/adversarial-review-protocol.md` § "Finding disposition",
+   size-rule claim per `standards/reviewer-conduct.md` § "Finding disposition",
    "Recording a widening". Its existing `active-<N>-*` label now covers the file for as long as
    the run continues.
 3. **More than ten lines, file free:** permitted only after the same `Touches` addition and
@@ -328,8 +328,8 @@ The block has four required fields, each non-empty:
 
 - **Spawned by**: the spawning issue `#`, PR `#`, or run identifier the finding came from (provenance).
 - **Why**: the defect or gap the new work addresses (the need).
-- **Why separable**: why the work is more work, not absorbed into the spawning change. The value must name one of the three defer categories `standards/adversarial-review-protocol.md` § "Finding disposition" defines. That section is the single owner of the categories' substance; this section only requires citing one of them, it does not restate them.
-- **Why not solved in the spawning session:** the concrete blocker that kept the work out of the spawning change (e.g. needs an owner design decision; would exceed the change's bounded scope). A file outside the spawning change's touched files is a sufficient reason only when the defect is not one the spawning change itself caused; a defect the change caused is repaired in place under `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1, not filed as a separate issue, so "outside the touched files" alone does not justify filing when the diff caused the gap.
+- **Why separable**: why the work is more work, not absorbed into the spawning change. The value must name one of the three defer categories `standards/reviewer-conduct.md` § "Finding disposition" defines. That section is the single owner of the categories' substance; this section only requires citing one of them, it does not restate them.
+- **Why not solved in the spawning session:** the concrete blocker that kept the work out of the spawning change (e.g. needs an owner design decision; would exceed the change's bounded scope). A file outside the spawning change's touched files is a sufficient reason only when the defect is not one the spawning change itself caused; a defect the change caused is repaired in place under `standards/reviewer-conduct.md` § "Finding disposition" disposition 1, not filed as a separate issue, so "outside the touched files" alone does not justify filing when the diff caused the gap.
 
 Example block:
 

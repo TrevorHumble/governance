@@ -31,7 +31,7 @@ reviewer").
 
 **Verify before accepting a PASS.** Confirm every cited URL resolves, every `file:line` exists at
 that location, and every item in scope has an explicit finding; this check is the orchestrator's
-own, never delegated (`standards/adversarial-review-protocol.md` § "The spawner must never" item
+own, never delegated (`standards/reviewer-conduct.md` § "The spawner must never" item
 5).
 
 Dispatching a review round re-stamps the issue's `active-<N>-*` claim label, per
