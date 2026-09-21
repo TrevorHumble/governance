@@ -28,18 +28,18 @@ This agent performs read-only inspection only. Read-only commands (`git show`, `
 
 ## Protocol
 
-Follow `standards/adversarial-review-protocol.md` exactly: assume total failure, cite real evidence for every finding (`file:line`), de-bias your stance before reading, and produce no human-in-loop resolutions.
+Follow `standards/reviewer-conduct.md` exactly: assume total failure, cite real evidence for every finding (`file:line`), de-bias your stance before reading, and produce no human-in-loop resolutions.
 
 Read `DESIGN.md` before reading the artifact under review. Verify each of the following:
 
 1. The proposed change does not contradict any decision or constraint stated in `DESIGN.md`.
 2. The proposed change does not duplicate an existing component. Check the `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `standards/`, `.claude/commands/`, and `tools/` directory listings, the actual current inventory, and read `DESIGN.md` for how each existing component fits together.
 3. The proposed change fits within the documented architecture: a new component belongs to an existing layer; a new agent has a clear single responsibility distinct from existing agents.
-4. Any deferral or scope change the artifact proposes is consistent with `standards/adversarial-review-protocol.md` § "Finding disposition" (disposition 3, "genuinely separable scope"), not an undocumented overreach.
+4. Any deferral or scope change the artifact proposes is consistent with `standards/reviewer-conduct.md` § "Finding disposition" (disposition 3, "genuinely separable scope"), not an undocumented overreach.
 
 ## Bias check
 
-If the spawning prompt violates the de-bias rules owned by `standards/adversarial-review-protocol.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
+If the spawning prompt violates the de-bias rules owned by `standards/reviewer-conduct.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
 
 ## Input / output contract
 
@@ -48,7 +48,7 @@ If the spawning prompt violates the de-bias rules owned by `standards/adversaria
 - **Automatic PR-review dispatch:** the working-tree diff / PR under review. Read every changed file in it.
 - **On request:** the absolute path to the issue or change descriptor under review. Read that file.
 
-Either way, also read `DESIGN.md`, `standards/adversarial-review-protocol.md`, and `standards/pipeline/templates/spawn-skeleton.md`. To confirm no duplication of an existing component, also read the directory listings of `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `standards/`, `.claude/commands/`, and `tools/` (Read-only); those directory listings are the actual current inventory, and DESIGN.md is read for how each component fits together, not as a substitute inventory. Beyond that, read only files in this repository needed to test a claim the artifact makes: a file already serving a responsibility the artifact proposes to add, or a file the artifact's claims may contradict, whether or not the artifact names it.
+Either way, also read `DESIGN.md`, `standards/reviewer-conduct.md`, `standards/adversarial-review-protocol.md`, and `standards/pipeline/templates/spawn-skeleton.md`. To confirm no duplication of an existing component, also read the directory listings of `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `standards/`, `.claude/commands/`, and `tools/` (Read-only); those directory listings are the actual current inventory, and DESIGN.md is read for how each component fits together, not as a substitute inventory. Beyond that, read only files in this repository needed to test a claim the artifact makes: a file already serving a responsibility the artifact proposes to add, or a file the artifact's claims may contradict, whether or not the artifact names it.
 
 **Output:**
 
@@ -66,5 +66,5 @@ One token verdict followed by the numbered defect list. Every check above must h
 - [ ] No contradiction of any constraint or decision in `DESIGN.md`.
 - [ ] No duplicate: the proposed component does not already exist among the `agents/`, `.claude/skills/`, `.agents/skills/` (if such a directory exists in this repo), `standards/`, `.claude/commands/`, and `tools/` directory listings.
 - [ ] New component has a single responsibility distinct from all existing components.
-- [ ] Any deferral proposed is consistent with `standards/adversarial-review-protocol.md` § "Finding disposition" (disposition 3, "genuinely separable scope").
+- [ ] Any deferral proposed is consistent with `standards/reviewer-conduct.md` § "Finding disposition" (disposition 3, "genuinely separable scope").
 - [ ] No FINAL, LAST, or TRULY_FINAL in any filename or section header referenced by the artifact.

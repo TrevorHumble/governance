@@ -17,7 +17,7 @@ since two agents must never share a file). An amendment that needs a file outsid
 not an amendment, it is a new issue: the owner directs it off the end-of-run report, filed and
 reviewed on its own.
 
-**A widening is not an amendment.** `standards/adversarial-review-protocol.md` § "Finding
+**A widening is not an amendment.** `standards/reviewer-conduct.md` § "Finding
 disposition" disposition 1's widening adds a file outside `Touches` to repair a defect the change
 itself caused. It changes no acceptance criterion and needs no owner-plus-reviewer sign-off,
 unlike an amendment, which spends new scope on purpose. It also does not get the concurrency

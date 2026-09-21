@@ -15,8 +15,7 @@ This skill writes the note and returns you to the current task.
 
 **Caused by your own diff? Wrong door.** If the defect is a direct consequence of the change you
 are making right now, a comment or cross-reference your own edits just made false, this skill is
-not where it goes: it is fixed in place under `standards/adversarial-review-protocol.md` §
-"Finding disposition", "Recording a widening" paragraph (the single owner of the record's shape
+not where it goes: it is fixed in place under `standards/reviewer-conduct.md` § "Finding disposition", "Recording a widening" paragraph (the single owner of the record's shape
 and where it lands), rather than captured as a note. Use this skill only for a defect your current
 diff did not cause.
 

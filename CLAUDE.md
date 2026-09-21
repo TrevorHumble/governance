@@ -52,8 +52,9 @@ Pre-review-surface carve-out stays authoritative in `agents/orchestrator.md` § 
 ## Adversarial review
 
 Every artifact ships only after independent, hostile-by-default review with evidence-backed
-findings and no human in the loop to resolve them. Full protocol, cadence, and dispatch rules:
-`standards/adversarial-review-protocol.md`.
+findings and no human in the loop to resolve them. Stance, calibration, and the rule against a
+human in the loop are authoritative in `standards/reviewer-conduct.md`; cadence and dispatch
+rules are in `standards/adversarial-review-protocol.md`.
 
 ## Documentation split
 

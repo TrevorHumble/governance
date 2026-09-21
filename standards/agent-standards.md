@@ -27,7 +27,7 @@ and no agent files an issue on its own initiative; the agent's job is only to ha
 upward, never to open it as an issue. **Reviewer carve-out:** a reviewer agent needs no separate
 slot for this, since a reviewer is read-only and never edits a file: its noticed defect is already
 a finding in its numbered defect list, and the orchestrator disposes of that finding per
-`standards/adversarial-review-protocol.md` § "Finding disposition" like any other. When the
+`standards/reviewer-conduct.md` § "Finding disposition" like any other. When the
 noticed defect is instead a pre-existing instance a standard scopes out of the current diff's
 findings, the design-philosophy reviewer's route home is its own `Report notes:` block, per
 `agents/reviewer-design-philosophy.md` § "Input / output contract". The referee carries a
@@ -73,7 +73,8 @@ minimum-context rule: a reviewer's briefing carries only what the spawn-prompt s
 (`standards/pipeline/templates/spawn-skeleton.md`) names, nothing more; any task-specific addition
 beyond the skeleton's own lines is bias. What counts
 as spawner bias and the sanctioned briefing fields are owned by
-`standards/adversarial-review-protocol.md` § "De-bias the setup" and § "Spawning a reviewer"; this
+`standards/reviewer-conduct.md` § "De-bias the setup" and `standards/adversarial-review-protocol.md`
+§ "Spawning a reviewer"; this
 standard does not restate them.
 
 ---

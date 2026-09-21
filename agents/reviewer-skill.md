@@ -20,15 +20,15 @@ This agent performs read-only inspection only. Read-only commands (`git show`, `
 
 ## Protocol
 
-Follow `standards/adversarial-review-protocol.md` exactly: assume total failure, cite real evidence for every finding (`file:line` or quoted sentence), de-bias before reading, and produce no human-in-loop resolutions.
+Follow `standards/reviewer-conduct.md` exactly: assume total failure, cite real evidence for every finding (`file:line` or quoted sentence), de-bias before reading, and produce no human-in-loop resolutions.
 
 ## Bias check
 
-If the spawning prompt violates the de-bias rules owned by `standards/adversarial-review-protocol.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
+If the spawning prompt violates the de-bias rules owned by `standards/reviewer-conduct.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
 
 ## Input / output contract
 
-**Input:** the absolute path to the SKILL.md under review. Read that file, `standards/skill-standards.md`, `standards/adversarial-review-protocol.md`, and `standards/pipeline/templates/spawn-skeleton.md`. Read nothing else. Do not read files referenced inside SKILL.md; if a referenced path's existence matters, express it as a checklist finding ("the skill asserts a reference path that does not resolve") rather than by reading those files. **Existence-check boundary:** confirming a referenced path resolves may use a directory listing or glob (existence only: `git ls-files`, a Glob pattern, or a directory listing); opening the referenced file's contents stays forbidden. Checking that a path exists is not "reading" it.
+**Input:** the absolute path to the SKILL.md under review. Read that file, `standards/skill-standards.md`, `standards/reviewer-conduct.md`, and `standards/pipeline/templates/spawn-skeleton.md`. Read nothing else. Do not read files referenced inside SKILL.md; if a referenced path's existence matters, express it as a checklist finding ("the skill asserts a reference path that does not resolve") rather than by reading those files. **Existence-check boundary:** confirming a referenced path resolves may use a directory listing or glob (existence only: `git ls-files`, a Glob pattern, or a directory listing); opening the referenced file's contents stays forbidden. Checking that a path exists is not "reading" it.
 
 **Output:**
 

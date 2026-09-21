@@ -101,7 +101,7 @@ instead of committing it (build speed over serialization is the deliberate trade
 orchestrator then routes that non-`.md` fix through the normal `agents/implementation-agent.md`
 path. That reported need is drift this change caused, not a note: the doc-currency agent hands
 it back to the orchestrator, and the orchestrator dispatches the fix into this change under
-`standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's recorded
+`standards/reviewer-conduct.md` § "Finding disposition" disposition 1's recorded
 widening. It is never appended to `.run_state/notes.md`. If, and only if, the doc-currency agent
 notices something it did not cause and cannot fix, that is an ordinary note, handled per § "No
 agent files its own issue".
@@ -195,8 +195,7 @@ Review follows **the referee and the eight-round loop** in
 `standards/pipeline/edge/referee-loop.md`; full mechanics live there, not restated here.
 
 - Every FAIL is fixed by the implementation agent and re-reviewed with a fresh reviewer instance.
-  The author never decides a finding is a "nitpick"; see `standards/adversarial-review-protocol.md` §
-  "Finding disposition" for what counts as in-scope-fixable vs. taste vs. genuinely separable.
+  The author never decides a finding is a "nitpick"; see `standards/reviewer-conduct.md` § "Finding disposition" for what counts as in-scope-fixable vs. taste vs. genuinely separable.
 - **The per-finding ledger.** The round count and fix history for a blocker/major finding that
   survives its first scoped re-check live in a ledger the orchestrator writes under
   `.run_state/` (already inside its declared write scope, alongside `.run_state/notes.md`): one
@@ -240,12 +239,12 @@ Review follows **the referee and the eight-round loop** in
   `standards/adversarial-review-protocol.md` § "Spawning a reviewer" - Briefing audit.
 
 **Disposing of a finding, every round.** A FAIL is never routed to a new GitHub issue or a
-`spawn_task` chip merely to end the current review round: `standards/adversarial-review-protocol.md`
-§ "Finding disposition, fix in place, drop, or defer" is the single authority for when a
+`spawn_task` chip merely to end the current review round: `standards/reviewer-conduct.md`
+§ "Finding disposition: fix in place, drop, or defer" is the single authority for when a
 finding is fixed in place, dropped, or deferred; consult it, do not re-derive it here. This
 governs a finding raised _on the artifact under review_, split further by cause: a stale reference
 or comment this run's own diff just falsified is a direct consequence of the change, handled as
-`standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's widening, not
+`standards/reviewer-conduct.md` § "Finding disposition" disposition 1's widening, not
 routed to a new issue, and recorded on the `Touches` lines per that section. A defect in the
 repo's own machinery that this run merely encountered, not caused by its diff, is a different
 trigger and is routed through § "No agent files its own issue" below, which tries the size rule's
@@ -293,7 +292,7 @@ These gates are additive to the existing `reviewer-issue` / `reviewer-pr` pipeli
 surfaces a defect its own diff caused in a file outside the issue's `Touches` list (the required
 handoff field `agents/implementation-agent.md` defines), the orchestrator, not the implementer,
 records the widening and dispatches the fix into the current change rather than filing a new issue.
-Record shape and where it lands: `standards/adversarial-review-protocol.md` § "Finding disposition",
+Record shape and where it lands: `standards/reviewer-conduct.md` § "Finding disposition",
 "Recording a widening" paragraph, the single owner of that detail.
 
 **Periodic full-system architectural audit:** Count each committed-issue entry across `buildlog/*.md` (excluding `README.md`) plus each committed-issue entry already folded into `BUILDLOG.md` (audit entries, prefixed `[AUDIT]`, are never counted in either location): a pending fragment counts the moment it is written, so the cadence does not wait on the next fold. On every 5th counted entry, run a `full-system architectural audit` over `DESIGN.md` and the `agents/`, `.claude/skills/`, and `standards/` inventory (an externally-managed design-skills directory, if this repo has one, is outside this audit's scope), and append the outcome as an `[AUDIT]`-prefixed line to `BUILDLOG.md` on the default branch (excluded from the count).
@@ -315,7 +314,7 @@ When an agent hits a problem mid-run:
    make it. Outside that list, two doors still lead to a fix instead of a note, and both are
    tried before any note exists. **A defect your own change caused** outside `Touches`, a
    cross-reference your diff just falsified, is repaired inside this change under
-   `standards/adversarial-review-protocol.md` § "Finding disposition" disposition 1's recorded
+   `standards/reviewer-conduct.md` § "Finding disposition" disposition 1's recorded
    widening: surface it, the orchestrator records the widening, and the fix lands here; a
    regression an agent caused never leaves as a report note. **A defect nobody caused here** goes
    through the size rule (`standards/issue-standards.md` § "The file claim and the size rule",
@@ -350,7 +349,7 @@ When an agent hits a problem mid-run:
    (branch 4, or not a file edit), and, when the agent judges it, a stated confidence that the
    right answer is do-nothing. The gitignored file is the crash-safe record; the issue body is
    the reviewed one: every later review round's briefing carries it (the notes-under-challenge
-   briefing field, `standards/adversarial-review-protocol.md` § "De-bias the setup"), each
+   briefing field, `standards/reviewer-conduct.md` § "De-bias the setup"), each
    gating reviewer rules on it, and any
    reviewer can overrule the deferral per that protocol's § "Finding disposition".
    **The unit is the session, not the issue.** The pipeline creates one worktree per session
@@ -376,7 +375,7 @@ When an agent hits a problem mid-run:
    **Confident drop.** A note whose own justification states over-70-percent confidence in
    do-nothing is dropped entirely, never appearing in the report, when every reviewer that ruled
    on it (in-round or in the late-note pass) ruled `DROP`, per the split-rulings rule in
-   `standards/adversarial-review-protocol.md` § "Finding disposition", "Challenging a
+   `standards/reviewer-conduct.md` § "Finding disposition", "Challenging a
    deferral". The agent alone may not drop it: an agent silently
    dropping its own findings is the same unaudited exit this rule exists to close. A dropped
    note stays in `.run_state/notes.md` and the issue's `## Notes` section as the audit trail.

@@ -23,7 +23,7 @@ This agent performs read-only inspection only. Read-only commands (`git show`, `
 
 ## Protocol
 
-Follow `standards/adversarial-review-protocol.md` exactly: assume total failure, cite real evidence for every finding (`file:line`), de-bias your stance before reading, and produce no human-in-loop resolutions.
+Follow `standards/reviewer-conduct.md` exactly: assume total failure, cite real evidence for every finding (`file:line`), de-bias your stance before reading, and produce no human-in-loop resolutions.
 
 Read `standards/design-philosophy.md` before reading the artifact under review. Apply each principle and red-flag check from that standard to the artifact. Cite the principle name and a specific file:line reference for every finding. Do not make abstract characterizations without evidence.
 
@@ -33,7 +33,7 @@ A finding that matches a named red flag in `standards/design-philosophy.md` is c
 
 ## Bias check
 
-If the spawning prompt violates the de-bias rules owned by `standards/adversarial-review-protocol.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
+If the spawning prompt violates the de-bias rules owned by `standards/reviewer-conduct.md` § "De-bias the setup", halt immediately and return `FAIL` with the finding: "Spawner injected intent". A briefing field sanctioned by that section is never by itself a bias finding.
 
 ## Required-input check
 
@@ -41,7 +41,7 @@ If the spawn supplies no diff and no changed-comment list, halt immediately and 
 
 ## Input / output contract
 
-**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, `standards/design-philosophy-examples.md`, `standards/adversarial-review-protocol.md`, `standards/pipeline/templates/spawn-skeleton.md`, and `standards/agent-standards.md` § "Input / output contract". Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
+**Input:** the absolute path to the implementation artifact under review, plus the diff (or the list of comments the change adds or modifies) the keep-test verdict is bound to (required; see "## Required-input check" above if absent). The spawner may hand over the staged diff itself as the artifact per `standards/adversarial-review-protocol.md` § "Spawning a reviewer". Read the artifact, `standards/design-philosophy.md`, `standards/design-philosophy-examples.md`, `standards/reviewer-conduct.md`, `standards/adversarial-review-protocol.md`, `standards/pipeline/templates/spawn-skeleton.md`, and `standards/agent-standards.md` § "Input / output contract". Read nothing else unless a specific file:line must be confirmed for a red-flag or keep-test finding.
 
 **Output:**
 
