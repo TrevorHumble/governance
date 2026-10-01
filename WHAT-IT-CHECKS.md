@@ -14,6 +14,14 @@ When all checks pass, these things have been confirmed automatically, without an
 request. It checks that this repo's own logic, and any scripts and tooling it ships, produce the
 right results, not just that the code ran without crashing.
 
+**The readable files are checked against a token budget on every push and pull request.**
+`scripts/check-token-budget.js` (`npm run check:budget`) counts words times 1.35 over the readable
+`.md` files and fails above 25,000 tokens, naming the total and the five largest files. It also
+totals each reviewer's fixed reading (each `reviewing-*` and `refereeing` skill folder,
+`standards/reviewing.md`, the reviewer agent file, and `AGENTS.md`) and fails any over 10,000,
+naming it. Code and JSON files are not counted. Until the new tree replaces the old one, it counts
+the files listed in `new-tree.json`, with `AGENTS.md` counted at its pending 1,200 budget.
+
 **Newly added lines are checked for the no-em-dash writing rule, but only on a pull request in
 CI; a local run also checks your dirty working tree.** `scripts/check-emdash.js` rejects a pull
 request or merge-queue run whose added lines contain an em dash or an HTML entity spelling of

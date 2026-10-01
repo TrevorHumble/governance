@@ -1,6 +1,4 @@
 // scripts/check-token-budget-core.js
-// Pure token-budget logic for the readable-tree gate; no process, filesystem, or git access here.
-// The caller supplies the file list and a readFile function.
 'use strict';
 
 const TOTAL_LIMIT = 25000;
@@ -30,7 +28,7 @@ function countWords(text) {
  * @param {string[]} files repo-relative paths; only `.md` files are counted, others count as zero
  * @param {(file: string) => string} readFile
  * @param {Record<string, number>} [pending] path -> budget in tokens for a file not written yet;
- *   added to each reviewer's total only, and only while the path is absent from `files`
+ *   added to each reviewer's total only, and only for a path in REVIEWER_SHARED_PATHS that is absent from `files`
  * @returns {{lines: string[], exitCode: number}}
  */
 function run(files, readFile, pending = {}) {
@@ -40,7 +38,7 @@ function run(files, readFile, pending = {}) {
 
   const words = new Map();
   for (const raw of files) {
-    const file = raw.replace(/\\/g, '/');
+    const file = raw;
     if (words.has(file)) continue;
     if (!file.endsWith('.md')) {
       words.set(file, 0);
@@ -73,7 +71,7 @@ function run(files, readFile, pending = {}) {
 
   const sharedWords = REVIEWER_SHARED_PATHS.reduce((sum, p) => sum + (words.get(p) || 0), 0);
   const pendingTokens = Object.entries(pending)
-    .filter(([p]) => !words.has(p))
+    .filter(([p]) => REVIEWER_SHARED_PATHS.includes(p) && !words.has(p))
     .reduce((sum, [, tokens]) => sum + tokens, 0);
   const reviewers = [...folders.entries()]
     .sort(([a], [b]) => a.localeCompare(b))

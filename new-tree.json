@@ -1,4 +1,9 @@
 {
+  "groups": {
+    "pipeline-steps": 3400,
+    "buildlog-realign-resume": 800,
+    "issue-writer-researcher": 300
+  },
   "files": [
     {
       "path": "NORTH-STAR.md",
@@ -34,51 +39,51 @@
     },
     {
       "path": "pipeline/steps/01-isolate.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/02-sync.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/03-research.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/04-pre-review.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/05-hand-off.md",
-      "budget": 500
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/06-issue.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/07-issue-review.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/08-implement.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/09-pr-review.md",
-      "budget": 500
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/10-commit.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/11-ship.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "pipeline/steps/12-report.md",
-      "budget": 240
+      "group": "pipeline-steps"
     },
     {
       "path": "_claude/skills/writing-user-stories/SKILL.md",
@@ -154,17 +159,14 @@
     },
     {
       "path": "_claude/skills/buildlog/SKILL.md",
-      "budget": 800,
       "group": "buildlog-realign-resume"
     },
     {
       "path": "_claude/skills/realign/SKILL.md",
-      "budget": 800,
       "group": "buildlog-realign-resume"
     },
     {
       "path": "_claude/skills/resume/SKILL.md",
-      "budget": 800,
       "group": "buildlog-realign-resume"
     },
     {
@@ -181,12 +183,10 @@
     },
     {
       "path": "_claude/agents/issue-writer.md",
-      "budget": 300,
       "group": "issue-writer-researcher"
     },
     {
       "path": "_claude/agents/researcher.md",
-      "budget": 300,
       "group": "issue-writer-researcher"
     }
   ],

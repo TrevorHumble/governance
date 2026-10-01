@@ -1,4 +1,4 @@
 # 04-pre-review
 
 Placeholder. This file will hold the pipeline step that tells the agent to run pre-review, with the exemption for children that have a pre-review surface.
-Budget: 240 tokens.
+Budget: part of the 3,400 tokens shared across the twelve steps; 05 and 09 about 500 each.

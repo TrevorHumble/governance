@@ -38,6 +38,7 @@ npm test
 npm run lint
 npm run format:check
 npm run check:emdash
+npm run check:budget
 ```
 
 If `format:check` fails, `npm run format` rewrites the flagged files in place.

@@ -1,4 +1,4 @@
 # 11-ship
 
 Placeholder. This file will hold the pipeline step that tells the agent to ship the change.
-Budget: 240 tokens.
+Budget: part of the 3,400 tokens shared across the twelve steps; 05 and 09 about 500 each.

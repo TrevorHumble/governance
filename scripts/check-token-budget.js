@@ -24,7 +24,7 @@ function main() {
     const listed = execFileSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' });
     files = listed.split('\n').filter(Boolean);
   }
-  files = files.filter((f) => f.endsWith('.md') && !NOT_COUNTED(f));
+  files = files.filter((f) => !NOT_COUNTED(f));
 
   const { lines, exitCode } = run(
     files,
