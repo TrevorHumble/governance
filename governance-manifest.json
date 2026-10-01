@@ -35,6 +35,8 @@
     "scripts/buildlog-glue.js",
     "scripts/check-emdash-core.js",
     "scripts/check-emdash.js",
+    "scripts/check-token-budget-core.js",
+    "scripts/check-token-budget.js",
     "AGENTS.md",
     "definition-of-done.md",
     "buildlog/README.md",
@@ -62,7 +64,11 @@
     "CLAUDE.local.md",
     "DESIGN.md",
     ".claude/settings.json",
-    "owner-declines.md"
+    "owner-declines.md",
+    "new-tree.json",
+    "pipeline/**",
+    "_claude/**",
+    "NORTH-STAR.md"
   ],
   "classes": {
     ".agents/**": "content",
@@ -99,6 +105,8 @@
     "scripts/buildlog-glue.js": "content",
     "scripts/check-emdash-core.js": "content",
     "scripts/check-emdash.js": "content",
+    "scripts/check-token-budget-core.js": "content",
+    "scripts/check-token-budget.js": "content",
     "AGENTS.md": "content",
     "definition-of-done.md": "content",
     "buildlog/README.md": "content",

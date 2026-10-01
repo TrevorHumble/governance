@@ -38,6 +38,8 @@ jobs:
         run: npm run lint
       - name: Format check
         run: npm run format:check
+      - name: Token budget
+        run: npm run check:budget
       # Runs only on pull_request/merge_group: a direct push to main has no
       # pull request, so no merge-base diff of added lines exists to judge.
       # See DESIGN.md "CI gate for added em dashes".

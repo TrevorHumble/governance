@@ -1,0 +1,199 @@
+{
+  "files": [
+    {
+      "path": "NORTH-STAR.md",
+      "budget": 700
+    },
+    {
+      "path": "standards/reviewing.md",
+      "budget": 1200
+    },
+    {
+      "path": "standards/deciding.md",
+      "budget": 1500
+    },
+    {
+      "path": "standards/edge-cases.md",
+      "budget": 600
+    },
+    {
+      "path": "standards/writing.md",
+      "budget": 400
+    },
+    {
+      "path": "standards/skills.md",
+      "budget": 300
+    },
+    {
+      "path": "pipeline/PIPELINE.md",
+      "budget": 900
+    },
+    {
+      "path": "pipeline/report-template.md",
+      "budget": 800
+    },
+    {
+      "path": "pipeline/steps/01-isolate.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/02-sync.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/03-research.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/04-pre-review.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/05-hand-off.md",
+      "budget": 500
+    },
+    {
+      "path": "pipeline/steps/06-issue.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/07-issue-review.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/08-implement.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/09-pr-review.md",
+      "budget": 500
+    },
+    {
+      "path": "pipeline/steps/10-commit.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/11-ship.md",
+      "budget": 240
+    },
+    {
+      "path": "pipeline/steps/12-report.md",
+      "budget": 240
+    },
+    {
+      "path": "_claude/skills/writing-user-stories/SKILL.md",
+      "budget": 300
+    },
+    {
+      "path": "_claude/skills/writing-acceptance-criteria/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/writing-issues/SKILL.md",
+      "budget": 400
+    },
+    {
+      "path": "_claude/skills/reviewing-issues/SKILL.md",
+      "budget": 600
+    },
+    {
+      "path": "_claude/skills/reviewing-prs/SKILL.md",
+      "budget": 700
+    },
+    {
+      "path": "_claude/skills/reviewing-design/SKILL.md",
+      "budget": 800
+    },
+    {
+      "path": "_claude/skills/reviewing-design/reference/examples.md",
+      "budget": 600
+    },
+    {
+      "path": "_claude/skills/reviewing-skills/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/reviewing-docs/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/reviewing-architecture/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/reviewing-security/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/refereeing/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/build/SKILL.md",
+      "budget": 300
+    },
+    {
+      "path": "_claude/skills/implementing/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/researching/SKILL.md",
+      "budget": 400
+    },
+    {
+      "path": "_claude/skills/reporting-a-defect/SKILL.md",
+      "budget": 150
+    },
+    {
+      "path": "_claude/skills/github-write/SKILL.md",
+      "budget": 500
+    },
+    {
+      "path": "_claude/skills/working-autonomously/SKILL.md",
+      "budget": 300
+    },
+    {
+      "path": "_claude/skills/buildlog/SKILL.md",
+      "budget": 800,
+      "group": "buildlog-realign-resume"
+    },
+    {
+      "path": "_claude/skills/realign/SKILL.md",
+      "budget": 800,
+      "group": "buildlog-realign-resume"
+    },
+    {
+      "path": "_claude/skills/resume/SKILL.md",
+      "budget": 800,
+      "group": "buildlog-realign-resume"
+    },
+    {
+      "path": "_claude/agents/orchestrator.md",
+      "budget": 600
+    },
+    {
+      "path": "_claude/agents/reviewer.md",
+      "budget": 150
+    },
+    {
+      "path": "_claude/agents/implementer.md",
+      "budget": 150
+    },
+    {
+      "path": "_claude/agents/issue-writer.md",
+      "budget": 300,
+      "group": "issue-writer-researcher"
+    },
+    {
+      "path": "_claude/agents/researcher.md",
+      "budget": 300,
+      "group": "issue-writer-researcher"
+    }
+  ],
+  "pending": [
+    {
+      "path": "AGENTS.md",
+      "budget": 1200
+    }
+  ]
+}
