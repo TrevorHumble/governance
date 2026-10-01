@@ -11,10 +11,11 @@
     "install": "npm ci",
     "test": "npm test",
     "emdash": "npm run check:emdash",
+    "budget": "npm run check:budget",
     "lint": "npm run lint",
     "format": "npm run format:check"
   },
   "ghPath": "gh",
-  "defaultBranch": "main",
+  "defaultBranch": "v2",
   "governanceHome": "self"
 }
