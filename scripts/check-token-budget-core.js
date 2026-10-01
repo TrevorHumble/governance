@@ -1,4 +1,5 @@
 // scripts/check-token-budget-core.js
+// Pure token counting for the token-budget CI gate; no process, filesystem, or git access here.
 'use strict';
 
 const TOTAL_LIMIT = 25000;
@@ -37,8 +38,7 @@ function run(files, readFile, pending = {}) {
   }
 
   const words = new Map();
-  for (const raw of files) {
-    const file = raw;
+  for (const file of files) {
     if (words.has(file)) continue;
     if (!file.endsWith('.md')) {
       words.set(file, 0);
@@ -107,4 +107,4 @@ function run(files, readFile, pending = {}) {
   return { lines, exitCode: total > TOTAL_LIMIT || heavy.length > 0 ? 1 : 0 };
 }
 
-module.exports = { run, TOTAL_LIMIT, REVIEWER_LIMIT };
+module.exports = { run, TOTAL_LIMIT };

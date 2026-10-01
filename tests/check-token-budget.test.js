@@ -6,7 +6,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { run } = require('../scripts/check-token-budget-core');
+const { run, TOTAL_LIMIT } = require('../scripts/check-token-budget-core');
 
 let dir;
 beforeEach(() => {
@@ -151,6 +151,11 @@ describe('reviewer budget', () => {
     expect(text(r)).toContain('14 tokens in total');
   });
 
+  it('ignores a pending entry for a path outside the reviewer shared paths', () => {
+    const r = run([lightReviewer()], read, { 'other.md': 5000 });
+    expect(text(r)).toContain('reviewer reviewing-prs: 14 tokens');
+  });
+
   it('counts a written AGENTS.md by its words and ignores its pending budget', () => {
     const files = [lightReviewer(), writeFileOfWords('AGENTS.md', 100)];
     const r = run(files, read, { 'AGENTS.md': 1200 });
@@ -190,7 +195,7 @@ describe('new-tree.json', () => {
   it('has listed budgets that sum to 25,000 or less, counting a group budget once', () => {
     const own = tree.files.filter((f) => !f.group).reduce((sum, f) => sum + f.budget, 0);
     const shared = Object.values(tree.groups).reduce((sum, b) => sum + b, 0);
-    expect(own + shared).toBeLessThanOrEqual(25000);
+    expect(own + shared).toBeLessThanOrEqual(TOTAL_LIMIT);
   });
 
   it('records the AGENTS.md budget as pending and does not list it as a file', () => {
