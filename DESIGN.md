@@ -96,6 +96,10 @@ check:emdash"}`.
   home, or the URL or filesystem path of the governance home repo for a child. Absent means
   unconfigured: `tools/governance-sync.ps1` does nothing. This repo's own profile declares
   `"self"`.
+- `budget` (object). Allowed: an object with numeric `total` (the token cap on the readable tree)
+  and `reviewer` (the cap on each reviewer's fixed reading), and `notCounted`, a list of
+  repo-relative paths the budget check skips, where an entry ending in `/` matches as a prefix;
+  read by `scripts/check-token-budget.js`. A missing or non-numeric cap fails the check.
 - `syncIssue` (positive integer). The child's own standing GitHub issue number for governance
   syncs; required whenever `governanceHome` is not `"self"`. This repo does not declare it.
 - `acknowledgedDivergentPaths` (array of strings). Allowed: any list of repo-relative paths, or

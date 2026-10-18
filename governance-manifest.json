@@ -68,7 +68,9 @@
     "new-tree.json",
     "pipeline/**",
     "_claude/**",
-    "NORTH-STAR.md"
+    "NORTH-STAR.md",
+    "vendor/**",
+    "reviewer-library.json"
   ],
   "classes": {
     ".agents/**": "content",
@@ -167,6 +169,10 @@
     {
       "name": "governanceHome",
       "type": "string"
+    },
+    {
+      "name": "budget",
+      "type": "object"
     },
     {
       "name": "syncIssue",

@@ -194,6 +194,26 @@
     {
       "path": "AGENTS.md",
       "budget": 1200
+    },
+    {
+      "path": "CLAUDE.md",
+      "budget": 20
+    },
+    {
+      "path": "README.md",
+      "budget": 500
+    },
+    {
+      "path": "definition-of-done.md",
+      "budget": 1200
+    },
+    {
+      "path": "owner-declines.md",
+      "budget": 250
+    },
+    {
+      "path": "WHAT-IT-CHECKS.md",
+      "budget": 600
     }
   ]
 }
