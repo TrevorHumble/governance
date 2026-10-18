@@ -17,5 +17,10 @@
   },
   "ghPath": "gh",
   "defaultBranch": "v2",
-  "governanceHome": "self"
+  "governanceHome": "self",
+  "budget": {
+    "total": 25000,
+    "reviewer": 10000,
+    "notCounted": ["BUILDLOG.md", "DESIGN.md", "buildlog/"]
+  }
 }

@@ -9,23 +9,43 @@ what it cannot check, where you remain the eye after the fact.
 
 When all checks pass, these things have been confirmed automatically, without anyone reading the code:
 
-**The test suite runs on every push to `main` and every pull request.**
-`npm test` (`vitest run`) runs in GitHub's CI system on every push to `main` and every pull
+**The test suite runs on every push to `main` or `v2` and every pull request.**
+`npm test` (`vitest run`) runs in GitHub's CI system on every push to `main` or `v2` and every pull
 request. It checks that this repo's own logic, and any scripts and tooling it ships, produce the
 right results, not just that the code ran without crashing.
 
-**The readable files are checked against a token budget on every push and pull request.**
+**The readable files are checked against a token budget on every pull request and on every push to `main` or `v2`.**
 `scripts/check-token-budget.js` (`npm run check:budget`) counts words times 1.35 over the readable
-`.md` files and fails above 25,000 tokens, naming the total and the five largest files. It also
-totals each reviewer's fixed reading (each `reviewing-*` and `refereeing` skill folder,
-`standards/reviewing.md`, the reviewer agent file, and `AGENTS.md`) and fails any over 10,000,
-naming it. Code and JSON files are not counted. Until the new tree replaces the old one, it counts
-the files listed in `new-tree.json`, with `AGENTS.md` counted at its pending 1,200 budget.
+`.md` files and fails above the total cap, naming the total and the five largest files. It also
+totals each reviewer's fixed reading (its `reviewing-*` or `refereeing` skill folder, every file in
+its `SKILL.md`'s `metadata.reads`, `standards/reviewing.md`, the reviewer agent file, and
+`AGENTS.md`) and fails any over the reviewer cap, naming it. The caps and the `notCounted` list live
+in `repo-profile.json`'s `budget` key; code and JSON files are not counted. Until the new tree
+replaces the old one, it counts the files listed in `new-tree.json` and counts each file in its
+`pending` list at its reserved budget, in the total and in every reviewer that reads it, so the
+files written at the swap cannot push the tree over later. A borrowed skill under `vendor/skills/`
+counts against the reviewers named for it in `reviewer-library.json`, never against the total; the
+check fails if a vendored file's sha256 differs from the library's, if a file sits under
+`vendor/skills/` with no library entry, or if a reviewer's `reads` misses a file the library gives
+it. It also fails a reviewer `SKILL.md` that names a tracked file in backticks without listing it in
+`reads`. When a check fails it lists the ways to make room for that cap and, given the PR's base,
+says whether the base was already over.
+
+The budget also cannot be loosened by stealth. On a pull request or merge-queue run, the check
+compares the PR with its base (`origin/$GITHUB_BASE_REF`, or the merge-queue payload's `base_sha`)
+and fails a PR that raises a cap, adds a `notCounted` entry, stops counting a file that still
+exists, or lowers a pending budget, unless that is the PR's only change (a `buildlog/` fragment and
+`BUILDLOG.md` may ride along). Pure additions land with their work. A push, or a local run with no
+`--base`, skips this guard and still runs the counts. Known gap: the session acts on GitHub as the
+owner, so no check can prove the owner said yes; the rule makes every budget change separate and
+visible, and the owner's yes is honored, not enforced. Edits to the check scripts, deleting the CI
+budget step, editing `package.json`'s `check:budget`, and renaming a counted file into an uncounted
+place are not caught; a reviewer reading the diff is the guard there.
 
 **Newly added lines are checked for the no-em-dash writing rule, but only on a pull request in
 CI; a local run also checks your dirty working tree.** `scripts/check-emdash.js` rejects a pull
 request or merge-queue run whose added lines contain an em dash or an HTML entity spelling of
-one. It does not run in CI on a plain push to `main`, only on `pull_request` and `merge_group`
+one. It does not run in CI on a plain push to `main` or `v2`, only on `pull_request` and `merge_group`
 events: that push has no pull request, so there is no merge-base diff of added lines for it to
 judge. In CI, on a clean checkout, it judges only the lines a PR adds against the merge-base diff
 with this repo's default branch (see `repo-profile.json`'s `defaultBranch` field), never the
@@ -72,7 +92,7 @@ reached before the profile has parsed. Like the commit-msg check, it is local an
 which this repo does not yet ship.
 
 **A PR containing a lint or formatting violation cannot merge.** `npm run lint` (`eslint . --max-warnings=0`)
-and `npm run format:check` (`prettier --check .`) both run in CI on every push to `main` and every
+and `npm run format:check` (`prettier --check .`) both run in CI on every push to `main` or `v2` and every
 pull request, in the same required `build` job as the test suite. This exists so the parent never
 ships a shared file its children's own required lint/format checks would bounce; see `DESIGN.md`
 for the fuller rationale. `prettier` also has a second, older use: the buildlog test suite calls it
