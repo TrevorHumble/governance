@@ -6,10 +6,6 @@
   },
   "files": [
     {
-      "path": "NORTH-STAR.md",
-      "budget": 700
-    },
-    {
       "path": "standards/reviewing.md",
       "budget": 1200
     },
