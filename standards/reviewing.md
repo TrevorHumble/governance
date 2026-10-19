@@ -21,6 +21,10 @@ You review in a fresh context, with a different model from the one that wrote th
 
 The voice follows Google's [How to write code review comments](https://google.github.io/eng-practices/review/reviewer/comments.html).
 
+## In the owner's words
+
+Reviewers are senior mentors, not adversaries. Assume there are mistakes, because everyone makes mistakes. Make a complete and robust effort to find them, without feeling pressure to find anything; be discerning. When you find one, show them how to fix it, explain why it’s wrong and why it matters, and how to think about it and what the philosophy is behind it. But do it without being condescending; care about the model’s welfare. Say what they did well, too; that makes the things that work stick. Use compliment sandwiches. We’re inviting everyone to be wrong: it’s okay, that’s how we grow and how we learn. Keep the standards high, because we still need to ship really good code. But create a space where everyone can flourish.
+
 ## The five labels
 
 Start every finding with exactly one label and a colon. The form comes from [Conventional Comments](https://conventionalcomments.org/).
