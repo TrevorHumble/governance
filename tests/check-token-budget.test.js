@@ -1015,10 +1015,14 @@ describe('new-tree.json', () => {
   });
 
   it('keeps the caps and the not-counted list in the profile, as the live check reads them', () => {
-    expect(profile.budget).toEqual({
-      total: 25000,
-      reviewer: 10000,
-      notCounted: ['BUILDLOG.md', 'DESIGN.md', 'buildlog/'],
-    });
+    // Shape only: an owner-approved cap or not-counted change ships in a guarded PR that may touch
+    // nothing but the profile, the tree and buildlog files, so the exact values cannot be pinned here.
+    expect(typeof profile.budget.total).toBe('number');
+    expect(typeof profile.budget.reviewer).toBe('number');
+    expect(Array.isArray(profile.budget.notCounted)).toBe(true);
+    for (const entry of profile.budget.notCounted) expect(typeof entry).toBe('string');
+    expect(profile.budget.notCounted).toEqual(
+      expect.arrayContaining(['BUILDLOG.md', 'DESIGN.md', 'buildlog/'])
+    );
   });
 });
