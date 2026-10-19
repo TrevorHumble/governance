@@ -53,10 +53,11 @@ describe('a valid file', () => {
     expect(validateSeats(valid())).toEqual([]);
   });
 
-  it('needs no awards key', () => {
+  it('needs no awards key, but an awards key that is null fails', () => {
     const s = valid();
     delete s.awards;
     expect(validateSeats(s)).toEqual([]);
+    expect(problems((t) => (t.awards = null))).toEqual(['"awards" must be an object']);
   });
 
   it('accepts a dated snapshot ID and every known effort word', () => {
@@ -173,10 +174,10 @@ describe('independence', () => {
   });
 
   it('lets the cheaper-seats award collapse the implementer and code reviewer', () => {
-    // the shipped shape: the award puts the code reviewer on the implementer's model
-    expect(validateSeats(valid())).toEqual([]);
-    const award = valid().awards['cheaper-seats']['code-reviewer'];
-    expect(award.model).toBe(valid().roles.implementer.model);
+    const s = valid();
+    expect(s.roles['code-reviewer'].model).not.toBe(s.roles.implementer.model);
+    expect(s.awards['cheaper-seats']['code-reviewer'].model).toBe(s.roles.implementer.model);
+    expect(validateSeats(s)).toEqual([]);
   });
 
   it('fails the issue writer and issue reviewer on one model', () => {
@@ -287,8 +288,9 @@ describe('agent and skills', () => {
     ]);
   });
 
-  it('allows the same skill twice under one role', () => {
-    expect(problems((s) => s.roles.referee.skills.push('refereeing'))).toEqual([]);
+  it('fails the same skill listed twice under one role', () => {
+    const p = problems((s) => s.roles.referee.skills.push('refereeing'));
+    expect(p).toEqual(['skill "refereeing" is listed twice under role "referee"']);
   });
 
   it('fails skills that are not an array of names', () => {
@@ -350,6 +352,15 @@ describe('seats-only detection', () => {
     const r = classify((s) => (s.roles.researcher.effort = 'high'), ['seats.json', 'README.md']);
     expect(r.seatsOnly).toBe(false);
     expect(r.reasons).toEqual(['it also changes README.md']);
+  });
+
+  it('is not seats-only when a rename hides a source, which the changed list names', () => {
+    const r = classify(
+      (s) => (s.roles.researcher.effort = 'high'),
+      ['seats.json', 'buildlog/rules.md', 'standards/rules.md']
+    );
+    expect(r.seatsOnly).toBe(false);
+    expect(r.reasons).toEqual(['it also changes standards/rules.md']);
   });
 
   it('is not seats-only when seats.json is not among the changed files', () => {
@@ -508,6 +519,24 @@ describe('the CLI on temp git repos', () => {
     const r = main({ root: dir, argv: ['--base', 'trunk'], env: {} });
     expect(r.exitCode).toBe(0);
     expect(r.lines.join('\n')).toContain('it also changes other.txt');
+  });
+
+  it('is not seats-only when a tracked file is renamed into buildlog/, and names the source', () => {
+    git('checkout', '-q', 'trunk');
+    write('standards/rules.md', 'rules');
+    commit('rules');
+    git('checkout', '-q', '-b', 'moved', 'trunk');
+    write(
+      'seats.json',
+      withChange((s) => (s.roles.researcher.effort = 'high'))
+    );
+    fs.mkdirSync(path.join(dir, 'buildlog'));
+    git('mv', 'standards/rules.md', 'buildlog/rules.md');
+    commit('seat and move');
+    const r = main({ root: dir, argv: ['--base', 'trunk'], env: {} });
+    expect(r.exitCode).toBe(0);
+    expect(r.lines.join('\n')).toContain('not a seats-only PR');
+    expect(r.lines.join('\n')).toContain('standards/rules.md');
   });
 
   it('is not seats-only when the base has no seats.json', () => {

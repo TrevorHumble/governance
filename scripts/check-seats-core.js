@@ -4,6 +4,7 @@
 'use strict';
 
 const { isDeepStrictEqual } = require('util');
+const { ridesAlong } = require('./check-token-budget-core');
 
 const REQUIRED_ROLES = [
   'orchestrator',
@@ -33,10 +34,9 @@ const PROVIDERS = {
   },
 };
 
-// Pairs of roles that must run on different models. `awardMaySplit` marks the one pair the
-// cheaper-seats award is allowed to collapse.
+// Pairs of roles that must run on different models; the cheaper-seats award may collapse one.
 const INDEPENDENT_PAIRS = [
-  { a: 'implementer', b: 'code-reviewer', awardMaySplit: true },
+  { a: 'implementer', b: 'code-reviewer', cheaperSeatsMayShare: true },
   { a: 'issue-writer', b: 'issue-reviewer' },
   { a: 'referee', b: 'implementer' },
   { a: 'referee', b: 'code-reviewer' },
@@ -92,7 +92,9 @@ function roleProblems(roles) {
     }
     for (const skill of seat.skills) {
       const owner = skillOwner.get(skill);
-      if (owner !== undefined && owner !== role) {
+      if (owner === role) {
+        problems.push(`skill "${skill}" is listed twice under role "${role}"`);
+      } else if (owner !== undefined) {
         problems.push(`skill "${skill}" is listed under two roles ("${owner}" and "${role}")`);
       } else {
         skillOwner.set(skill, role);
@@ -155,9 +157,9 @@ function independenceProblems(roles, awards) {
   for (const [name, entries] of Object.entries(awards)) {
     if (!KNOWN_AWARDS.includes(name) || !isObject(entries)) continue;
     const seats = effectiveSeats(roles, entries);
-    for (const { a, b, awardMaySplit } of INDEPENDENT_PAIRS) {
+    for (const { a, b, cheaperSeatsMayShare } of INDEPENDENT_PAIRS) {
       const touched = Object.hasOwn(entries, a) || Object.hasOwn(entries, b);
-      if (!touched || (awardMaySplit && name === CHEAPER_SEATS)) continue;
+      if (!touched || cheaperSeatsMayShare) continue;
       if (sameModel(seats, a, b)) {
         problems.push(
           `under award "${name}", "${a}" and "${b}" share the model ${seats[a].model}; they must differ`
@@ -177,7 +179,7 @@ function validateSeats(seats) {
   if (!isObject(seats)) return ['seats.json must be an object with "roles" and "awards"'];
   const problems = [];
   const roles = seats.roles;
-  const awards = seats.awards ?? {};
+  const awards = seats.awards === undefined ? {} : seats.awards;
   if (!isObject(roles)) problems.push('"roles" must be an object');
   if (!isObject(awards)) problems.push('"awards" must be an object');
   if (problems.length > 0) return problems;
@@ -196,13 +198,13 @@ function diffLeaves(before, after, path = []) {
   return isDeepStrictEqual(before, after) ? [] : [{ path, before, after }];
 }
 
-// roles.<role>.<field> or awards.<award>.<role>.<field>, where <field> is a seat value both sides
-// hold as a string.
+// Path length of a seat value under each top-level key.
+const SEAT_DEPTH = { roles: 3, awards: 4 };
+
 function isSeatValueChange({ path, before, after }) {
-  const depth = path[0] === 'roles' ? 3 : path[0] === 'awards' ? 4 : 0;
   return (
-    path.length === depth &&
-    SEAT_FIELDS.includes(path[depth - 1]) &&
+    path.length === SEAT_DEPTH[path[0]] &&
+    SEAT_FIELDS.includes(path[path.length - 1]) &&
     typeof before === 'string' &&
     typeof after === 'string'
   );
@@ -222,9 +224,7 @@ const describeSeat = (path) => (path[0] === 'roles' ? path[1] : `${path[1]} / ${
  */
 function classifyPr({ changed, baseSeats, headSeats }) {
   const reasons = [];
-  const others = changed.filter(
-    (f) => f !== 'seats.json' && f !== 'BUILDLOG.md' && !f.startsWith('buildlog/')
-  );
+  const others = changed.filter((f) => f !== 'seats.json' && !ridesAlong(f));
   if (!changed.includes('seats.json')) reasons.push('the PR does not change seats.json');
   if (others.length > 0) reasons.push(`it also changes ${others.join(', ')}`);
   if (baseSeats === undefined) reasons.push('seats.json is not readable at the base');
@@ -287,10 +287,8 @@ function run(headSeats, base) {
 
 module.exports = {
   REQUIRED_ROLES,
-  PROVIDERS,
   validateSeats,
   classifyPr,
-  changeTable,
   run,
   failLine,
 };

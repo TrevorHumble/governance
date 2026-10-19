@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const { run, failLine } = require('./check-seats-core');
-const { baseRef, git, gitLines } = require('./check-token-budget');
+const { baseRef, git, changedFiles } = require('./check-token-budget');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SEATS_FILE = 'seats.json';
@@ -46,7 +46,7 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
   }
   let changed;
   try {
-    changed = gitLines(root, ['diff', '--name-only', `${found.ref}...HEAD`]);
+    changed = changedFiles(root, found.ref);
   } catch (err) {
     return fail(
       `cannot list the files changed since ${found.ref} (${err.message.split('\n')[0]}).`

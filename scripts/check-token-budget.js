@@ -39,6 +39,10 @@ function git(root, args) {
   });
 }
 const gitLines = (root, args) => git(root, args).split('\n').filter(Boolean);
+// Files a PR changes since the base. --no-renames lists a rename's source as well as its
+// destination, so a file moved into a ride-along folder cannot hide.
+const changedFiles = (root, ref) =>
+  gitLines(root, ['diff', '--name-only', '--no-renames', `${ref}...HEAD`]);
 
 function baseRef(argv, env) {
   const at = argv.findIndex((a) => a === '--base' || a.startsWith('--base='));
@@ -173,7 +177,7 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
       const inputs = countInputs(base.view);
       baseCounts = run(inputs.files, base.read, base.caps, { pending: inputs.pending });
       if (base.guarded) {
-        const changed = gitLines(root, ['diff', '--name-only', `${found.ref}...HEAD`]);
+        const changed = changedFiles(root, found.ref);
         guardLines.push(
           ...guardFailures(guardedChanges(base, head), changed, base.profile, head.profile)
         );
@@ -210,4 +214,4 @@ if (require.main === module) {
   process.exitCode = exitCode;
 }
 
-module.exports = { main, readHead, baseRef, git, gitLines };
+module.exports = { main, readHead, baseRef, git, changedFiles };

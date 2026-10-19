@@ -864,6 +864,17 @@ describe('the wrapper, on temp git repos', () => {
     expect(r.out).toContain('Other changed files: standards/x.md');
   });
 
+  it('fails a guarded change when a tracked file is renamed into buildlog/, and names the source', () => {
+    const root = makeRepo({ files: { 'standards/x.md': 'x' } });
+    raiseCap(root);
+    fs.mkdirSync(path.join(root, 'buildlog'), { recursive: true });
+    git(root, 'mv', 'standards/x.md', 'buildlog/x.md');
+    commit(root);
+    const r = check(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain('Other changed files: standards/x.md');
+  });
+
   it('fails other repo-profile.json edits riding on a budget change', () => {
     const root = makeRepo();
     put(root, 'repo-profile.json', {
