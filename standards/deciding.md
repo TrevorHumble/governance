@@ -44,6 +44,7 @@ Make at most three attempts on one idea. If it has failed three times, the idea 
 
 Do what the issue asks and touch the files it names.
 
+- Anything the acceptance criteria need in order to be true is part of the issue: build it, do not ask.
 - A defect your own change caused is fixed in this change, wherever it lives.
 - A small fix in a file nobody else is working on is made, and recorded on the issue's `Touches` line and in the PR body.
 - Do not improve things for their own sake.
