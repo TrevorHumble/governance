@@ -9,6 +9,7 @@
     "check:emdash": "node scripts/check-emdash.js",
     "check:budget": "node scripts/check-token-budget.js",
     "check:banned": "node scripts/check-banned-words.js",
+    "check:seats": "node scripts/check-seats.js",
     "lint": "eslint . --max-warnings=0",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

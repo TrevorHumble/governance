@@ -13,6 +13,7 @@
     "emdash": "npm run check:emdash",
     "budget": "npm run check:budget",
     "banned": "npm run check:banned",
+    "seats": "npm run check:seats",
     "lint": "npm run lint",
     "format": "npm run format:check"
   },

@@ -45,6 +45,10 @@ jobs:
       # Scans the tree, not a diff, so it has no `if:`.
       - name: Banned words
         run: npm run check:banned
+      # Same base handling as the token budget step: validates seats.json, and on a pull_request or
+      # merge_group event also reports whether the PR is seats-only.
+      - name: Seats
+        run: npm run check:seats
       # Runs only on pull_request/merge_group: a direct push to main or v2 has no
       # pull request, so no merge-base diff of added lines exists to judge.
       # See DESIGN.md "CI gate for added em dashes".
