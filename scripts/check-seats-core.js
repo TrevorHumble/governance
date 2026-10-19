@@ -34,9 +34,9 @@ const PROVIDERS = {
   },
 };
 
-// Pairs of roles that must run on different models; the cheaper-seats award may collapse one.
+// Pairs of roles that must run on different models, unless the award in `sharesUnder` applies.
 const INDEPENDENT_PAIRS = [
-  { a: 'implementer', b: 'code-reviewer', cheaperSeatsMayShare: true },
+  { a: 'implementer', b: 'code-reviewer', sharesUnder: CHEAPER_SEATS },
   { a: 'issue-writer', b: 'issue-reviewer' },
   { a: 'referee', b: 'implementer' },
   { a: 'referee', b: 'code-reviewer' },
@@ -90,11 +90,13 @@ function roleProblems(roles) {
       problems.push(`${label} skills must be an array of skill names`);
       continue;
     }
-    for (const skill of seat.skills) {
+    const repeated = seat.skills.filter((skill, i) => seat.skills.indexOf(skill) !== i);
+    for (const skill of new Set(repeated)) {
+      problems.push(`skill "${skill}" is listed twice under role "${role}"`);
+    }
+    for (const skill of new Set(seat.skills)) {
       const owner = skillOwner.get(skill);
-      if (owner === role) {
-        problems.push(`skill "${skill}" is listed twice under role "${role}"`);
-      } else if (owner !== undefined) {
+      if (owner !== undefined) {
         problems.push(`skill "${skill}" is listed under two roles ("${owner}" and "${role}")`);
       } else {
         skillOwner.set(skill, role);
@@ -157,9 +159,9 @@ function independenceProblems(roles, awards) {
   for (const [name, entries] of Object.entries(awards)) {
     if (!KNOWN_AWARDS.includes(name) || !isObject(entries)) continue;
     const seats = effectiveSeats(roles, entries);
-    for (const { a, b, cheaperSeatsMayShare } of INDEPENDENT_PAIRS) {
+    for (const { a, b, sharesUnder } of INDEPENDENT_PAIRS) {
       const touched = Object.hasOwn(entries, a) || Object.hasOwn(entries, b);
-      if (!touched || cheaperSeatsMayShare) continue;
+      if (!touched || sharesUnder === name) continue;
       if (sameModel(seats, a, b)) {
         problems.push(
           `under award "${name}", "${a}" and "${b}" share the model ${seats[a].model}; they must differ`
@@ -198,7 +200,7 @@ function diffLeaves(before, after, path = []) {
   return isDeepStrictEqual(before, after) ? [] : [{ path, before, after }];
 }
 
-// Path length of a seat value under each top-level key.
+// Seat values sit at roles.<role>.<field> and awards.<award>.<role>.<field>.
 const SEAT_DEPTH = { roles: 3, awards: 4 };
 
 function isSeatValueChange({ path, before, after }) {

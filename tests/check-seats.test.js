@@ -293,6 +293,14 @@ describe('agent and skills', () => {
     expect(p).toEqual(['skill "refereeing" is listed twice under role "referee"']);
   });
 
+  it('prints a two-roles collision once, even when the skill repeats under the second role', () => {
+    const p = problems((s) => s.roles.referee.skills.push('reviewing-prs', 'reviewing-prs'));
+    expect(p).toEqual([
+      'skill "reviewing-prs" is listed twice under role "referee"',
+      'skill "reviewing-prs" is listed under two roles ("code-reviewer" and "referee")',
+    ]);
+  });
+
   it('fails skills that are not an array of names', () => {
     for (const skills of [undefined, 'reviewing-prs', [1], [''], null]) {
       const p = problems((s) => (s.roles.researcher.skills = skills));
