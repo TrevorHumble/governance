@@ -1,0 +1,69 @@
+{
+  "roles": {
+    "orchestrator": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "agent": "orchestrator",
+      "skills": []
+    },
+    "issue-writer": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "agent": "issue-writer",
+      "skills": []
+    },
+    "issue-reviewer": {
+      "provider": "anthropic",
+      "model": "claude-fable-5-1",
+      "effort": "medium",
+      "agent": "reviewer",
+      "skills": ["reviewing-issues"]
+    },
+    "implementer": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "agent": "implementer",
+      "skills": []
+    },
+    "code-reviewer": {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "agent": "reviewer",
+      "skills": [
+        "reviewing-prs",
+        "reviewing-architecture",
+        "reviewing-design",
+        "reviewing-security",
+        "reviewing-skills",
+        "reviewing-docs"
+      ]
+    },
+    "referee": {
+      "provider": "anthropic",
+      "model": "claude-fable-5-1",
+      "effort": "medium",
+      "agent": "reviewer",
+      "skills": ["refereeing"]
+    },
+    "researcher": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "agent": "researcher",
+      "skills": []
+    }
+  },
+  "awards": {
+    "cheaper-seats": {
+      "code-reviewer": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-5-5",
+        "effort": "medium"
+      }
+    }
+  }
+}

@@ -30,6 +30,8 @@ const REVIEWER_WAYS = [
   "Ways to make room (cutting or moving a reviewer's reading needs the owner's yes first): cut that reviewer's own reading (its skill, its reads, its vendored files), or move a large skill to a one-pass specialist.",
 ];
 
+// A file a guarded PR may change beside its guarded file: the build log and its fragments.
+const ridesAlong = (file) => file === 'BUILDLOG.md' || file.startsWith('buildlog/');
 const isVendored = (file) => file.startsWith(VENDOR_ROOT);
 const isCap = (n) => typeof n === 'number' && Number.isFinite(n);
 const failLine = (text) => `check-token-budget: FAIL, ${text}`;
@@ -149,9 +151,7 @@ function guardedChanges(base, head) {
 function guardFailures(changes, changed, baseProfile, headProfile) {
   if (changes.length === 0) return [];
   const homes = ['repo-profile.json', 'new-tree.json'];
-  const others = changed.filter(
-    (f) => !homes.includes(f) && f !== 'BUILDLOG.md' && !f.startsWith('buildlog/')
-  );
+  const others = changed.filter((f) => !homes.includes(f) && !ridesAlong(f));
   const strip = ({ budget: _budget, ...rest }) => rest;
   const profileRides =
     changed.includes('repo-profile.json') &&
@@ -435,5 +435,6 @@ module.exports = {
   isNotCounted,
   isCap,
   failLine,
+  ridesAlong,
   VENDOR_ROOT,
 };
