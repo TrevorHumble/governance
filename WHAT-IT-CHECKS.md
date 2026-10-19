@@ -42,6 +42,16 @@ visible, and the owner's yes is honored, not enforced. Edits to the check script
 budget step, editing `package.json`'s `check:budget`, and renaming a counted file into an uncounted
 place are not caught; a reviewer reading the diff is the guard there.
 
+**The files are checked for banned phrases and filler words on every pull request and every push to `main` or `v2`.**
+`scripts/check-banned-words.js` (`npm run check:banned`) reads the working copy of the files it scans
+and fails, naming the file and line, if a file the budget check counts as the new tree, anything
+under `vendor/skills/`, `BUILDLOG.md`, or a `buildlog/` fragment holds a banned phrase, and, for
+the counted files only, if one holds a banned filler word. Counted files are the `new-tree.json`
+files minus the budget's not-counted list; once `new-tree.json` is deleted, every tracked `.md` file
+the budget counts. A phrase matches inside a longer word; a filler word only as a whole word. The
+lists are stored encoded and not quoted here. Files in the
+`pending` list are not scanned until the swap points the check at the whole tree.
+
 **Newly added lines are checked for the no-em-dash writing rule, but only on a pull request in
 CI; a local run also checks your dirty working tree.** `scripts/check-emdash.js` rejects a pull
 request or merge-queue run whose added lines contain an em dash or an HTML entity spelling of
@@ -183,5 +193,5 @@ repo currently declares none (`preReview: "none"`); if that changes, this file a
 statement of this; it is not restated here.
 
 **Green means the test suite passes, `eslint` and `prettier --check` both exit 0, and newly added
-lines carry no em dash. For anything whose correctness depends on how it looks or reads to a
+lines carry no em dash, and no scanned file holds a banned phrase or filler word. For anything whose correctness depends on how it looks or reads to a
 person, that judgment is still yours.**

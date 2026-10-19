@@ -8,6 +8,7 @@
     "buildlog": "node scripts/buildlog-glue.js",
     "check:emdash": "node scripts/check-emdash.js",
     "check:budget": "node scripts/check-token-budget.js",
+    "check:banned": "node scripts/check-banned-words.js",
     "lint": "eslint . --max-warnings=0",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

@@ -210,4 +210,4 @@ if (require.main === module) {
   process.exitCode = exitCode;
 }
 
-module.exports = { main };
+module.exports = { main, readHead };
