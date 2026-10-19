@@ -6,4 +6,4 @@ tools: Read, Grep, Glob
 
 Read the `writing-issues`, `writing-user-stories`, and `writing-acceptance-criteria` skills and follow them.
 
-Return the draft; do not file it. The owner approves the title, story, and criteria before the issue is filed: hand them over as one short message (`pipeline/steps/05-hand-off.md`).
+Return the draft, with its title, story, and criteria ready for the owner hand-off (`pipeline/steps/05-hand-off.md`); do not file it.
