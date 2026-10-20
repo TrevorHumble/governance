@@ -19,13 +19,18 @@ let dir;
 
 beforeAll(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'before-issue-create-'));
-  fs.writeFileSync(path.join(dir, 'ok.md'), `Top\r\n${LINE}\r\nBody\r\n`);
+  fs.writeFileSync(path.join(dir, 'ok.md'), `${LINE}\r\nBody\r\n`);
+  fs.writeFileSync(path.join(dir, 'bom.md'), `\uFEFF${LINE}\nBody\n`);
   fs.writeFileSync(path.join(dir, 'bad.md'), 'Body only\n');
+  fs.writeFileSync(path.join(dir, 'late.md'), `Top\n${LINE}\n`);
+  fs.writeFileSync(path.join(dir, 'big.md'), `${LINE}\n${'x'.repeat(3 * 1024 * 1024)}`);
+  fs.mkdirSync(path.join(dir, 'sub'));
 });
 
 afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-// Runs the hook on a Bash command (or on raw stdin). Returns 'allow' (no output) or the deny reason.
+// Runs the hook on a Bash command (or on raw stdin). Returns { decision, event, reason }: decision is
+// 'allow' when the hook printed nothing (event and reason are then undefined) or 'deny' when it did.
 function run(command, { raw } = {}) {
   const input = raw !== undefined ? raw : JSON.stringify({ tool_input: { command }, cwd: dir });
   const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', SCRIPT], {
@@ -75,13 +80,14 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the one accepted form', ()
     expect(run(create(`--label bug --body-file ok.md`)).decision).toBe('deny');
     const noLine = run(create(`--label ${LABEL} --body-file bad.md`));
     expect(noLine.decision).toBe('deny');
-    expect(noLine.reason).toContain("no 'Owner-approved: yes' line");
+    expect(noLine.reason).toContain("first line of 'bad.md' is not 'Owner-approved: yes'");
   });
 
-  it('denies a missing or unreadable body file and a body from stdin', () => {
+  it('denies a missing body file, a directory, and a body from stdin', () => {
     const missing = run(create(`--label ${LABEL} --body-file nope.md`));
     expect(missing.decision).toBe('deny');
     expect(missing.reason).toContain('nope.md');
+    expect(run(create(`--label ${LABEL} --body-file sub`)).decision).toBe('deny');
     const stdin = run(create(`--label ${LABEL} --body-file -`));
     expect(stdin.decision).toBe('deny');
     expect(stdin.reason).toContain('stdin');
@@ -192,5 +198,135 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: everything else passes', (
     expect(run(undefined, { raw: JSON.stringify({ tool_input: {} }) }).decision).toBe('allow');
     expect(run(undefined, { raw: 'not json at all' }).decision).toBe('allow');
     expect(run(undefined, { raw: '' }).decision).toBe('allow');
+  });
+});
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: gh at a command position only', () => {
+  const exe = '"C:\\Program Files\\GitHub CLI\\gh.exe"';
+
+  it('passes searches and commits that only mention the command', () => {
+    expect(
+      decisions([
+        'grep -rn "gh issue create" .',
+        "rg 'gh issue create' docs/",
+        'git commit -m "fix gh issue create handling"',
+        'echo gh issue create',
+        'cat notes.md | grep "gh issue create" > out.txt',
+      ])
+    ).toEqual(Array(5).fill('allow'));
+  });
+
+  it('sees a create behind a path, .exe, quotes, the call operator, or a VAR= prefix', () => {
+    const rest = 'issue create --title T --body x';
+    expect(
+      decisions([
+        `${exe} ${rest}`,
+        `& ${exe} ${rest}`,
+        `/usr/local/bin/gh ${rest}`,
+        `GH_TOKEN=abc gh ${rest}`,
+        `echo hi\ngh ${rest}`,
+        `(gh ${rest})`,
+        `ls || gh ${rest}`,
+      ])
+    ).toEqual(Array(7).fill('deny'));
+  });
+
+  it('judges a quoted-program create by the one form', () => {
+    expect(run(`${exe} issue create --label ${LABEL} --body-file ok.md`).decision).toBe('allow');
+    expect(run(`${exe} issue create --label ${LABEL} --body-file bad.md`).decision).toBe('deny');
+  });
+
+  it('allows -R and --repo between issue and the verb, and still judges the create', () => {
+    expect(run(`gh issue -R o/r create --label ${LABEL} --body-file ok.md`).decision).toBe('allow');
+    expect(run(`gh issue --repo=o/r create --label ${LABEL} --body-file ok.md`).decision).toBe(
+      'allow'
+    );
+    expect(run('gh issue -R o/r create --title T').decision).toBe('deny');
+  });
+});
+
+maybeDescribe(
+  '_claude/hooks/before-issue-create.ps1: one issue per call, one call per segment',
+  () => {
+    const good = `gh issue create --label ${LABEL} --body-file ok.md`;
+
+    it('denies more than one create in one call, even when each is compliant', () => {
+      const chained = run(`${good} && ${good}`);
+      expect(chained.decision).toBe('deny');
+      expect(chained.reason).toContain('one issue per call');
+      expect(run(`${good}; gh issue new --title T`).decision).toBe('deny');
+      expect(run(`${good} && gh api -X POST repos/o/r/issues -f title=T`).decision).toBe('deny');
+    });
+
+    it('reads flags only from the create itself, not from the words around it', () => {
+      expect(
+        decisions([
+          `gh issue create --title "drop the -b flag" --label ${LABEL} --body-file ok.md`,
+          `${good} 2>&1 | grep -B 2 error`,
+          `${good} && grep -b x notes.md`,
+          `echo --label ${LABEL} && gh issue create --title T --body-file ok.md`,
+        ])
+      ).toEqual(['allow', 'allow', 'allow', 'deny']);
+    });
+
+    it('does not take a label or body flag from inside a quoted title', () => {
+      expect(
+        decisions([
+          `gh issue create --title "--label ${LABEL}" --body-file ok.md`,
+          `gh issue create --title "x" --label ${LABEL} --body-file ok.md --body "inline"`,
+        ])
+      ).toEqual(['deny', 'deny']);
+    });
+
+    it('reads flags case-sensitively', () => {
+      expect(run(`gh issue create --label ${LABEL.toUpperCase()} --body-file ok.md`).decision).toBe(
+        'deny'
+      );
+      expect(run(`gh issue create -L ${LABEL} --body-file ok.md`).decision).toBe('deny');
+    });
+  }
+);
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: gh api reads its own call', () => {
+  it('takes the method from that call, not from a later command', () => {
+    expect(
+      decisions([
+        'gh api -X GET repos/o/r/issues -f state=open && curl -X POST example.com',
+        'gh api repos/o/r/issues; gh api -X POST repos/o/r/issues/5/comments -f body=x',
+        'gh api repos/o/r/issues | xargs -f list.txt',
+      ])
+    ).toEqual(['allow', 'allow', 'allow']);
+    expect(run('gh api repos/o/r/issues -XPOST -f title=T').decision).toBe('deny');
+    expect(run('gh api repos/o/r/issues --method=POST').decision).toBe('deny');
+  });
+
+  it('catches a full https URL for the issues endpoint, and only that endpoint', () => {
+    expect(run('gh api -X POST https://api.github.com/repos/o/r/issues -f title=T').decision).toBe(
+      'deny'
+    );
+    expect(
+      run('gh api -X POST https://git.example/api/v3/repos/o/r/issues -f title=T').decision
+    ).toBe('deny');
+    expect(
+      run('gh api -X POST https://api.github.com/repos/o/r/issues/5/comments -f body=x').decision
+    ).toBe('allow');
+  });
+});
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file', () => {
+  const withFile = (f) => create(`--label ${LABEL} --body-file ${f}`);
+
+  it('requires the line to be the first line, with CRLF and a BOM allowed', () => {
+    expect(decisions([withFile('ok.md'), withFile('bom.md')])).toEqual(['allow', 'allow']);
+    expect(run(withFile('late.md')).decision).toBe('deny');
+  });
+
+  it('reads no more than 1 MB of a large file', () => {
+    expect(run(withFile('big.md')).decision).toBe('allow');
+  });
+
+  it.skipIf(process.platform !== 'linux')('allows the call when reading the file throws', () => {
+    // /proc/self/mem exists as a file but fails with an I/O error on read.
+    expect(run(withFile('/proc/self/mem')).decision).toBe('allow');
   });
 });
