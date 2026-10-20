@@ -64,9 +64,12 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the one accepted form', ()
         create(`-l ${LABEL} -F ok.md`),
         create(`--label bug,${LABEL} --body-file ok.md`),
         create(`--label bug --label ${LABEL} --body-file ${path.join(dir, 'ok.md')}`),
-        `gh issue new --label ${LABEL} --body-file ok.md 2>&1`,
       ])
-    ).toEqual(['allow', 'allow', 'allow', 'allow']);
+    ).toEqual(['allow', 'allow', 'allow']);
+  });
+
+  it('accepts the new alias, with a trailing redirect', () => {
+    expect(run(`gh issue new --label ${LABEL} --body-file ok.md 2>&1`).decision).toBe('allow');
   });
 
   it('reads a relative file from the payload cwd, not from a cd earlier in the command (documented gap)', () => {
@@ -249,6 +252,22 @@ maybeDescribe(
       expect(res.reason).toContain('names issue creation more than once');
       expect(res.reason).toContain('neutral title');
       expect(res.reason).toContain('gh issue edit <N> --title');
+    });
+
+    it('allows the rename the advice names: a title read from a file, in gh issue edit', () => {
+      expect(run('gh issue edit 5 --title "$(cat title.txt)"').decision).toBe('allow');
+    });
+
+    it('opens every deny without claiming the call files an issue', () => {
+      const reasons = [
+        run('git commit -m "note gh issue create"').reason,
+        run(`gh issue create --label ${LABEL} --body-file bad.md`).reason,
+        run('gh api -X POST repos/o/r/issues -f title=T').reason,
+      ];
+      for (const r of reasons) {
+        expect(r).toContain('This command names issue creation, so it is judged as a filing:');
+        expect(r).not.toContain('this call files an issue');
+      }
     });
 
     it('reads flags only from the create itself, not from the words around it', () => {

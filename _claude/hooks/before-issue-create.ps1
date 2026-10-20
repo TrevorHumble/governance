@@ -1,6 +1,4 @@
-# before-issue-create: a PreToolUse hook for Bash that denies filing a GitHub issue unless the call is
-# `gh issue create` with the needs-issue-review label and --body-file <file> (or -F <file>) whose
-# first line is "Owner-approved: yes". It is a reminder, not a guarantee: an agent can type the line.
+# before-issue-create: a reminder, not a guarantee: an agent can type the Owner-approved line.
 # It fails closed: text cannot be reliably told from a command, so any command text that reads like
 # a create is judged as one, mentions included.
 # Not covered: a loop that runs one create several times, a cd earlier in the same command, gh api
@@ -77,7 +75,7 @@ function Test-IssuesApiPost([string[]]$words) {
 }
 
 function Write-Deny($why) {
-  $reason = "before-issue-create: this call files an issue, but $why. File an issue one way: " +
+  $reason = "before-issue-create: This command names issue creation, so it is judged as a filing: $why. File an issue one way: " +
     "gh issue create --label $LABEL --body-file <file>, where the file's first line is '$FIRST_LINE'. " +
     "The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. " +
     "Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search."
@@ -95,7 +93,7 @@ try {
   $creates = @([regex]::Matches($text, $CREATE))
   $apiPosts = @([regex]::Matches($text, $API) | Where-Object { Test-IssuesApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
-  if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'its text names issue creation more than once (one create per call; a title or other text that names the command counts too; file with a neutral title, then gh issue edit <N> --title)'; exit 0 }
+  if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'its text names issue creation more than once (one create per call; a title or other text that names the command counts too; file with a neutral title, then write the real title to a file with the Write tool and run gh issue edit <N> --title "$(cat <file>)")'; exit 0 }
   if ($apiPosts.Count -eq 1) { Write-Deny 'it creates the issue through gh api'; exit 0 }
 
   $facts = Get-CreateFacts (Get-SegmentWords $text ($creates[0].Index + $creates[0].Length))
