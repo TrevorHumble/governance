@@ -19,7 +19,7 @@ Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whos
 
 ## The token change
 
-Work out the number before you write the message. `writing-issues` says what it means. If the change would push governance over the cap, make room first: `npm run check:budget` lists the ways, and any cut needs the owner's yes.
+Work out the number before you write the message. `writing-issues` says what it means.
 
 An approved cut becomes a Done-when line, so it gets checked like any other.
 
