@@ -1,4 +1,11 @@
 # 06-issue
 
-Placeholder. This file will hold the pipeline step that tells the agent to file the issue.
-Budget: part of the 3,400 tokens shared across the twelve steps.
+File only after the owner's yes from step 05. Use the words the owner approved.
+
+```
+gh issue create --title "<title>" --body-file <file> --label needs-issue-review --label owner-approved
+```
+
+Make the first line of the body `Owner-approved: yes`. The `before-issue-create` hook stops a filing that lacks the `needs-issue-review` label or that line.
+
+If the change adds or restructures a component, run the architecture specialist (`reviewing-architecture`, on the `code-reviewer` seat) on the plan before you file. Put their notes in the body under "Specialist notes". Fix any `blocker:` there before you file. The issue reviewer checks the fix at step 07.
