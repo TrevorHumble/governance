@@ -1,7 +1,7 @@
 // tests/before-issue-create.test.js
 // Vitest tests for _claude/hooks/before-issue-create.ps1: a PreToolUse hook that allows filing an
-// issue in one form only (`gh issue create`, the needs-issue-review label, and a body file holding
-// the line "Owner-approved: yes") and denies every other create. Each case feeds the PreToolUse
+// issue in one form only (`gh issue create`, the needs-issue-review label, and a body file whose
+// first line is 'Owner-approved: yes') and denies every other create. Each case feeds the PreToolUse
 // JSON on stdin and reads the deny JSON (or nothing) from stdout. Launcher: tests/ps-launcher.js.
 'use strict';
 
@@ -328,5 +328,90 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file', () => {
   it.skipIf(process.platform !== 'linux')('allows the call when reading the file throws', () => {
     // /proc/self/mem exists as a file but fails with an I/O error on read.
     expect(run(withFile('/proc/self/mem')).decision).toBe('allow');
+  });
+});
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: a call with one word after the verb', () => {
+  it('still judges it: =-joined and attached flags, and a lone flag', () => {
+    expect(
+      decisions([
+        'gh issue create --body-file=bad.md',
+        'gh issue create -Fbad.md',
+        'gh issue create --body=inline',
+        'gh issue create --title=T',
+        `gh issue create --label=${LABEL}`,
+      ])
+    ).toEqual(Array(5).fill('deny'));
+  });
+
+  it('allows the one form written with = and attached values', () => {
+    expect(run(`gh issue create --label=${LABEL} --body-file=ok.md`).decision).toBe('allow');
+    expect(run(`gh issue create -l${LABEL} -Fok.md`).decision).toBe('allow');
+  });
+
+  it('keeps the last --body-file, as gh does', () => {
+    expect(run(create(`--label ${LABEL} --body-file bad.md --body-file ok.md`)).decision).toBe(
+      'allow'
+    );
+    expect(run(create(`--label ${LABEL} --body-file ok.md -F bad.md`)).decision).toBe('deny');
+  });
+});
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: quoted mentions are not commands', () => {
+  it('passes single-quoted text, quoted heredocs, and double-quoted text outside $( )', () => {
+    const heredoc = (q) =>
+      `git commit -m "$(cat <<${q}\nblocks gh issue create calls\n\ngh issue create\nEOF\n)"`;
+    expect(
+      decisions([
+        "git commit -m 'blocks `gh issue create` without a label'",
+        "gh pr create --title T --body 'checks `gh issue create` calls'",
+        heredoc("'EOF'"),
+        heredoc('"EOF"'),
+        'rg "(gh issue create|gh issue new)" docs',
+        'git commit -m "x; gh issue create handling"',
+        'git commit -m "blocks \\`gh issue create\\` calls"',
+        'echo "first\ngh issue create"',
+      ])
+    ).toEqual(Array(8).fill('allow'));
+  });
+
+  it('still denies a create beside a mention, or inside a double-quoted $( )', () => {
+    expect(
+      decisions([
+        "git commit -m 'gh issue create' && gh issue create --title T",
+        `echo "it's fine" && gh issue create --title T`,
+        'echo "$(gh issue create --title T --body x)"',
+        'echo "ok" "$(echo hi | gh issue create --title T)"',
+        'git commit -m "$(cat <<EOF\nnote\nEOF\n)" && gh issue create --title T',
+      ])
+    ).toEqual(Array(5).fill('deny'));
+  });
+
+  it('reads a single-quoted label and body file in a real create', () => {
+    expect(run(`gh issue create --label '${LABEL}' --body-file 'ok.md'`).decision).toBe('allow');
+  });
+});
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: program name and prefixes', () => {
+  it('matches the program name in any case', () => {
+    expect(
+      decisions([
+        'GH issue create --title T',
+        'Gh.exe issue create --title T',
+        'gh ISSUE create --title T',
+      ])
+    ).toEqual(['deny', 'deny', 'allow']);
+  });
+
+  it('sees a create behind timeout, nice, xargs, {, and !', () => {
+    expect(
+      decisions([
+        'timeout 30 gh issue create --title T',
+        'nice gh issue create --title T',
+        'echo T | xargs gh issue create --title',
+        '{ gh issue create --title T; }',
+        '! gh issue create --title T',
+      ])
+    ).toEqual(Array(5).fill('deny'));
   });
 });

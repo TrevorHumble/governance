@@ -2,18 +2,23 @@
 # call is `gh issue create` with the needs-issue-review label and --body-file <file> (or -F <file>)
 # whose first line is "Owner-approved: yes". Every other way of creating one is denied with a
 # message naming that form. It is a reminder, not a guarantee: an agent can type the line.
-# Not covered: bash -c strings, a cd earlier in the same command, gh api graphql, and a heredoc
-# line that starts with `gh issue create` (it looks like a command). Any failure here allows the call.
+# `gh` counts only where a command can start. Single-quoted text, quoted heredoc bodies, and
+# double-quoted text outside $( ) are not scanned, so grep, rg, and commit messages that mention
+# the command pass.
+# Not covered: bash -c and pwsh -c strings, a cd earlier in the same command, gh api graphql, line
+# continuations inside the command, a loop that runs one create several times, and a line starting
+# with `gh issue create` inside an unquoted heredoc (it looks like a command).
+# Any failure here allows the call.
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
 $FIRST_LINE = 'Owner-approved: yes'
 $MAX_READ = 1MB
 
-# `gh` counts only where a command can start, so grep, rg, and a commit message that merely mention
-# it pass. The text is scanned as written, so a create inside quotes, $( ), or backticks is seen.
-$PROGRAM = '(?:"(?:[^"]*[\\/])?gh(?:\.exe)?"|''(?:[^'']*[\\/])?gh(?:\.exe)?''|(?:[^\s"''`;&|()]*[\\/])?gh(?:\.exe)?)'
-$COMMAND_START = '(?:^|[;|&\n(`])\s*(?:&\s*)?(?:(?:env|command|sudo|time|exec|nohup|then|do|else|if|while|until|[A-Za-z_]\w*=(?:"[^"]*"|''[^'']*''|\S*))\s+)*' + $PROGRAM
+# The program name ignores case because Windows resolves GH and Gh.exe; verbs and flags do not.
+$PROGRAM = '(?:"(?:[^"]*[\\/])?(?i:gh(?:\.exe)?)"|''(?:[^'']*[\\/])?(?i:gh(?:\.exe)?)''|(?:[^\s"''`;&|()]*[\\/])?(?i:gh(?:\.exe)?))'
+$PREFIX = '(?:env|command|sudo|time|exec|nohup|nice|xargs|then|do|else|if|while|until|!|\{|timeout\s+[\d.]+[smhd]?|[A-Za-z_]\w*=(?:"[^"]*"|''[^'']*''|\S*))'
+$COMMAND_START = '(?:^|[;|&\n(`])\s*(?:&\s*)?(?:' + $PREFIX + '\s+)*' + $PROGRAM
 $CREATE = $COMMAND_START + '\s+issue\s+(?:(?:-R|--repo)(?:=|\s+)(?:"[^"]*"|\S+)\s+)?(?:create|new)(?=[\s;|&)`]|$)'
 $API = $COMMAND_START + '\s+api(?=\s)'
 $ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?(?:\?.*)?$'
@@ -22,8 +27,43 @@ $ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?
 $VALUE_FLAGS = @('--body', '-b', '--body-file', '-F', '--label', '-l', '--title', '-t', '--assignee', '-a',
   '--milestone', '-m', '--project', '-p', '--repo', '-R', '--template', '-T', '--recover')
 
-function Get-CallWords($text, $from) {
-  # The words of one command: from $from to the next unquoted separator, quotes removed.
+function Get-ScanText([string]$text) {
+  # Same length as $text, so a match position indexes the original. Masks what is not a command:
+  # quoted heredoc bodies, single-quoted text, and double-quoted text outside $( ).
+  $text = [regex]::Replace($text, '(<<-?[ \t]*([''"])(\w+)\2[^\n]*)\n.*?\n[ \t]*\3[ \t\r]*(?=\n|$)',
+    [System.Text.RegularExpressions.MatchEvaluator] { param($m)
+      $m.Groups[1].Value + [regex]::Replace($m.Value.Substring($m.Groups[1].Length), '[^\n]', 'x') },
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+  $out = New-Object System.Text.StringBuilder
+  $stack = New-Object System.Collections.Generic.List[string]
+  $inSingle = $false
+  for ($i = 0; $i -lt $text.Length; $i++) {
+    $c = [string]$text[$i]
+    $next = if ($i + 1 -lt $text.Length) { [string]$text[$i + 1] } else { '' }
+    $top = if ($stack.Count) { $stack[$stack.Count - 1] } else { 'code' }
+    if ($inSingle) {
+      if ($c -eq "'") { $inSingle = $false; [void]$out.Append($c) } else { [void]$out.Append('x') }
+    } elseif ($c -eq '\' -and ($top -ne 'dq' -or $next -in '"', '\', '$', '`')) {
+      # In double quotes only these four are escapes; a Windows path like "C:\Program Files\gh.exe" keeps its slashes.
+      [void]$out.Append($(if ($top -eq 'dq') { 'x' } else { $c }))
+      if ($next) { [void]$out.Append($(if ($top -eq 'dq') { 'x' } else { $next })); $i++ }
+    } elseif ($top -eq 'dq') {
+      if ($c -eq '"') { $stack.RemoveAt($stack.Count - 1); [void]$out.Append($c) }
+      elseif ($c -eq '$' -and $next -eq '(') { $stack.Add('sub'); [void]$out.Append('$('); $i++ }
+      elseif ($c -in ';', '|', '&', '(', "`n") { [void]$out.Append('x') }
+      else { [void]$out.Append($c) }
+    } else {
+      if ($c -eq "'") { $inSingle = $true }
+      elseif ($c -eq '"') { $stack.Add('dq') }
+      elseif ($c -eq '(') { $stack.Add('sub') }
+      elseif ($c -eq ')' -and $stack.Count) { $stack.RemoveAt($stack.Count - 1) }
+      [void]$out.Append($c)
+    }
+  }
+  return $out.ToString()
+}
+
+function Get-SegmentWords([string]$text, [int]$from) {
   $quote = ''
   $i = $from
   for (; $i -lt $text.Length; $i++) {
@@ -38,11 +78,11 @@ function Get-CallWords($text, $from) {
   }
   $segment = $text.Substring($from, [Math]::Min($i, $text.Length) - $from)
   $words = [regex]::Matches($segment, '(?:"[^"]*"|''[^'']*''|[^\s"''])+')
-  return @($words | ForEach-Object { $_.Value -replace '["'']', '' })
+  # The leading comma keeps a one-word result an array; PowerShell would unroll it to a string.
+  return , @($words | ForEach-Object { $_.Value -replace '["'']', '' })
 }
 
-function Get-CreateFacts($words) {
-  # What a create call carries: whether the body is inline, its labels, and its --body-file value.
+function Get-CreateFacts([string[]]$words) {
   $facts = @{ Inline = $false; Labels = @(); File = $null }
   for ($i = 0; $i -lt $words.Count; $i++) {
     $w = $words[$i]
@@ -54,12 +94,12 @@ function Get-CreateFacts($words) {
     if (-not $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
     if ($name -ceq '--body' -or $name -ceq '-b') { $facts.Inline = $true }
     elseif ($name -ceq '--label' -or $name -ceq '-l') { $facts.Labels += $val -split ',' | ForEach-Object { $_.Trim() } }
-    elseif (($name -ceq '--body-file' -or $name -ceq '-F') -and -not $facts.File) { $facts.File = $val }
+    elseif ($name -ceq '--body-file' -or $name -ceq '-F') { $facts.File = $val }
   }
   return $facts
 }
 
-function Test-ApiPost($words) {
+function Test-ApiPost([string[]]$words) {
   # A POST to exactly repos/<owner>/<repo>/issues. Fields with no explicit method also POST.
   if (-not ($words | Where-Object { $_ -match $ISSUES_ENDPOINT })) { return $false }
   $method = $null
@@ -88,14 +128,15 @@ try {
   $text = $payload.tool_input.command
   if ($text -isnot [string]) { exit 0 }
 
-  # .NET matching is case-sensitive unless asked otherwise, which is what these flags need.
-  $creates = @([regex]::Matches($text, $CREATE))
-  $apiPosts = @([regex]::Matches($text, $API) | Where-Object { Test-ApiPost (Get-CallWords $text ($_.Index + $_.Length)) })
+  # Matching is case-sensitive: the verb and flag names must be exact. Only the program name ignores case.
+  $scan = Get-ScanText $text
+  $creates = @([regex]::Matches($scan, $CREATE))
+  $apiPosts = @([regex]::Matches($scan, $API) | Where-Object { Test-ApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
   if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'it files more than one issue (file one issue per call)'; exit 0 }
   if ($apiPosts.Count -eq 1) { Write-Deny 'it creates the issue through gh api'; exit 0 }
 
-  $facts = Get-CreateFacts (Get-CallWords $text ($creates[0].Index + $creates[0].Length))
+  $facts = Get-CreateFacts (Get-SegmentWords $text ($creates[0].Index + $creates[0].Length))
   if ($facts.Inline) { Write-Deny 'its body is inline'; exit 0 }
   if ($facts.Labels -cnotcontains $LABEL) { Write-Deny "it has no $LABEL label"; exit 0 }
   if (-not $facts.File -or $facts.File -eq '-') { Write-Deny 'its body does not come from a file (stdin cannot be read here)'; exit 0 }
