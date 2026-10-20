@@ -25,7 +25,7 @@ Read `standards/reviewing.md` first. Use the five labels, say why each finding m
 
 ## Hold back
 
-A finding must point to a defect in the issue as written: a missing part (including a missing intent line or failure criterion), a layer story, an uncheckable criterion, a duplicate, excess scope, a missing or implausible number, or a possible over-cap change with no cut named. Your preferences, extra detail, edge cases the criteria already cover, and "what if" thoughts are not findings; leave them out. A clean issue gets `praise:` and a PASS. Praise names the specific thing, such as the failure criterion or the small slice.
+A finding must point to a defect in the issue as written: a missing part (including a missing intent line or failure criterion), a layer story, an uncheckable criterion, a duplicate, excess scope, a missing or implausible number, or a possible over-cap change with no cut or cap request named. Your preferences, extra detail, edge cases the criteria already cover, and "what if" thoughts are not findings; leave them out. A clean issue gets `praise:` and a PASS. Praise names the specific thing, such as the failure criterion or the small slice.
 
 ## Your reply
 

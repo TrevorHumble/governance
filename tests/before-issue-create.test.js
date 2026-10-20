@@ -184,15 +184,6 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: everything else passes', (
     ).toEqual(Array(5).fill('allow'));
   });
 
-  it('passes a git command that only mentions the create command', () => {
-    expect(
-      decisions([
-        'git commit -m "the hook blocks gh issue create without a label"',
-        'git commit -m "$(cat <<\'EOF\'\nfix gh issue create handling\nEOF\n)"',
-      ])
-    ).toEqual(['allow', 'allow']);
-  });
-
   it('passes empty, missing, and unparseable input', () => {
     expect(run('').decision).toBe('allow');
     expect(run(undefined, { raw: JSON.stringify({ tool_input: {} }) }).decision).toBe('allow');
@@ -201,22 +192,10 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: everything else passes', (
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: gh at a command position only', () => {
+maybeDescribe('_claude/hooks/before-issue-create.ps1: where gh can appear', () => {
   const exe = '"C:\\Program Files\\GitHub CLI\\gh.exe"';
 
-  it('passes searches and commits that only mention the command', () => {
-    expect(
-      decisions([
-        'grep -rn "gh issue create" .',
-        "rg 'gh issue create' docs/",
-        'git commit -m "fix gh issue create handling"',
-        'echo gh issue create',
-        'cat notes.md | grep "gh issue create" > out.txt',
-      ])
-    ).toEqual(Array(5).fill('allow'));
-  });
-
-  it('sees a create behind a path, .exe, quotes, the call operator, or a VAR= prefix', () => {
+  it('sees a create behind a path, .exe, quotes, the call operator, a prefix, or a line break', () => {
     const rest = 'issue create --title T --body x';
     expect(
       decisions([
@@ -227,8 +206,10 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: gh at a command position o
         `echo hi\ngh ${rest}`,
         `(gh ${rest})`,
         `ls || gh ${rest}`,
+        `timeout 30 gh ${rest}`,
+        `gh \\\n${rest}`,
       ])
-    ).toEqual(Array(7).fill('deny'));
+    ).toEqual(Array(9).fill('deny'));
   });
 
   it('judges a quoted-program create by the one form', () => {
@@ -357,34 +338,49 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: a call with one word after
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: quoted mentions are not commands', () => {
-  it('passes single-quoted text, quoted heredocs, and double-quoted text outside $( )', () => {
-    const heredoc = (q) =>
-      `git commit -m "$(cat <<${q}\nblocks gh issue create calls\n\ngh issue create\nEOF\n)"`;
-    expect(
-      decisions([
-        "git commit -m 'blocks `gh issue create` without a label'",
-        "gh pr create --title T --body 'checks `gh issue create` calls'",
-        heredoc("'EOF'"),
-        heredoc('"EOF"'),
-        'rg "(gh issue create|gh issue new)" docs',
-        'git commit -m "x; gh issue create handling"',
-        'git commit -m "blocks \\`gh issue create\\` calls"',
-        'echo "first\ngh issue create"',
-      ])
-    ).toEqual(Array(8).fill('allow'));
+maybeDescribe('_claude/hooks/before-issue-create.ps1: it fails closed on mentions', () => {
+  const heredoc = (q) => `git commit -m "$(cat <<${q}\nblocks gh issue create calls\nEOF\n)"`;
+
+  it('denies text that only mentions creating an issue, and points to a file or Grep', () => {
+    const mentions = [
+      'git commit -m "fix gh issue create handling"',
+      "git commit -m 'blocks `gh issue create` without a label'",
+      'grep -rn "gh issue create" .',
+      'rg "(gh issue create|gh issue new)" docs',
+      'echo gh issue create',
+      heredoc("'EOF'"),
+      heredoc('EOF'),
+    ];
+    expect(decisions(mentions)).toEqual(Array(7).fill('deny'));
+    const res = run(mentions[0]);
+    expect(res.reason).toContain('git commit -F <file>');
+    expect(res.reason).toContain('Grep tool');
+    expect(res.reason).toContain(`gh issue create --label ${LABEL} --body-file <file>`);
   });
 
-  it('still denies a create beside a mention, or inside a double-quoted $( )', () => {
+  it('does not read gh inside another word, or other gh commands, as a create', () => {
+    expect(
+      decisions(['echo high issue create', 'echo ugh issue created', 'echo gh issue create-x'])
+    ).toEqual(['allow', 'allow', 'allow']);
+  });
+
+  it('still denies a real create after an apostrophe, a comment, or an ANSI-C string', () => {
     expect(
       decisions([
-        "git commit -m 'gh issue create' && gh issue create --title T",
         `echo "it's fine" && gh issue create --title T`,
+        `echo it's && gh issue create --title T`,
+        `# don't stop\ngh issue create --title T`,
+        `echo $'it\\'s' && gh issue create --title T`,
+        `git commit -m "$(cat <<EOF\nit's a note\nEOF\n)" && gh issue create --title T`,
         'echo "$(gh issue create --title T --body x)"',
-        'echo "ok" "$(echo hi | gh issue create --title T)"',
-        'git commit -m "$(cat <<EOF\nnote\nEOF\n)" && gh issue create --title T',
       ])
-    ).toEqual(Array(5).fill('deny'));
+    ).toEqual(Array(6).fill('deny'));
+  });
+
+  it('judges a create by its own segment when the title has an escaped apostrophe', () => {
+    const own = `gh issue create --title it\\'s --label ${LABEL} --body-file`;
+    expect(run(`${own} ok.md ; echo -F bad.md`).decision).toBe('allow');
+    expect(run(`${own} bad.md ; echo -F ok.md`).decision).toBe('deny');
   });
 
   it('reads a single-quoted label and body file in a real create', () => {
@@ -392,7 +388,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: quoted mentions are not co
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: program name and prefixes', () => {
+maybeDescribe('_claude/hooks/before-issue-create.ps1: program name', () => {
   it('matches the program name in any case', () => {
     expect(
       decisions([
@@ -401,17 +397,5 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: program name and prefixes'
         'gh ISSUE create --title T',
       ])
     ).toEqual(['deny', 'deny', 'allow']);
-  });
-
-  it('sees a create behind timeout, nice, xargs, {, and !', () => {
-    expect(
-      decisions([
-        'timeout 30 gh issue create --title T',
-        'nice gh issue create --title T',
-        'echo T | xargs gh issue create --title',
-        '{ gh issue create --title T; }',
-        '! gh issue create --title T',
-      ])
-    ).toEqual(Array(5).fill('deny'));
   });
 });

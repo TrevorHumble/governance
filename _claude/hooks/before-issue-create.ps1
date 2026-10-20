@@ -1,67 +1,26 @@
 # before-issue-create: a PreToolUse hook for Bash calls. It denies filing a GitHub issue unless the
 # call is `gh issue create` with the needs-issue-review label and --body-file <file> (or -F <file>)
-# whose first line is "Owner-approved: yes". Every other way of creating one is denied with a
-# message naming that form. It is a reminder, not a guarantee: an agent can type the line.
-# `gh` counts only where a command can start. Single-quoted text, quoted heredoc bodies, and
-# double-quoted text outside $( ) are not scanned, so grep, rg, and commit messages that mention
-# the command pass.
-# Not covered: bash -c and pwsh -c strings, a cd earlier in the same command, gh api graphql, line
-# continuations inside the command, a loop that runs one create several times, and a line starting
-# with `gh issue create` inside an unquoted heredoc (it looks like a command).
-# Any failure here allows the call.
+# whose first line is "Owner-approved: yes". It is a reminder, not a guarantee: an agent can type the line.
+# It fails closed on mentions on purpose: telling a real create from text that names one is where
+# every earlier version leaked, so any command text that reads like a create is judged as one.
+# Not covered: a loop that runs one create several times, a cd earlier in the same command, and
+# gh api graphql. Any exception inside the hook allows the call.
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
 $FIRST_LINE = 'Owner-approved: yes'
 $MAX_READ = 1MB
 
-# The program name ignores case because Windows resolves GH and Gh.exe; verbs and flags do not.
-$PROGRAM = '(?:"(?:[^"]*[\\/])?(?i:gh(?:\.exe)?)"|''(?:[^'']*[\\/])?(?i:gh(?:\.exe)?)''|(?:[^\s"''`;&|()]*[\\/])?(?i:gh(?:\.exe)?))'
-$PREFIX = '(?:env|command|sudo|time|exec|nohup|nice|xargs|then|do|else|if|while|until|!|\{|timeout\s+[\d.]+[smhd]?|[A-Za-z_]\w*=(?:"[^"]*"|''[^'']*''|\S*))'
-$COMMAND_START = '(?:^|[;|&\n(`])\s*(?:&\s*)?(?:' + $PREFIX + '\s+)*' + $PROGRAM
-$CREATE = $COMMAND_START + '\s+issue\s+(?:(?:-R|--repo)(?:=|\s+)(?:"[^"]*"|\S+)\s+)?(?:create|new)(?=[\s;|&)`]|$)'
-$API = $COMMAND_START + '\s+api(?=\s)'
+# Windows resolves GH and Gh.exe, so the program name ignores case; verbs and flags do not.
+# The lookbehind keeps a word like "high" from reading as gh.
+$GH = '(?<![\w.-])(?i:gh(?:\.exe)?)["'']?(?:\s|\\\r?\n)+'
+$CREATE = $GH + 'issue(?:\s|\\\r?\n)+(?:(?:-R|--repo)(?:=|\s+)(?:"[^"]*"|''[^'']*''|\S+)\s+)?(?:create|new)(?![\w-])'
+$API = $GH + 'api(?=\s)'
 $ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?(?:\?.*)?$'
 
 # Flags that take a value. Reading them by name keeps a title like "drop the -b flag" from counting.
 $VALUE_FLAGS = @('--body', '-b', '--body-file', '-F', '--label', '-l', '--title', '-t', '--assignee', '-a',
   '--milestone', '-m', '--project', '-p', '--repo', '-R', '--template', '-T', '--recover')
-
-function Get-ScanText([string]$text) {
-  # Same length as $text, so a match position indexes the original. Masks what is not a command:
-  # quoted heredoc bodies, single-quoted text, and double-quoted text outside $( ).
-  $text = [regex]::Replace($text, '(<<-?[ \t]*([''"])(\w+)\2[^\n]*)\n.*?\n[ \t]*\3[ \t\r]*(?=\n|$)',
-    [System.Text.RegularExpressions.MatchEvaluator] { param($m)
-      $m.Groups[1].Value + [regex]::Replace($m.Value.Substring($m.Groups[1].Length), '[^\n]', 'x') },
-    [System.Text.RegularExpressions.RegexOptions]::Singleline)
-  $out = New-Object System.Text.StringBuilder
-  $stack = New-Object System.Collections.Generic.List[string]
-  $inSingle = $false
-  for ($i = 0; $i -lt $text.Length; $i++) {
-    $c = [string]$text[$i]
-    $next = if ($i + 1 -lt $text.Length) { [string]$text[$i + 1] } else { '' }
-    $top = if ($stack.Count) { $stack[$stack.Count - 1] } else { 'code' }
-    if ($inSingle) {
-      if ($c -eq "'") { $inSingle = $false; [void]$out.Append($c) } else { [void]$out.Append('x') }
-    } elseif ($c -eq '\' -and ($top -ne 'dq' -or $next -in '"', '\', '$', '`')) {
-      # In double quotes only these four are escapes; a Windows path like "C:\Program Files\gh.exe" keeps its slashes.
-      [void]$out.Append($(if ($top -eq 'dq') { 'x' } else { $c }))
-      if ($next) { [void]$out.Append($(if ($top -eq 'dq') { 'x' } else { $next })); $i++ }
-    } elseif ($top -eq 'dq') {
-      if ($c -eq '"') { $stack.RemoveAt($stack.Count - 1); [void]$out.Append($c) }
-      elseif ($c -eq '$' -and $next -eq '(') { $stack.Add('sub'); [void]$out.Append('$('); $i++ }
-      elseif ($c -in ';', '|', '&', '(', "`n") { [void]$out.Append('x') }
-      else { [void]$out.Append($c) }
-    } else {
-      if ($c -eq "'") { $inSingle = $true }
-      elseif ($c -eq '"') { $stack.Add('dq') }
-      elseif ($c -eq '(') { $stack.Add('sub') }
-      elseif ($c -eq ')' -and $stack.Count) { $stack.RemoveAt($stack.Count - 1) }
-      [void]$out.Append($c)
-    }
-  }
-  return $out.ToString()
-}
 
 function Get-SegmentWords([string]$text, [int]$from) {
   $quote = ''
@@ -70,6 +29,8 @@ function Get-SegmentWords([string]$text, [int]$from) {
     $c = [string]$text[$i]
     if ($quote) {
       if ($c -eq '\' -and $quote -eq '"') { $i++ } elseif ($c -eq $quote) { $quote = '' }
+    } elseif ($c -eq '\') {
+      $i++
     } elseif ($c -eq '"' -or $c -eq "'") {
       $quote = $c
     } elseif ($c -in ';', '|', '&', "`n", ')', '`') {
@@ -77,9 +38,9 @@ function Get-SegmentWords([string]$text, [int]$from) {
     }
   }
   $segment = $text.Substring($from, [Math]::Min($i, $text.Length) - $from)
-  $words = [regex]::Matches($segment, '(?:"[^"]*"|''[^'']*''|[^\s"''])+')
+  $words = [regex]::Matches($segment, '(?:\\.|"[^"]*"|''[^'']*''|[^\s"''\\])+')
   # The leading comma keeps a one-word result an array; PowerShell would unroll it to a string.
-  return , @($words | ForEach-Object { $_.Value -replace '["'']', '' })
+  return , @($words | ForEach-Object { $_.Value -replace '\\(["''])', '$1' -replace '["'']', '' })
 }
 
 function Get-CreateFacts([string[]]$words) {
@@ -116,7 +77,8 @@ function Test-ApiPost([string[]]$words) {
 function Write-Deny($why) {
   $reason = "before-issue-create: this call files an issue, but $why. File an issue one way: " +
     "gh issue create --label $LABEL --body-file <file>, where the file's first line is '$FIRST_LINE'. " +
-    "The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it."
+    "The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. " +
+    "Text that only mentions issue creation belongs in a file (git commit -F <file>, --body-file) or a Grep tool search."
   $out = [ordered]@{ hookSpecificOutput = [ordered]@{
       hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = $reason } }
   Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
@@ -128,10 +90,8 @@ try {
   $text = $payload.tool_input.command
   if ($text -isnot [string]) { exit 0 }
 
-  # Matching is case-sensitive: the verb and flag names must be exact. Only the program name ignores case.
-  $scan = Get-ScanText $text
-  $creates = @([regex]::Matches($scan, $CREATE))
-  $apiPosts = @([regex]::Matches($scan, $API) | Where-Object { Test-ApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
+  $creates = @([regex]::Matches($text, $CREATE))
+  $apiPosts = @([regex]::Matches($text, $API) | Where-Object { Test-ApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
   if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'it files more than one issue (file one issue per call)'; exit 0 }
   if ($apiPosts.Count -eq 1) { Write-Deny 'it creates the issue through gh api'; exit 0 }

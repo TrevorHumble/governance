@@ -21,7 +21,7 @@ Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whos
 
 Work out the number before you write the message. `writing-issues` says what it means.
 
-An approved cut becomes a Done-when line, so it gets checked like any other.
+An approved cut or cap request becomes a Done-when line, so it gets checked like any other.
 
 ## After you send
 
