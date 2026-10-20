@@ -1,8 +1,5 @@
 // tests/before-issue-create.test.js
-// Vitest tests for _claude/hooks/before-issue-create.ps1: a PreToolUse hook that allows filing an
-// issue in one form only (`gh issue create`, the needs-issue-review label, and a body file whose
-// first line is 'Owner-approved: yes') and denies every other create. Each case feeds the PreToolUse
-// JSON on stdin and reads the deny JSON (or nothing) from stdout. Launcher: tests/ps-launcher.js.
+// Tests for _claude/hooks/before-issue-create.ps1.
 'use strict';
 
 const { spawnSync } = require('child_process');
@@ -67,10 +64,15 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the one accepted form', ()
         create(`-l ${LABEL} -F ok.md`),
         create(`--label bug,${LABEL} --body-file ok.md`),
         create(`--label bug --label ${LABEL} --body-file ${path.join(dir, 'ok.md')}`),
-        `gh issue new --label ${LABEL} --body-file ok.md`,
-        `cd /tmp && gh issue create --label ${LABEL} --body-file "ok.md" 2>&1`,
+        `gh issue new --label ${LABEL} --body-file ok.md 2>&1`,
       ])
-    ).toEqual(['allow', 'allow', 'allow', 'allow', 'allow']);
+    ).toEqual(['allow', 'allow', 'allow', 'allow']);
+  });
+
+  it('reads a relative file from the payload cwd, not from a cd earlier in the command (documented gap)', () => {
+    expect(run(`cd /tmp && gh issue create --label ${LABEL} --body-file "ok.md"`).decision).toBe(
+      'allow'
+    );
   });
 
   it('denies a missing label, a wrong label, a missing line, and says which', () => {
@@ -234,9 +236,19 @@ maybeDescribe(
     it('denies more than one create in one call, even when each is compliant', () => {
       const chained = run(`${good} && ${good}`);
       expect(chained.decision).toBe('deny');
-      expect(chained.reason).toContain('one issue per call');
+      expect(chained.reason).toContain('names issue creation more than once');
       expect(run(`${good}; gh issue new --title T`).decision).toBe('deny');
       expect(run(`${good} && gh api -X POST repos/o/r/issues -f title=T`).decision).toBe('deny');
+    });
+
+    it('denies a compliant create whose title names issue creation, and says how to file it', () => {
+      const res = run(
+        `gh issue create --title "fix gh issue create" --label ${LABEL} --body-file ok.md`
+      );
+      expect(res.decision).toBe('deny');
+      expect(res.reason).toContain('names issue creation more than once');
+      expect(res.reason).toContain('neutral title');
+      expect(res.reason).toContain('gh issue edit <N> --title');
     });
 
     it('reads flags only from the create itself, not from the words around it', () => {
@@ -325,6 +337,12 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: a call with one word after
     ).toEqual(Array(5).fill('deny'));
   });
 
+  it('takes an empty =value as the value, not the next word', () => {
+    expect(run(create(`--label ${LABEL} -F ok.md --milestone= -F bad.md`)).decision).toBe('deny');
+    expect(run(create(`--label ${LABEL} --title= --body-file ok.md`)).decision).toBe('allow');
+    expect(run(create(`--label ${LABEL} -m= -F bad.md -F ok.md`)).decision).toBe('allow');
+  });
+
   it('allows the one form written with = and attached values', () => {
     expect(run(`gh issue create --label=${LABEL} --body-file=ok.md`).decision).toBe('allow');
     expect(run(`gh issue create -l${LABEL} -Fok.md`).decision).toBe('allow');
@@ -353,6 +371,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: it fails closed on mention
     ];
     expect(decisions(mentions)).toEqual(Array(7).fill('deny'));
     const res = run(mentions[0]);
+    expect(res.reason).toContain('written with the Write tool');
     expect(res.reason).toContain('git commit -F <file>');
     expect(res.reason).toContain('Grep tool');
     expect(res.reason).toContain(`gh issue create --label ${LABEL} --body-file <file>`);
@@ -389,7 +408,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: it fails closed on mention
 });
 
 maybeDescribe('_claude/hooks/before-issue-create.ps1: program name', () => {
-  it('matches the program name in any case', () => {
+  it('matches the program name in any case, but not the verb', () => {
     expect(
       decisions([
         'GH issue create --title T',

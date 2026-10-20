@@ -1,10 +1,11 @@
-# before-issue-create: a PreToolUse hook for Bash calls. It denies filing a GitHub issue unless the
-# call is `gh issue create` with the needs-issue-review label and --body-file <file> (or -F <file>)
-# whose first line is "Owner-approved: yes". It is a reminder, not a guarantee: an agent can type the line.
-# It fails closed on mentions on purpose: telling a real create from text that names one is where
-# every earlier version leaked, so any command text that reads like a create is judged as one.
-# Not covered: a loop that runs one create several times, a cd earlier in the same command, and
-# gh api graphql. Any exception inside the hook allows the call.
+# before-issue-create: a PreToolUse hook for Bash that denies filing a GitHub issue unless the call is
+# `gh issue create` with the needs-issue-review label and --body-file <file> (or -F <file>) whose
+# first line is "Owner-approved: yes". It is a reminder, not a guarantee: an agent can type the line.
+# It fails closed: text cannot be reliably told from a command, so any command text that reads like
+# a create is judged as one, mentions included.
+# Not covered: a loop that runs one create several times, a cd earlier in the same command, gh api
+# graphql, curl or other HTTP clients, gh aliases, and non-Bash tools (such as a GitHub connector's
+# issue tool) that this hook never sees. Any exception inside the hook allows the call.
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
@@ -49,10 +50,11 @@ function Get-CreateFacts([string[]]$words) {
     $w = $words[$i]
     if ($w -ceq '--') { break }
     if ($w.StartsWith('--')) { $name, $val = $w -split '=', 2 }
-    elseif ($w -cmatch '^-[A-Za-z]') { $name = $w.Substring(0, 2); $val = $w.Substring(2).TrimStart('=') }
+    elseif ($w -cmatch '^-[A-Za-z]') { $name = $w.Substring(0, 2); $val = if ($w.Length -gt 2) { $w.Substring(2).TrimStart('=') } else { $null } }
     else { continue }
     if ($VALUE_FLAGS -cnotcontains $name) { continue }
-    if (-not $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
+    # An empty value after = is a value, as in gh; only a bare flag takes the next word.
+    if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
     if ($name -ceq '--body' -or $name -ceq '-b') { $facts.Inline = $true }
     elseif ($name -ceq '--label' -or $name -ceq '-l') { $facts.Labels += $val -split ',' | ForEach-Object { $_.Trim() } }
     elseif ($name -ceq '--body-file' -or $name -ceq '-F') { $facts.File = $val }
@@ -60,8 +62,8 @@ function Get-CreateFacts([string[]]$words) {
   return $facts
 }
 
-function Test-ApiPost([string[]]$words) {
-  # A POST to exactly repos/<owner>/<repo>/issues. Fields with no explicit method also POST.
+function Test-IssuesApiPost([string[]]$words) {
+  # Fields with no explicit method also POST.
   if (-not ($words | Where-Object { $_ -match $ISSUES_ENDPOINT })) { return $false }
   $method = $null
   $hasFields = $false
@@ -78,7 +80,7 @@ function Write-Deny($why) {
   $reason = "before-issue-create: this call files an issue, but $why. File an issue one way: " +
     "gh issue create --label $LABEL --body-file <file>, where the file's first line is '$FIRST_LINE'. " +
     "The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. " +
-    "Text that only mentions issue creation belongs in a file (git commit -F <file>, --body-file) or a Grep tool search."
+    "Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search."
   $out = [ordered]@{ hookSpecificOutput = [ordered]@{
       hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = $reason } }
   Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
@@ -91,9 +93,9 @@ try {
   if ($text -isnot [string]) { exit 0 }
 
   $creates = @([regex]::Matches($text, $CREATE))
-  $apiPosts = @([regex]::Matches($text, $API) | Where-Object { Test-ApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
+  $apiPosts = @([regex]::Matches($text, $API) | Where-Object { Test-IssuesApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
-  if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'it files more than one issue (file one issue per call)'; exit 0 }
+  if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'its text names issue creation more than once (one create per call; a title or other text that names the command counts too; file with a neutral title, then gh issue edit <N> --title)'; exit 0 }
   if ($apiPosts.Count -eq 1) { Write-Deny 'it creates the issue through gh api'; exit 0 }
 
   $facts = Get-CreateFacts (Get-SegmentWords $text ($creates[0].Index + $creates[0].Length))
@@ -105,7 +107,7 @@ try {
   if (-not [System.IO.Path]::IsPathRooted($path) -and $payload.cwd -is [string]) { $path = Join-Path $payload.cwd $path }
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { Write-Deny "the body file '$($facts.File)' is missing or is a directory"; exit 0 }
 
-  # Only the first line matters, so a huge file is read no further than $MAX_READ.
+  # A pathological file must not stall the hook, so read no more than $MAX_READ.
   $stream = [System.IO.File]::OpenRead($path)
   try {
     $buffer = New-Object byte[] $MAX_READ
