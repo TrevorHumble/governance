@@ -15,11 +15,11 @@ Token change: a number, or "none". Cut proposed: none, or what and why.
 Ok to file?
 ```
 
-Write for the owner's calls: what users will experience, how it should work, whether to do it at all, and anything that spends money, publishes, deletes the owner's data, or cannot be undone. Leave out the technical how. The models own that, and the owner does not need to read it.
+Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it.
 
 ## The token change
 
-Work out the number before you write the message: the tokens this change adds to or removes from the readable tree, as `npm run check:budget` counts them. If the change would push governance over the cap, say what you propose to cut or move to make room. Nothing is cut without the owner's yes.
+Work out the number before you write the message. `writing-issues` says what it means. If the change would push governance over the cap, make room first: `npm run check:budget` lists the ways, and any cut needs the owner's yes.
 
 An approved cut becomes a Done-when line, so it gets checked like any other.
 
@@ -27,10 +27,12 @@ An approved cut becomes a Done-when line, so it gets checked like any other.
 
 Send the message, then stop. Nothing is filed until the owner says yes.
 
+If the owner says no or asks for a change, revise and resend the whole message. Nothing is filed meanwhile.
+
 Ask a second time only if the measured token change differs a lot from the number you gave. A small difference needs no second ask.
 
 ## When approved words change later
 
-If a criterion changes after the owner said yes, the changed criteria go back to the owner and to one reviewer on the `issue-reviewer` seat. The build does not rely on them until both have seen them.
+If a criterion changes after the owner said yes, the changed criteria go back to the owner and to one reviewer on the `issue-reviewer` seat. The build does not rely on them until the owner has said yes and the reviewer has passed them.
 
 The yes is recorded at step 06.

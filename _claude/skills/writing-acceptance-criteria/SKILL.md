@@ -28,4 +28,4 @@ Three to six criteria. Add no design the owner did not ask for (approval records
 
 ## Whose call
 
-The owner decides what users experience, workflows, taste, whether to do something at all, and anything that spends money, publishes, deletes the owner's data, or cannot be undone. Write those from the owner's words, and send any change to one back to them. Everything technical inside a criterion is yours to decide.
+The owner decides what users experience, workflows, taste, whether to do something at all, and anything that spends money, publishes, deletes the owner's data, or cannot be undone. Write those from the owner's words. A changed criterion follows the hand-off step. Everything technical inside a criterion is yours to decide.
