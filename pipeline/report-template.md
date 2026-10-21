@@ -30,8 +30,8 @@ Ask on first use: costs a screen every new user sees. 10%
 
 A price is what the option costs: tokens, files, time, or money. If you need a fact to name it, go and look; say whether you looked or asked.
 
-**Notes.** A defect noticed and not fixed, only if a reviewer agreed it could not be fixed in the run (`pipeline/steps/12-report.md`). Say what breaks, whether it has ever done real damage (say plainly when the answer is no), and the options and prices as above.
+**Notes.** The defects `pipeline/steps/12-report.md` passes on. Say what breaks, whether it has ever done real damage (say plainly when the answer is no), and the options and prices as above.
 
 ## Nothing on your own initiative
 
-The report is where the owner learns of a note. File nothing yourself: no issue, no label, no PR. The owner decides whether it becomes work.
+The report is where the owner learns of a note. Do not file an issue, label, or PR about it on your own initiative; the owner decides whether it becomes work. The pipeline's own calls, such as the labels at step 07 and the PR at step 11, are not this.

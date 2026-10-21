@@ -2,8 +2,8 @@
 
 Run these twelve steps in order. Each line says what the step is for and what it hands on. The step file says how. Read a step's file when you reach it, not before.
 
-1. **Isolate** (`pipeline/steps/01-isolate.md`). Work in your own worktree, never the shared checkout. Hands on: a clean tree.
-2. **Sync** (`pipeline/steps/02-sync.md`). Catch up with the default branch and the parent governance. Hands on: the current rules.
+1. **Isolate** (`pipeline/steps/01-isolate.md`). Work in your own worktree, cut from the current default branch, never the shared checkout. Hands on: a clean, current tree.
+2. **Sync** (`pipeline/steps/02-sync.md`). Pull the parent governance's updates, which land on a later run. Hands on: the rules in the tree.
 3. **Research** (`pipeline/steps/03-research.md`). Look at what this repo already has first, and the web last. Hands on: what you found and where.
 4. **Pre-review** (`pipeline/steps/04-pre-review.md`). A repo with a pre-review surface settles it with the owner first. Others skip to step 5. Hands on: the owner's settled answer, or nothing.
 5. **Hand-off** (`pipeline/steps/05-hand-off.md`). One short message to the owner: title, story, criteria, token change, any proposed cut. Hands on: the owner's yes.

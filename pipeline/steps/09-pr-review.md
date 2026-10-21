@@ -4,7 +4,7 @@ Review, fix, re-review until it passes. That loop is normal and fair; most chang
 
 ## Who looks
 
-Seat every reviewer as `_claude/agents/orchestrator.md` says. Run each specialist once, on the PR diff:
+Seat every reviewer as `_claude/agents/orchestrator.md` says. Run each specialist once, on the working-tree diff (no PR exists until step 11):
 
 - `reviewing-design`: every diff.
 - `reviewing-security`: when the diff touches anything its description names, or any path in `criticalPaths` or any entry in `criticalDependencies` (`repo-profile.json`).
@@ -24,4 +24,4 @@ On a FAIL, fix every `blocker:` and answer every `question:`, then re-check as `
 
 ## Token change
 
-If the measured token change differs materially from the one stated at hand-off, ask the owner again: `05-hand-off.md`.
+If the measured token change differs materially from the one stated at hand-off, ask the owner again: `pipeline/steps/05-hand-off.md`.

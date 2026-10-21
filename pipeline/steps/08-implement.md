@@ -6,4 +6,4 @@ Its handoff has decision lines under the first line. Keep them: step 11 copies t
 
 When it returns, run `npm run check:budget` before any review, so an overage is caught before anyone reviews or pushes. CI runs it again as the backstop.
 
-If it fails, read the check's own message and follow it. Do not copy its options here. Tightening your own change's new text needs no yes from the owner; cutting or moving anything else, or raising a cap, does.
+If it fails, read the check's own message and follow it; it says what needs the owner's yes. Tightening your own change's new text needs no yes.
