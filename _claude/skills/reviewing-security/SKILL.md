@@ -7,7 +7,7 @@ metadata:
 
 # Reviewing security
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. You run once on the PR diff and do not loop; the main PR reviewer re-checks your blockers.
+Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there.
 
 ## Trace from input to sink
 
@@ -21,7 +21,7 @@ Treat every value an untrusted user can send as unsafe: request fields, paramete
 
 Judge access by the rule the issue states. If the issue says any signed-in user may read any attachment, that is the rule; the open question is only whether the path stays inside the folder.
 
-A `blocker:` shows the path: what the user sends, which line it reaches, and the wrong result, such as "name `../../.env` reads the server's secrets".
+The path from input to sink is what makes a `blocker:`, such as "name `../../.env` reads the server's secrets".
 
 ## Hold back
 

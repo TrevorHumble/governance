@@ -7,7 +7,7 @@ metadata:
 
 # Reviewing design
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. You run once on the PR diff and do not loop; the main PR reviewer re-checks your blockers. The worked pairs are in `reference/examples.md`; read them before you flag anything.
+Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. The worked pairs are in `reference/examples.md`; read them before you flag anything.
 
 ## The lens is depth
 
