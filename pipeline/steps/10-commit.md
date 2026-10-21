@@ -1,4 +1,3 @@
 # 10-commit
 
-Placeholder. This file will hold the pipeline step that tells the agent to commit the change.
-Budget: part of the 3,400 tokens shared across the twelve steps.
+Commit once review has passed. Say in plain words what changed, and name the issue, for example `(#98)`. `.githooks/commit-msg` blocks a code commit that names none.

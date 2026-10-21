@@ -1,4 +1,5 @@
 # 03-research
 
-Placeholder. This file will hold the pipeline step that tells the agent to research local prior art first and the web last.
-Budget: part of the 3,400 tokens shared across the twelve steps.
+Before you plan, find out what the repo and the web already know. Start the `researcher` on its seat (`_claude/agents/orchestrator.md`) with the question. It follows the `researching` skill and returns what it found and where, with no decisions.
+
+Then use what came back. If something already does the job, extend it; do not build a second one. If nothing fits, say so in the plan and carry on.
