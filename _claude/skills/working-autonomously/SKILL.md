@@ -7,16 +7,16 @@ metadata:
 
 # Working autonomously
 
-The owner is away. Do not wait and do not stop. Finish all the work that can be finished.
+The owner is away. Do not wait and do not stop. Finish what can be finished.
 
 ## Decide what you may
 
-Check the criteria first, as `standards/deciding.md` says. A question the criteria answer is yours, even if it feels like a question for the owner. Pick, write one line, move on. Do not leave a question in the code or the report for something you could settle.
+Check the criteria first, as `standards/deciding.md` says. A question the criteria answer is yours. Pick, write one line, move on.
 
 ## Park what you may not
 
-If only the owner can decide it, build everything that works without the answer, with a clearly marked placeholder. Then put it under "For you" in the report, with every option priced, as `pipeline/report-template.md` shows. "The owner must set it" is not enough. A change that goes over a cap is parked the same way. Never approve it yourself.
+The implementer builds what the criteria state and marks an `Owner's call:` line. When the owner is away, you also build around anything only the owner can decide, with a clearly marked placeholder. Both go under "For you" in the report, every option priced, as `pipeline/report-template.md` shows. A change that goes over a cap is parked the same way. Never approve it yourself.
 
 ## One report
 
-End with one report, in the template's form: a line for each decision, then "For you", then notes. File nothing yourself: no issue, no label, no PR. A defect outside the issue is a line in the report, and its file stays as it is.
+End with one report, in the template's form: a line for each decision, then "For you", then notes. What you may file on your own is set in the template's "Nothing on your own initiative". A defect outside the issue is fixed when `standards/deciding.md`, "Stay in scope", allows it; otherwise it is a line in the report.
