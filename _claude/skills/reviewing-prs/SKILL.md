@@ -29,7 +29,7 @@ When the briefing carries a specialist's `blocker:`, re-check it as `standards/r
 
 ## Hold back
 
-A finding is an unmet criterion, an untested row that applies, or a defect in the changed lines that you can show with an input and a wrong result. Preferences, edge cases no applicable row names, speculation the diff cannot confirm, and missing context such as omitted imports or unchanged lines are not findings; leave them out. A clean PR gets `praise:` that names the criterion it meets and the test that proves it, and you say it is ready.
+A finding is an unmet criterion, an untested row that applies, or a defect in the changed lines that you can show with an input and a wrong result. Preferences, edge cases no applicable row names, speculation the diff cannot confirm, and missing context such as omitted imports or unchanged lines are not findings; leave them out. A clean PR gets `praise:` that names the criterion it meets and the evidence that proves it, and you say it is ready.
 
 ## Your reply
 

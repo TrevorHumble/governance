@@ -15,7 +15,7 @@ Read `standards/reviewing.md` first. Use the five labels, say why each finding m
 2. **Least-privilege tools** (agents). Each tool listed must be one the job uses. An agent that says it writes nothing but holds write and shell tools is a `blocker:`; name the tool to drop and what it could do with it.
 3. **Input and output contract** (agents). It says what the agent is given and what it hands back.
 4. **The description says when to use it.** It starts from a situation ("Use when..."), not a topic.
-5. **Size.** CI owns it (`check:budget`); it is not a review finding.
+5. **Size.** A `SKILL.md` over the size ceiling in `standards/skills.md` is a finding; that file has the number. Judge by reading it, at about words × 1.35 tokens. If it is close, raise a `question:`, not a `blocker:`.
 6. **Eval first.** See `standards/skills.md`. A new skill with no baseline note gets a `question:`.
 
 ## Hold back

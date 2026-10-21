@@ -100,7 +100,7 @@ check:emdash"}`.
   and `reviewer` (the cap on each reviewer's fixed reading), and `notCounted`, a list of
   repo-relative paths the budget check skips, where an entry ending in `/` matches as a prefix;
   read by `scripts/check-token-budget.js`. A missing or non-numeric cap fails the check.
-- `lenses` (array of strings). Allowed: any list of reviewing-skill names, or `[]`; read by
+- `lenses` (array of strings). Allowed: any list of reviewing-skill names, or `[]`; to be read by
   pipeline step 09 (#98). Empty by default. Which seat a lens runs on:
   `_claude/agents/orchestrator.md`. This repo declares `[]`.
 - `syncIssue` (positive integer). The child's own standing GitHub issue number for governance
