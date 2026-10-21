@@ -24,5 +24,6 @@
     "total": 25000,
     "reviewer": 10000,
     "notCounted": ["BUILDLOG.md", "DESIGN.md", "NORTH-STAR.md", "buildlog/"]
-  }
+  },
+  "lenses": []
 }

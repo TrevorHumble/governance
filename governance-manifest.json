@@ -184,6 +184,10 @@
       "type": "object"
     },
     {
+      "name": "lenses",
+      "type": "array of strings"
+    },
+    {
       "name": "syncIssue",
       "type": "positive integer"
     },
