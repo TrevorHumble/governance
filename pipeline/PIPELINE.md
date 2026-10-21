@@ -10,7 +10,7 @@ Run these twelve steps in order. Each line says what the step is for and what it
 6. **Issue** (`pipeline/steps/06-issue.md`). File what the owner approved. This step may call the architecture specialist first. Hands on: an issue number.
 7. **Issue review** (`pipeline/steps/07-issue-review.md`). A fresh reviewer reads the issue. Hands on: a passing issue.
 8. **Implement** (`pipeline/steps/08-implement.md`). The implementer builds what the issue asks. You do not. Hands on: the change.
-9. **PR review** (`pipeline/steps/09-pr-review.md`). Review, fix, and re-check until it passes. Hands on: a passing PR.
+9. **PR review** (`pipeline/steps/09-pr-review.md`). Review, fix, and re-check until it passes. Hands on: a passing change.
 10. **Commit** (`pipeline/steps/10-commit.md`). Commit the change, naming the issue. Hands on: a commit.
 11. **Ship** (`pipeline/steps/11-ship.md`). Open the PR and merge it on green. Hands on: a merged change.
 12. **Report** (`pipeline/steps/12-report.md`). Tell the owner what happened and what needs them, using `pipeline/report-template.md`. Hands on: the report.
