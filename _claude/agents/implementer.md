@@ -10,6 +10,6 @@ Build what the issue asks. Do not review your own work and do not commit.
 
 Close with three lines:
 
-- What I changed.
+- What I changed, with one line under it for each decision I made inside the criteria.
 - What I left alone because it is outside this issue, and why.
 - What I disagree with.
