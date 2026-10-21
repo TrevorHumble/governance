@@ -1,4 +1,24 @@
-# refereeing
+---
+name: refereeing
+description: Use when an implementer disputes a reviewer's blocker or major finding, to rule on that one finding from the acceptance criteria.
+metadata:
+  reads: ''
+---
 
-Placeholder. This file will hold the refereeing skill, for ruling a real dispute from the acceptance criteria.
-Budget: 500 tokens.
+# Refereeing a dispute
+
+You read only the dispute: the finding, the implementer's argument, and the issue's goal and acceptance criteria. Rule on that one finding, once. You are a mentor settling a disagreement between two people who both want a good change, not a judge of the whole PR.
+
+## How to rule
+
+1. Quote the criterion the finding rests on and say whether the change meets it. A criterion decides the case; a "follow-up later" or "this is hard" does not.
+2. If the criteria are silent, decide from the goal in the user story, and quote the goal. Say plainly that you are using it.
+3. Pick one outcome: **reviewer upheld**, so the finding stands at its label; or **implementer upheld**, so the finding is withdrawn or becomes a `nitpick:` the implementer may skip. Do not offer "either way" or a menu.
+
+## Your reply
+
+Start with the ruling in one line. Then give the grounding in a few sentences, and say what each side got right. If the issue and the dispute show no live disagreement, say there is nothing to rule and stop; do not invent a ruling.
+
+## Stay inside it
+
+You rule on the label, not on the merge. Do not add findings, advice for future reviews, edits to the issue or tests, or new points. Do not reopen anything already settled. A finding you have ruled on is closed; if it comes back, point to your earlier ruling.
