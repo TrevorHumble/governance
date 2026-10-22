@@ -678,3 +678,85 @@ maybeDescribe(
     });
   }
 );
+
+maybeDescribe(
+  '_claude/hooks/before-issue-create.ps1: gh api endpoints and unreadable words',
+  () => {
+    const good = `-f title=T -F body=@ok.md -f 'labels[]=${LABEL}'`;
+
+    it('still judges an endpoint with a #fragment or ?query as the issues endpoint', () => {
+      for (const ep of [
+        'repos/o/r/issues#x',
+        'repos/o/r/issues?a=1#frag',
+        'repos/o/r/issues/#top',
+      ]) {
+        expect(run(`gh api ${ep} -f title=T`).decision).toBe('deny');
+        expect(
+          run(`gh api -X POST ${ep} -f title=T -F body=@bad.md -f 'labels[]=${LABEL}'`).decision
+        ).toBe('deny');
+        expect(run(`gh api ${ep} ${good}`).decision).toBe('allow');
+      }
+      expect(run('gh api repos/o/r/issues/5#x -f state=closed').decision).toBe('allow');
+    });
+
+    it('denies a field word it cannot read: no =, a variable, a substitution, backticks, $-quoting', () => {
+      for (const bad of [
+        '-f noequals',
+        '-f "$X"',
+        '-f title="$TITLE"',
+        '-f "x=$(cat t)"',
+        '-f "x=`cat t`"',
+        "-f $'x=y'",
+        '$FLAGS',
+        '-F "labels[]=$L"',
+        '--field=$X',
+      ]) {
+        const res = run(`gh api repos/o/r/issues ${good} ${bad}`);
+        expect(res.decision).toBe('deny');
+        expect(res.reason).toMatch(/cannot be (read as written|told from the issues endpoint)/);
+      }
+    });
+
+    it('denies a second body key however it is spelled, so an unread field cannot override the body', () => {
+      for (const extra of [
+        '-f body=x',
+        '-F body=@ok.md',
+        '--raw-field body=@ok.md',
+        '-f Body=x',
+        '-f BODY=x',
+        '-f body[]=x',
+        "-f 'body[0]=x'",
+      ]) {
+        expect(run(`gh api repos/o/r/issues ${good} ${extra}`).decision).toBe('deny');
+      }
+      expect(run(`gh api repos/o/r/issues ${good} -f bodyguard=x`).decision).toBe('allow');
+    });
+
+    it('denies an endpoint built from a variable when the call sends any field', () => {
+      for (const cmd of [
+        'gh api repos/o/$R/issues -f title=T',
+        'gh api "repos/o/r/$(echo issues)" -f title=T',
+        'gh api repos/o/r/`echo issues` -X POST -F body=@ok.md',
+        'gh api $EP --input body.json',
+        `gh api repos/$REPO/issues ${good}`,
+      ]) {
+        const res = run(cmd);
+        expect(res.decision).toBe('deny');
+        expect(res.reason).toContain('built from a variable');
+      }
+    });
+
+    it('leaves a variable endpoint without fields alone', () => {
+      expect(run('gh api repos/o/$R/issues').decision).toBe('allow');
+      expect(run('gh api "$EP" --jq .id').decision).toBe('allow');
+    });
+
+    it('counts a label in a trailing comment, as the header says (a reminder, not a guarantee)', () => {
+      const noLabel = '-f title=T -F body=@ok.md';
+      expect(run(`gh api repos/o/r/issues ${noLabel} # -f 'labels[]=${LABEL}'`).decision).toBe(
+        'allow'
+      );
+      expect(run(`gh issue create --body-file ok.md # --label ${LABEL}`).decision).toBe('allow');
+    });
+  }
+);

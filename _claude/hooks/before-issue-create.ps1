@@ -6,15 +6,20 @@
 # the needs-issue-review label (for gh api: -f/-F/--field/--raw-field 'labels[]=...') and a body from
 # a regular file whose first line is Owner-approved: yes (for gh api: -F or --field body=@<file>).
 # An inline body, a missing label, a second create in the same command, a body from stdin or
-# --input, and anything it cannot parse are denied.
+# --input, and anything it cannot parse are denied. For gh api that includes a field word it cannot
+# read (no =, a variable, a command substitution, backticks, $'...' quoting), a second body key of
+# any spelling, and an endpoint built from a variable when the call sends any field. A ?query or
+# #fragment on the endpoint is ignored when it is matched.
 # Not covered: a loop that runs one create several times, a cd earlier in the same command, gh api
 # graphql, curl or other HTTP clients, gh aliases, and non-Bash tools (such as a GitHub connector's
 # issue tool) that this hook never sees. Also not covered: a command longer than 10000 characters
 # or naming gh more than 12 times is denied unread (a cap on the work the hook does), and a
 # --body-file that is not a regular file (a pipe, a device) is denied unopened, so a legitimate use
 # of either has to be split or rewritten. For gh api, only the fields -f/-F/--field/--raw-field set
-# are read; a body or label sent another way (a nested JSON field, a --template, a here-document to
-# --input) is denied or unseen. Any exception inside the hook allows the call.
+# are read; a label inside a trailing shell comment still counts (as it does for gh issue create),
+# so this is a reminder, not a guarantee; a body or label sent another way (a nested JSON field, a
+# --template, a here-document to --input) is denied or unseen. Any exception inside the hook allows
+# the call.
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
@@ -39,7 +44,10 @@ $ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?
 $VALUE_FLAGS = @('--body', '-b', '--body-file', '-F', '--label', '-l', '--title', '-t', '--assignee', '-a',
   '--milestone', '-m', '--project', '-p', '--repo', '-R', '--template', '-T', '--recover')
 
-function Get-SegmentWords([string]$text, [int]$from) {
+# The words after $from up to the next unquoted ; | & or newline, and (unless $wide) also a ) or a
+# backtick, which usually end a substitution. $wide reads past those, to see a call whose endpoint is
+# itself a substitution.
+function Get-SegmentWords([string]$text, [int]$from, [bool]$wide = $false) {
   $quote = ''
   $i = $from
   for (; $i -lt $text.Length; $i++) {
@@ -50,7 +58,9 @@ function Get-SegmentWords([string]$text, [int]$from) {
       $i++
     } elseif ($c -eq '"' -or $c -eq "'") {
       $quote = $c
-    } elseif ($c -in ';', '|', '&', "`n", ')', '`') {
+    } elseif ($c -in ';', '|', '&', "`n") {
+      break
+    } elseif (-not $wide -and $c -in ')', '`') {
       break
     }
   }
@@ -185,8 +195,8 @@ try {
   $apiCalls = @($apiMatches | ForEach-Object { , (Get-SegmentWords $text ($_.Index + $_.Length)) })
   # An endpoint built from a variable cannot be told from the issues endpoint, so a call that has one
   # and also sends fields is denied.
-  foreach ($words in $apiCalls) {
-    $call = Read-ApiCall $words
+  foreach ($m in $apiMatches) {
+    $call = Read-ApiCall (Get-SegmentWords $text ($m.Index + $m.Length) $true)
     if ($call.Fields.Count -gt 0 -or $call.Input) {
       if (@($call.Positionals | Where-Object { Test-Unreadable $_ }).Count -gt 0) {
         Write-Deny 'its gh api endpoint is built from a variable or command substitution and it sends fields, so it cannot be told from the issues endpoint'
