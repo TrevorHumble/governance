@@ -171,6 +171,63 @@ function independenceProblems(roles, awards) {
   return problems;
 }
 
+// The seats pattern's prefix (the model pattern above), unanchored, so a dated or suffixed ID
+// matches too. Shared markdown must not name a model; seats.json is the one home.
+const MODEL_ID_IN_TEXT = new RegExp(`claude-(${CLAUDE_FAMILIES.join('|')})-\\d`);
+
+/**
+ * The names seats.json and the profile point at must be real files: each role's agent a file in
+ * .claude/agents/, each skill and each lens a folder in .claude/skills/.
+ * @param {unknown} seats the parsed seats.json
+ * @param {string[]} tracked repo-relative paths of the tracked files
+ * @param {string[]} lenses the `lenses` list from repo-profile.json
+ * @returns {string[]} one problem per name that matches no file
+ */
+function referenceProblems(seats, tracked, lenses = []) {
+  if (!isObject(seats) || !isObject(seats.roles)) return [];
+  const agents = new Set();
+  const skillFolders = new Set();
+  for (const file of tracked) {
+    const agent = /^\.claude\/agents\/([^/]+)\.md$/.exec(file);
+    if (agent) agents.add(agent[1]);
+    const skill = /^\.claude\/skills\/([^/]+)\//.exec(file);
+    if (skill) skillFolders.add(skill[1]);
+  }
+  const problems = [];
+  for (const [role, seat] of Object.entries(seats.roles)) {
+    if (!isObject(seat)) continue;
+    if (typeof seat.agent === 'string' && seat.agent !== '' && !agents.has(seat.agent)) {
+      problems.push(`role "${role}" agent "${seat.agent}" is not a file in .claude/agents/`);
+    }
+    for (const skill of Array.isArray(seat.skills) ? seat.skills : []) {
+      if (typeof skill === 'string' && skill && !skillFolders.has(skill)) {
+        problems.push(`role "${role}" skill "${skill}" is not a folder in .claude/skills/`);
+      }
+    }
+  }
+  if (!Array.isArray(lenses) || !lenses.every((l) => typeof l === 'string')) {
+    problems.push('repo-profile.json lenses must be an array of strings');
+    return problems;
+  }
+  for (const lens of lenses) {
+    if (!skillFolders.has(lens)) {
+      problems.push(`repo-profile.json lens "${lens}" is not a folder in .claude/skills/`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * Shared markdown never names a model; seats.json is the only home for model IDs.
+ * @param {{path: string, text: string}[]} files the shared .md files and their text
+ * @returns {string[]} one problem per file that carries a model ID
+ */
+function modelIdProblems(files) {
+  return files
+    .filter((f) => MODEL_ID_IN_TEXT.test(f.text))
+    .map((f) => `${f.path} names a model ID; model IDs live in seats.json only`);
+}
+
 /**
  * Every rule seats.json must hold. Never throws; a malformed value is a returned problem.
  * @param {unknown} seats the parsed seats.json
@@ -260,10 +317,18 @@ function changeTable(changes) {
  * The gate's verdict. Rule failures exit 1; a PR that is not seats-only is reported, not failed.
  * @param {unknown} headSeats the parsed seats.json at the head
  * @param {{ref: string, baseSeats: unknown, changed: string[]}} [base] set when a base was given
+ * @param {{tracked: string[], lenses: string[], sharedMarkdown: {path: string, text: string}[]}} [refs]
+ *   what the file-name and model-ID rules read; omitted, those rules are off
  * @returns {{lines: string[], exitCode: number}}
  */
-function run(headSeats, base) {
+function run(headSeats, base, refs) {
   const problems = validateSeats(headSeats);
+  if (refs) {
+    problems.push(
+      ...referenceProblems(headSeats, refs.tracked, refs.lenses),
+      ...modelIdProblems(refs.sharedMarkdown)
+    );
+  }
   const lines = problems.map((p) => failLine(p));
   if (problems.length === 0) {
     const roles = Object.keys(headSeats.roles).length;
@@ -289,6 +354,8 @@ function run(headSeats, base) {
 module.exports = {
   REQUIRED_ROLES,
   validateSeats,
+  referenceProblems,
+  modelIdProblems,
   effectiveSeats,
   classifyPr,
   run,

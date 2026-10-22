@@ -175,7 +175,7 @@ const SELF_PROFILE = { governanceHome: 'self' };
 // hook reads staged paths inside PowerShell via git diff, not by embedding
 // them in a command string; this constant exists only to prove the
 // rejection message names such a path correctly.
-const QUOTED_PATH = "standards/it's a test.md";
+const QUOTED_PATH = "pipeline/it's a test.md";
 
 // QUOTED_BRANCH carries an apostrophe and does reach sq(), on a reject
 // case where every branch a broken sq() can take still leaves it blocked.
@@ -207,7 +207,7 @@ maybeDescribe('.githooks/pre-commit', () => {
   // Row 2: the identical change, on a governance-sync branch: accepted.
   it('accepts the identical change on a governance-sync branch', () => {
     const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
-    const res = tryCommit(dir, { 'standards/ownership-map.md': 'edit\n' }, QUOTED_SYNC_BRANCH);
+    const res = tryCommit(dir, { 'pipeline/PIPELINE.md': 'edit\n' }, QUOTED_SYNC_BRANCH);
     expect(res.status).toBe(0);
   });
 
@@ -224,7 +224,7 @@ maybeDescribe('.githooks/pre-commit', () => {
   it('accepts on governanceHome "self", without ever reading the manifest', () => {
     const dir = makeFixture({ profile: SELF_PROFILE });
     expect(fs.existsSync(path.join(dir, 'governance-manifest.json'))).toBe(false);
-    const res = tryCommit(dir, { 'standards/ownership-map.md': 'edit\n' }, 'feat/whatever');
+    const res = tryCommit(dir, { 'pipeline/PIPELINE.md': 'edit\n' }, 'feat/whatever');
     expect(res.status).toBe(0);
   });
 
@@ -232,7 +232,7 @@ maybeDescribe('.githooks/pre-commit', () => {
   it('accepts when repo-profile.json is absent', () => {
     const dir = makeFixture({ manifest: 'real' });
     expect(fs.existsSync(path.join(dir, 'repo-profile.json'))).toBe(false);
-    const res = tryCommit(dir, { 'standards/ownership-map.md': 'edit\n' }, 'feat/whatever');
+    const res = tryCommit(dir, { 'pipeline/PIPELINE.md': 'edit\n' }, 'feat/whatever');
     expect(res.status).toBe(0);
   });
 
@@ -242,7 +242,7 @@ maybeDescribe('.githooks/pre-commit', () => {
   // sq(): the fixture root's apostrophe makes both produce this message.
   it('blocks and names repo-profile.json when present but unparseable', () => {
     const dir = makeFixture({ manifest: 'real', profileRaw: '{ this is not json' });
-    const res = tryCommit(dir, { 'standards/ownership-map.md': 'edit\n' }, 'feat/whatever');
+    const res = tryCommit(dir, { 'pipeline/PIPELINE.md': 'edit\n' }, 'feat/whatever');
     expect(res.status).not.toBe(0);
     const out = `${res.stdout}${res.stderr}`;
     expect(out).toContain('BLOCKED');
@@ -362,11 +362,11 @@ maybeDescribe('.githooks/pre-commit', () => {
   // under the new reader.
   it('blocks and names a parent-owned path whose name contains a space', () => {
     const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
-    const res = tryCommit(dir, { 'standards/new rule.md': 'edit\n' }, 'feat/whatever');
+    const res = tryCommit(dir, { 'pipeline/new rule.md': 'edit\n' }, 'feat/whatever');
     expect(res.status).not.toBe(0);
     const out = `${res.stdout}${res.stderr}`;
     expect(out).toContain('BLOCKED');
-    expect(out).toContain('standards/new rule.md');
+    expect(out).toContain('pipeline/new rule.md');
   });
 
   // Not asserting the literal name here: the hook's own $OutputEncoding
@@ -374,7 +374,7 @@ maybeDescribe('.githooks/pre-commit', () => {
   // The isolation test below reads the return value directly instead.
   it('blocks a parent-owned path whose name contains a non-ASCII character', () => {
     const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
-    const res = tryCommit(dir, { 'standards/café.md': 'edit\n' }, 'feat/whatever');
+    const res = tryCommit(dir, { 'pipeline/café.md': 'edit\n' }, 'feat/whatever');
     expect(res.status).not.toBe(0);
     const out = `${res.stdout}${res.stderr}`;
     expect(out).toContain('BLOCKED');
@@ -425,13 +425,13 @@ maybeDescribe('.githooks/pre-commit', () => {
     const dir = makeFixture({ manifest: 'real', profile: NON_SELF_PROFILE });
     const res = tryCommit(
       dir,
-      { 'standards/ownership-map.md': 'edit\n' },
+      { 'pipeline/PIPELINE.md': 'edit\n' },
       'Issue-7-Governance-Sync-abc1234'
     );
     expect(res.status).not.toBe(0);
     const out = `${res.stdout}${res.stderr}`;
     expect(out).toContain('BLOCKED');
-    expect(out).toContain('standards/ownership-map.md');
+    expect(out).toContain('pipeline/PIPELINE.md');
   });
 });
 

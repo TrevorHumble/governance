@@ -6,7 +6,6 @@
   "criticalPaths": [],
   "ciCheckNames": ["build"],
   "docCurrencyPaths": [],
-  "goalsDoc": "README.md",
   "checkCommands": {
     "install": "npm ci",
     "test": "npm test",
@@ -18,11 +17,12 @@
     "format": "npm run format:check"
   },
   "ghPath": "gh",
-  "defaultBranch": "v2",
+  "defaultBranch": "main",
+  "dataClass": "public",
   "governanceHome": "self",
   "budget": {
-    "total": 25000,
-    "reviewer": 10000,
+    "total": 20000,
+    "reviewer": 6000,
     "notCounted": [
       "BUILDLOG.md",
       "DESIGN.md",

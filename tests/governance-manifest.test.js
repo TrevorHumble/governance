@@ -3,7 +3,7 @@
 // governance-manifest.json: every declared sharedPaths entry must resolve to
 // at least one existing file in the tree. A prose sync guarantee shipped
 // without a guard is exactly the kind of silent-drift risk this repo exists
-// to avoid (see docs/seed-classification-2026-08-16.md, "Hazards").
+// to avoid.
 //
 // The shared/excluded partition is single-homed in governance-manifest.json
 // itself (`sharedPaths` and `excludedPaths`), not restated here: this file
@@ -330,7 +330,7 @@ describe('arrivesAsStructure paths resolve under sharedPaths (AC5)', () => {
 
 // AC4: every classes value is exactly "content" or "structure", and
 // classesDefault is exactly "structure" in the live manifest, the safe-side
-// value per the classesDefault rule in standards/governance-sync.md § "What a sync is".
+// value per the classesDefault rule in `AGENTS.md` ("Parent and children").
 describe('classes values and classesDefault hold only their allowed literals (AC4)', () => {
   /** `classes` entries whose value is not "content" or "structure", as "key: value" strings. */
   function invalidClassesValues(classes) {
@@ -422,5 +422,79 @@ describe('repoProfileFields names every repo-profile.json key', () => {
     const profile = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'repo-profile.json'), 'utf8'));
     const named = manifest.repoProfileFields.map((f) => f.name);
     for (const key of Object.keys(profile)) expect(named, key).toContain(key);
+  });
+});
+
+describe('the new tree is the shared set', () => {
+  const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+  const profile = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'repo-profile.json'), 'utf8'));
+  const tracked = listTrackedFiles();
+
+  it('shares the new files and none of the old globs', () => {
+    for (const entry of [
+      'pipeline/**',
+      'seats.json',
+      'AGENTS.md',
+      'definition-of-done.md',
+      'WHAT-IT-CHECKS.md',
+      'buildlog/README.md',
+      '.claude/agents/**',
+      'standards/deciding.md',
+      'standards/edge-cases.md',
+      'standards/reviewing.md',
+      'standards/skills.md',
+      'standards/writing.md',
+    ]) {
+      expect(manifest.sharedPaths, entry).toContain(entry);
+    }
+    for (const entry of ['standards/**', 'agents/**']) {
+      expect(manifest.sharedPaths, entry).not.toContain(entry);
+    }
+  });
+
+  it('shares exactly five standards files, all of them tracked', () => {
+    const standards = manifest.sharedPaths.filter((e) => e.startsWith('standards/'));
+    expect(standards).toHaveLength(5);
+    expect(tracked.filter((f) => f.startsWith('standards/')).sort()).toEqual(standards.sort());
+  });
+
+  it("keeps each repo's own files out of the shared set", () => {
+    for (const file of [
+      'README.md',
+      'CLAUDE.md',
+      'NORTH-STAR.md',
+      'owner-declines.md',
+      'DESIGN.md',
+      'repo-profile.json',
+      '.claude/settings.json',
+    ]) {
+      expect(isShared(file, manifest.sharedPaths), file).toBe(false);
+      expect(isExcluded(file, manifest.excludedPaths), file).toBe(true);
+    }
+  });
+
+  it('delivers pipeline/PIPELINE.md and the pre-commit hook as structure', () => {
+    expect(manifest.arrivesAsStructure).toEqual(['.githooks/pre-commit', 'pipeline/PIPELINE.md']);
+  });
+
+  it('retires each deleted path once, with a hash, and none is tracked or shared', () => {
+    const paths = manifest.retired.map((e) => e.path);
+    expect(new Set(paths).size).toBe(paths.length);
+    expect(paths.filter((p) => tracked.includes(p))).toEqual([]);
+  });
+
+  it('names no shelf root docs/, and has no new-tree.json to point at', () => {
+    expect(manifest.shelfRoots).not.toContain('docs/');
+    expect(manifest.excludedPaths).not.toContain('new-tree.json');
+    expect(manifest.excludedPaths).not.toContain('docs/**');
+  });
+
+  it('sets defaultBranch to main and dataClass to public, and drops goalsDoc', () => {
+    expect(profile.defaultBranch).toBe('main');
+    expect(profile.dataClass).toBe('public');
+    expect(profile).not.toHaveProperty('goalsDoc');
+    const named = manifest.repoProfileFields.map((f) => f.name);
+    expect(named).toContain('dataClass');
+    expect(named).not.toContain('goalsDoc');
   });
 });

@@ -459,7 +459,7 @@ maybeDescribe('governance-sync.ps1 configuration handling (AC 2)', () => {
 // parse. `pr list --head ...` (the wrapper's own PR lookup) and `pr merge`
 // are env-driven by STUB_OPEN_PR and STUB_PR_MERGE_FAIL; `pr list` with no
 // `--head` (the AC5 superseded-PR sweep) by STUB_SWEEP_PRS_JSON; `issue
-// list` (see standards/governance-sync.md § "The standing-issue rule") by
+// list` (the standing-issue lookup) by
 // STUB_OPEN_STRUCTURE_ISSUE_JSON and STUB_OPEN_DIVERGENT_ISSUE_JSON
 // together; the AC4 branch-protection read (`gh api .../protection`) by
 // STUB_REQUIRED_CHECKS_JSON, absent meaning unreadable (exit 1), matching

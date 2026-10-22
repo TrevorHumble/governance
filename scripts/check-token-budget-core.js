@@ -72,36 +72,39 @@ function isNotCounted(file, notCounted) {
 }
 
 /**
- * What a tree counts: the files and pending budgets in its `new-tree.json` while it has one,
- * otherwise every tracked `.md`. Vendored paths never count toward the total, in either mode, and
- * existence on disk alone never counts.
- * @param {{tree: object | null, listing: string[], notCounted: string[]}} view
- * @returns {{files: string[], pending: Record<string, number>}}
+ * True when a manifest `sharedPaths` entry covers a file: `dir/**` covers the directory and
+ * everything below it; any other entry is one exact path.
+ * @param {string} file repo-relative path
+ * @param {string[]} sharedPaths the manifest's sharedPaths
  */
-function countInputs({ tree, listing, notCounted }) {
-  if (!tree) {
-    const files = listing.filter(
-      (f) => f.endsWith('.md') && !isVendored(f) && !isNotCounted(f, notCounted)
-    );
-    return { files, pending: {} };
-  }
-  const files = (tree.files || [])
-    .map((f) => f.path)
-    .filter((f) => !isVendored(f) && !isNotCounted(f, notCounted));
-  const pending = {};
-  for (const p of tree.pending || []) pending[p.path] = p.budget;
-  return { files, pending };
+function isSharedPath(file, sharedPaths) {
+  return sharedPaths.some((entry) => {
+    if (!entry.endsWith('/**')) return file === entry;
+    const prefix = entry.slice(0, -3);
+    return file === prefix || file.startsWith(`${prefix}/`);
+  });
 }
 
-function countedPaths(view) {
-  const { files, pending } = countInputs(view);
-  return new Set([...files, ...Object.keys(pending)]);
+/**
+ * What a tree counts: every tracked `.md` that the manifest's shared paths cover, minus the
+ * vendored root and the not-counted entries. Existence on disk alone never counts.
+ * @param {{listing: string[], notCounted: string[], sharedPaths: string[]}} view
+ * @returns {string[]}
+ */
+function countInputs({ listing, notCounted, sharedPaths }) {
+  return listing.filter(
+    (f) =>
+      f.endsWith('.md') &&
+      isSharedPath(f, sharedPaths) &&
+      !isVendored(f) &&
+      !isNotCounted(f, notCounted)
+  );
 }
 
 /**
  * The guarded budget changes between a base and the head: a cap raised, a notCounted entry added,
- * a path counted at the base that still exists at the head but is not counted there, a pending
- * budget lowered while its path is still pending. Each is a line; no lines means none.
+ * a path counted at the base that still exists at the head but is not counted there. Each is a
+ * line; no lines means none.
  * @param {{caps: {total: number, reviewer: number}, view: object}} base
  * @param {{caps: {total: number, reviewer: number}, view: object}} head
  * @returns {string[]}
@@ -116,26 +119,23 @@ function guardedChanges(base, head) {
   for (const entry of head.view.notCounted) {
     if (!base.view.notCounted.includes(entry)) changes.push(`budget.notCounted gained ${entry}`);
   }
-  const headCounted = countedPaths(head.view);
+  const headCounted = new Set(countInputs(head.view));
   const headExists = new Set(head.view.listing);
-  for (const file of [...countedPaths(base.view)].sort()) {
-    if (headExists.has(file) && !headCounted.has(file)) {
+  // In a child, retiring a file is the sanctioned way out of the count, so the head manifest's
+  // `retired` list excuses a divergent copy that still exists. The parent (governanceHome
+  // "self") gets no such excuse: a retired path there must be deleted.
+  const retired = new Set(head.view.exemptRetired ? head.view.retired || [] : []);
+  for (const file of [...new Set(countInputs(base.view))].sort()) {
+    if (headExists.has(file) && !headCounted.has(file) && !retired.has(file)) {
       changes.push(`${file} was counted at the base and still exists, but is no longer counted`);
-    }
-  }
-  const basePending = countInputs(base.view).pending;
-  const headInputs = countInputs(head.view);
-  for (const [file, budget] of Object.entries(headInputs.pending)) {
-    if (file in basePending && !headInputs.files.includes(file) && budget < basePending[file]) {
-      changes.push(`pending budget for ${file} lowered from ${basePending[file]} to ${budget}`);
     }
   }
   return changes;
 }
 
 /**
- * Fails when a guarded change is not the PR's only change. The two budget homes
- * (repo-profile.json, new-tree.json) may change with it; `buildlog/` and BUILDLOG.md may too.
+ * Fails when a guarded change is not the PR's only change. The budget's home
+ * (repo-profile.json) may change with it; `buildlog/` and BUILDLOG.md may too.
  * @param {string[]} changes output of guardedChanges
  * @param {string[]} changed repo-relative paths the PR changes
  * @param {object} baseProfile
@@ -144,7 +144,7 @@ function guardedChanges(base, head) {
  */
 function guardFailures(changes, changed, baseProfile, headProfile) {
   if (changes.length === 0) return [];
-  const homes = ['repo-profile.json', 'new-tree.json'];
+  const homes = ['repo-profile.json'];
   const others = changed.filter((f) => !homes.includes(f) && !ridesAlong(f));
   const strip = ({ budget: _budget, ...rest }) => rest;
   const profileRides =
@@ -260,9 +260,6 @@ function libraryFailures(library, reviewers, vendorHashes) {
  * @param {(file: string) => string} readFile
  * @param {{total: number, reviewer: number}} caps token limits, from repo-profile.json
  * @param {object} [extra]
- * @param {Record<string, number>} [extra.pending] path -> budget in tokens for a file not written
- *   yet; added to the total, and to a reviewer when the path is in REVIEWER_SHARED_PATHS or the
- *   reviewer's reads, and only for a path absent from `files`
  * @param {object[]} [extra.library] reviewer-library.json entries; omitted, the library checks are off
  * @param {Record<string, string>} [extra.vendorHashes] sha256 of every file under VENDOR_ROOT on disk
  * @param {Set<string>} [extra.tracked] tracked paths, for the backticked-path check on reviewer skills
@@ -271,7 +268,7 @@ function libraryFailures(library, reviewers, vendorHashes) {
  * @returns {{lines: string[], exitCode: number, total?: number, reviewers?: Record<string, number>}}
  */
 function run(files, readFile, caps, extra = {}) {
-  const { pending = {}, library, vendorHashes = {}, tracked, base } = extra;
+  const { library, vendorHashes = {}, tracked, base } = extra;
   if (!caps || !isCap(caps.total) || !isCap(caps.reviewer)) {
     return {
       lines: [
@@ -304,9 +301,7 @@ function run(files, readFile, caps, extra = {}) {
   }
 
   const listed = [...words.keys()];
-  const pendingEntries = Object.entries(pending).filter(([p]) => !words.has(p));
-  const pendingTotal = pendingEntries.reduce((sum, [, tokens]) => sum + tokens, 0);
-  const total = toTokens(listed.reduce((sum, f) => sum + words.get(f), 0)) + pendingTotal;
+  const total = toTokens(listed.reduce((sum, f) => sum + words.get(f), 0));
 
   const folders = new Map();
   for (const file of listed) {
@@ -331,15 +326,11 @@ function run(files, readFile, caps, extra = {}) {
     const paths = new Set([...folderFiles, ...REVIEWER_SHARED_PATHS, ...reads]);
     let counted = 0;
     let vendored = 0;
-    let pendingTokens = 0;
     for (const p of paths) {
-      // A shared path not listed, not pending, and not in reads counts as zero, because
-      // .claude/agents/reviewer.md exists only after the swap.
+      // A shared path that is not listed and not in reads counts as zero.
       if (words.has(p)) {
         counted += words.get(p);
         if (isVendored(p)) vendored += words.get(p);
-      } else if (p in pending) {
-        pendingTokens += pending[p];
       } else if (!REVIEWER_SHARED_PATHS.includes(p) || reads.includes(p)) {
         try {
           // A listed read must exist even when it is not .md and so counts as zero.
@@ -354,7 +345,7 @@ function run(files, readFile, caps, extra = {}) {
     reviewers.push({
       name,
       reads,
-      tokens: toTokens(counted) + pendingTokens,
+      tokens: toTokens(counted),
       vendoredTokens: toTokens(vendored),
     });
 
@@ -390,12 +381,11 @@ function run(files, readFile, caps, extra = {}) {
     lines.push(...baseNote(base && base.total, 'the total'));
     lines.push(`Largest ${LARGEST_FILES_SHOWN} files:`);
     const largest = [
-      ...listed.filter((f) => f.endsWith('.md')).map((f) => [f, toTokens(words.get(f)), '']),
-      ...pendingEntries.map(([f, tokens]) => [f, tokens, ' (pending)']),
+      ...listed.filter((f) => f.endsWith('.md')).map((f) => [f, toTokens(words.get(f))]),
     ]
       .sort(([fa, a], [fb, b]) => b - a || fa.localeCompare(fb))
       .slice(0, LARGEST_FILES_SHOWN);
-    for (const [f, tokens, mark] of largest) lines.push(`  ${f}: ${tokens} tokens${mark}`);
+    for (const [f, tokens] of largest) lines.push(`  ${f}: ${tokens} tokens`);
     lines.push(...TOTAL_WAYS);
   } else {
     lines.push(`check-token-budget: ${total} tokens in total (limit ${caps.total}).`);
@@ -427,6 +417,7 @@ module.exports = {
   guardedChanges,
   guardFailures,
   isNotCounted,
+  isSharedPath,
   isCap,
   failLine,
   ridesAlong,

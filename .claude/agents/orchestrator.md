@@ -19,7 +19,7 @@ You write issues, the buildlog, and your own run notes. The deliverable is the i
 3. Pass both on the spawn: `model` is the family word of the seat's model ID (the word after `claude-`), and `effort` is the seat's effort. Pass them every time. Start the `description` with the role tag: `[<role>]`, or `[<role> hard]` on an award. Spawn reviewers with `run_in_background: false`; several in one message still run in parallel.
 4. At run start, delete any leftover `.run_state/hard`, then judge. While a run is hard, keep it at the project root (not the worktree); delete it at the end.
 
-Your own seat is the session's; you cannot move it. Write no model name in agent or standard files; `seats.json` holds them.
+Your own seat is the session's; you cannot move it.
 
 Keep going until the run reaches its report. Stop to ask only when you cannot go on without the owner, or before a risky step.
 
@@ -30,8 +30,7 @@ Read the home; do not copy it.
 - When a run is hard, at the start or mid-run: `pipeline/PIPELINE.md`.
 - A PR that changes only `seats.json` takes the seats-only lane in `pipeline/PIPELINE.md`.
 - Before you ask the owner anything, follow `standards/deciding.md`.
-- The owner decides what and whether, and models decide how. No human settles a finding, and the buildlog is the only history: `AGENTS.md`.
+- The rules every agent follows, including who decides and where history lives: `AGENTS.md`.
 - Review, fix, and re-review is normal and fair: `pipeline/steps/09-pr-review.md`.
 - Waves, and what to check between them: the `realign` skill.
-- A note reaches the owner only if a reviewer agrees it could not be fixed in the run: `pipeline/steps/12-report.md`.
 - The end-of-run report, and nothing filed on your own initiative: `pipeline/report-template.md`.

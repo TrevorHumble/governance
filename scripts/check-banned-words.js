@@ -1,8 +1,7 @@
 // scripts/check-banned-words.js
-// CI gate: no file in the new tree, vendored skill, BUILDLOG.md, or buildlog fragment holds a
-// banned phrase, and no file in the new tree holds a banned filler word. Matching lives in
-// check-banned-words-core.js; which files are the new tree is answered by the budget gate
-// (countInputs in check-token-budget-core.js), plus the design file; this file reads disk.
+// CI gate: no tracked .md file, vendored skill, BUILDLOG.md, or buildlog fragment holds a banned
+// phrase, and no tracked .md file outside the vendored, build log and buildlog set holds a banned
+// filler word. Matching lives in check-banned-words-core.js; this file reads disk and git.
 //
 //   node scripts/check-banned-words.js
 'use strict';
@@ -10,23 +9,20 @@
 const fs = require('fs');
 const path = require('path');
 const { findBannedWords } = require('./check-banned-words-core');
-const { countInputs, VENDOR_ROOT } = require('./check-token-budget-core');
-const { readHead } = require('./check-token-budget');
+const { VENDOR_ROOT } = require('./check-token-budget-core');
+const { git } = require('./check-token-budget');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
-// The design file is outside the budget count, so countInputs never lists it, but it is prose the
-// owner reads and gets the same scan.
-const DESIGN_FILE = 'DESIGN.md';
-
+// Every tracked .md file is scanned, shared or not: the repo's own README, goals and records are
+// prose the owner reads. Vendored skills, BUILDLOG.md and buildlog fragments get the phrases only.
 function scanSet(root) {
-  const { view } = readHead(root);
-  const inTree = new Set(countInputs(view).files);
   const scan = [];
-  for (const p of view.listing) {
-    if (inTree.has(p) || p === DESIGN_FILE) scan.push({ path: p, scope: 'all' });
-    else if (p.startsWith(VENDOR_ROOT) || p === 'BUILDLOG.md' || p.startsWith('buildlog/')) {
+  for (const p of git(root, ['ls-files']).split('\n').filter(Boolean)) {
+    if (p.startsWith(VENDOR_ROOT) || p === 'BUILDLOG.md' || p.startsWith('buildlog/')) {
       scan.push({ path: p, scope: 'phrases' });
+    } else if (p.endsWith('.md')) {
+      scan.push({ path: p, scope: 'all' });
     }
   }
   return scan;

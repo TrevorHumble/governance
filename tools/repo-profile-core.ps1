@@ -1,6 +1,6 @@
 # tools/repo-profile-core.ps1: single-homed repo-profile.json reader. Dot-source
 # this file; do not run it directly (mirrors the -core.ps1 convention of
-# tools/issue-core.ps1 and tools/classify-dep-pr-core.ps1).
+# tools/issue-core.ps1).
 #
 # Why this file exists instead of four private copies: DESIGN.md at the governance-v1 tag.
 #
