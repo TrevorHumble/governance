@@ -6,7 +6,8 @@
           {
             "type": "command",
             "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/session-greeting.ps1\"",
-            "shell": "powershell"
+            "shell": "powershell",
+            "timeout": 10
           }
         ]
       }
@@ -17,8 +18,55 @@
         "hooks": [
           {
             "type": "command",
-            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/goal-gate.ps1\"",
-            "shell": "powershell"
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/goal-check.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/before-issue-create.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/spawn-check.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/after-edit.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/reviewer-done.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
           }
         ]
       }
@@ -28,8 +76,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/loop-gate.ps1\"",
-            "shell": "powershell"
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/before-stop.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
           }
         ]
       }

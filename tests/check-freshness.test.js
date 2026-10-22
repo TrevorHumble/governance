@@ -224,7 +224,7 @@ maybeDescribe('check-freshness.ps1', () => {
   });
 });
 
-// Regression guard for /realign step ordering. `.claude/commands/realign.md`
+// Regression guard for /realign step ordering. `.claude/skills/realign/SKILL.md`
 // must run the next-batch overlap report BEFORE fast-forwarding local main to
 // origin/main. This test proves WHY: check-freshness.ps1 derives its drift range
 // from merge-base(origin/main, HEAD)..origin/main, and in the primary checkout on

@@ -13,7 +13,7 @@
 # remote session, a connector) is never checked, and the role tag is the agent's own word.
 $ErrorActionPreference = 'Stop'
 
-$FALLBACK = 'denied; see _claude/hooks/notes.md.'
+$FALLBACK = 'denied; see .claude/hooks/notes.md.'
 
 function Write-Deny([string[]]$keys, [hashtable]$values = @{}) {
   $parts = @($keys | ForEach-Object { Get-Note 'spawn-check' $_ })

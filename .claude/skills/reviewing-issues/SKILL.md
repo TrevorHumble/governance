@@ -2,7 +2,7 @@
 name: reviewing-issues
 description: Use when reviewing a filed issue before work starts, or re-checking its fixes, to say whether it is ready to build.
 metadata:
-  reads: 'standards/reviewing.md _claude/skills/writing-user-stories/SKILL.md _claude/skills/writing-acceptance-criteria/SKILL.md _claude/skills/writing-issues/SKILL.md pipeline/PIPELINE.md'
+  reads: 'standards/reviewing.md .claude/skills/writing-user-stories/SKILL.md .claude/skills/writing-acceptance-criteria/SKILL.md .claude/skills/writing-issues/SKILL.md pipeline/PIPELINE.md'
 ---
 
 # Reviewing an issue

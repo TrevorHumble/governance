@@ -2,7 +2,7 @@
 name: implementing
 description: Use when you are handed a reviewed issue to build, so the work is finished inside its criteria and the review is uneventful.
 metadata:
-  reads: 'standards/deciding.md standards/edge-cases.md _claude/skills/writing-acceptance-criteria/SKILL.md _claude/agents/implementer.md'
+  reads: 'standards/deciding.md standards/edge-cases.md .claude/skills/writing-acceptance-criteria/SKILL.md .claude/agents/implementer.md'
 ---
 
 # Implementing
@@ -22,6 +22,6 @@ Read every prior-art path the issue names, and reuse what is there. Before you c
 
 Technical calls inside the criteria are yours (`standards/deciding.md`, "Decide from the goals"). Would a typical user expect it to work? Then build it: a slug that mangles punctuation is a bug, not a follow-up.
 
-Open the handoff (`_claude/agents/implementer.md`) with its first line, with no summary before it.
+Open the handoff (`.claude/agents/implementer.md`) with its first line, with no summary before it.
 
 The owner's calls are the ones in `writing-acceptance-criteria`, "Whose call". Build the behavior the criteria state, add a line starting `Owner's call:` that names the question, and keep going. The report carries it to the owner.

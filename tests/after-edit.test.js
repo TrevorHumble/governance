@@ -1,5 +1,5 @@
 // tests/after-edit.test.js
-// Tests for _claude/hooks/after-edit.ps1: a PostToolUse note on Edit and Write, only for a path in
+// Tests for .claude/hooks/after-edit.ps1: a PostToolUse note on Edit and Write, only for a path in
 // repo-profile.json's docCurrencyPaths.
 'use strict';
 
@@ -9,7 +9,7 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const HOOKS = path.join(__dirname, '..', '_claude', 'hooks');
+const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'after-edit.ps1');
 
 function noteFor(hook) {
@@ -66,7 +66,7 @@ const maybeDescribe = launcherMissing
   ? describe.skip.bind(describe, skipTitle('after-edit'))
   : describe;
 
-maybeDescribe('_claude/hooks/after-edit.ps1', () => {
+maybeDescribe('.claude/hooks/after-edit.ps1', () => {
   beforeEach(() => profile(['src/api.js', 'lib/', 'tools/*.ps1', './.github/ci.yml']));
 
   it('adds the note, naming the path, for an exact path', () => {

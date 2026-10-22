@@ -1,74 +1,141 @@
-# session-greeting: a SessionStart hook. Two jobs, both fast, local, and idempotent
-# (NO network calls -- a SessionStart hook is on the critical path of opening the
-# project, so it must always return in well under a second):
-#   1. SELF-ARMS the local hooks if they're dormant (a clone doesn't carry
-#      core.hooksPath; this `git config` is what makes "clone and it just works"
-#      true -- the hooks arm the moment you open the project in Claude Code).
-#   2. GREETS with the honest current state, so the owner sees positive evidence
-#      they're protected -- and is told if their git identity still needs setting.
-# Fail-safe: any error -> no action, no greeting.
+# session-greeting: a SessionStart hook. It adds a greeting the model reads before the first prompt,
+# plus warnings when something would override the seats in seats.json:
+#   - the session's model is neither the orchestrator seat nor its hard award (checked only when the
+#     input carries `model`; after /clear or a recovery it does not, and the greeting says so);
+#   - CLAUDE_CODE_EFFORT_LEVEL is set, or CLAUDE_CODE_SUBAGENT_MODEL_FORCE is 1;
+#   - a maxEffortLevel in settings is below a seat's effort;
+#   - .run_state/hard exists at the project root (a leftover marker would move later runs up).
+#   - it also turns the git hooks on (core.hooksPath, through tools/setup-hooks.ps1, since a fresh
+#     clone does not carry it) and adds a line saying whether commit-msg and pre-commit are armed;
+#     with no tools/setup-hooks.ps1 it skips that line.
+# The project root is CLAUDE_PROJECT_DIR, else the input's cwd. It never blocks. Unreadable input
+# prints nothing; a seats.json that is missing or odd drops only the checks that need it, and the
+# hello line always prints.
+$ErrorActionPreference = 'Stop'
+
+$EFFORTS = @('low', 'medium', 'high', 'xhigh', 'max')
+
+# The lowest maxEffortLevel any settings file sets, as an index into $EFFORTS, or -1 for none.
+function Get-LowestCap([string]$root) {
+  $configDir = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $HOME '.claude' }
+  $files = @((Join-Path $root '.claude/settings.json'), (Join-Path $root '.claude/settings.local.json'),
+    (Join-Path $configDir 'settings.json'))
+  $lowest = -1
+  foreach ($f in $files) {
+    try {
+      $cap = (Get-Content -LiteralPath $f -Raw | ConvertFrom-Json).maxEffortLevel
+      $i = if ($cap -is [string]) { $EFFORTS.IndexOf($cap.ToLowerInvariant()) } else { -1 }
+      if ($i -ge 0 -and ($lowest -lt 0 -or $i -lt $lowest)) { $lowest = $i }
+    } catch { }
+  }
+  return $lowest
+}
+
 try {
-  $top = (& git rev-parse --show-toplevel 2>$null)
-  if (-not $top) { exit 0 }
+  . (Join-Path $PSScriptRoot 'hook-core.ps1')
+  $payload = (Read-Stdin) | ConvertFrom-Json
+  if ($null -eq $payload) { exit 0 }
+  $hello = Get-Note 'session-greeting' 'hello'
+  if (-not $hello) { exit 0 }
+  $lines = @($hello)
+  $root = Get-ProjectRoot $payload
 
-  # 1. Arm the local hooks if dormant (local git config, idempotent).
-  $commitMsgFile = Join-Path $top '.githooks/commit-msg'
-  $preCommitFile = Join-Path $top '.githooks/pre-commit'
-  $hp = "$(& git -C $top config --get core.hooksPath)".Trim()
-  if ($hp -ne '.githooks' -and (Test-Path $commitMsgFile)) {
-    . (Join-Path $top 'tools/setup-hooks.ps1')
-    if (Set-HooksPath -RepoRoot $top) { $hp = '.githooks' }
-  }
-  # Liveness reads BOTH hook files, not commit-msg alone, so a repo missing
-  # pre-commit is reported as missing pre-commit, not waved through as armed.
-  $missingHooks = @()
-  if (-not (Test-Path $commitMsgFile)) { $missingHooks += '.githooks/commit-msg' }
-  if (-not (Test-Path $preCommitFile)) { $missingHooks += '.githooks/pre-commit' }
-  $hookOn = ($hp -eq '.githooks' -and $missingHooks.Count -eq 0)
+  # Turn the git hooks on, then say which of the two are armed: the path is set and the file is there.
+  try {
+    $setup = if ($root) { Join-Path $root 'tools/setup-hooks.ps1' } else { $null }
+    if ($setup -and (Test-Path -LiteralPath $setup -PathType Leaf)) {
+      . $setup
+      # Write core.hooksPath only when the project dir is itself the repo root (an enclosing repo's
+      # config is never touched), the path is unset or already .githooks (a custom one is kept), and
+      # .githooks/commit-msg exists. Otherwise skip and say why.
+      $top = "$(& git -C $root rev-parse --show-toplevel 2>$null)".Trim()
+      $prefix = "$(& git -C $root rev-parse --show-prefix 2>$null)".Trim()
+      $path = ''
+      $why = ''
+      if (-not $top -or $prefix) {
+        $why = Get-Note 'session-greeting' 'githooks-elsewhere'
+      } else {
+        $path = "$(& git -C $top config --get core.hooksPath 2>$null)".Trim()
+        if ($path -and $path -ne '.githooks') {
+          $why = Get-Note 'session-greeting' 'githooks-kept'
+        } elseif (-not (Test-Path -LiteralPath (Join-Path $top '.githooks/commit-msg') -PathType Leaf)) {
+          $why = Get-Note 'session-greeting' 'githooks-missing'
+        } elseif ($path -ne '.githooks') {
+          $null = Set-HooksPath -RepoRoot $top
+          $path = "$(& git -C $top config --get core.hooksPath 2>$null)".Trim()
+        }
+      }
+      $state = @{}
+      foreach ($name in @('commit-msg', 'pre-commit')) {
+        $armed = $top -and $path -eq '.githooks' -and (Test-Path -LiteralPath (Join-Path $top ".githooks/$name") -PathType Leaf)
+        $state[$name] = if ($armed) { 'armed' } else { 'not armed' }
+      }
+      $note = Get-Note 'session-greeting' 'githooks'
+      if ($note) {
+        $text = Fill $note @{ commitMsg = $state['commit-msg']; preCommit = $state['pre-commit'] }
+        if ($why) { $text = "$text $why" }
+        $lines += $text
+      }
+    }
+  } catch { }
+  $seats = Read-Seats $root
 
-  # governanceHome "self" is one repo-profile.json state where the
-  # parent-ownership hook (.githooks/pre-commit) exits 0 without ever
-  # reading governance-manifest.json -- see that hook's own header. A repo
-  # with no repo-profile.json at all is a second such state: that hook's own
-  # header treats a missing profile as "the wall is off", exiting 0 before it
-  # even looks for a PowerShell launcher. Both hook files being present and
-  # armed is not the same claim as this repo being protected by the
-  # ownership rule; the greeting must not conflate them.
-  #
-  # The reader (tools/repo-profile-core.ps1) is itself a shared path that can
-  # arrive at a child out of step with this script (both sync independently),
-  # so its absence is tested before dot-sourcing it rather than left to the
-  # outer catch: a missing dot-sourced file raises, and the outer catch would
-  # silence the whole greeting, including the hooks-missing warning below,
-  # which has nothing to do with the profile reader.
-  $profilePath = Join-Path $top 'repo-profile.json'
-  $profileExists = Test-Path $profilePath
-  $readerPath = Join-Path $top 'tools/repo-profile-core.ps1'
-  $readerMissing = -not (Test-Path $readerPath)
-  $isGovernanceHome = $false
-  if (-not $readerMissing) {
-    . $readerPath
-    $isGovernanceHome = ($profileExists -and (Get-RepoProfileValue -Field 'governanceHome' -ProfilePath $profilePath) -eq 'self')
-  }
+  # Each check stands alone: one that throws on an odd seats.json drops only itself.
+  try {
+    if ($seats) {
+      $orch = Get-Family $seats.roles.orchestrator.model
+      $hardOrch = $null
+      $hardAwards = Get-HardAwards $seats
+      if ($hardAwards -and $hardAwards.PSObject.Properties['orchestrator']) {
+        $hardOrch = Get-Family $hardAwards.orchestrator.model
+      }
+      $allowed = @($orch, $hardOrch) | Where-Object { $_ }
+      $session = Get-Family $payload.model
+      if (-not $orch) {
+        # No orchestrator seat to compare with.
+      } elseif (-not $session) {
+        $lines += Get-Note 'session-greeting' 'unchecked'
+      } elseif ($allowed -cnotcontains $session) {
+        $shown = if ($hardOrch) { "$orch, or $hardOrch on a hard run" } else { $orch }
+        $lines += Fill (Get-Note 'session-greeting' 'model') @{ model = $payload.model; seats = $shown }
+      }
+    }
+  } catch { }
 
-  # 2. Greet (honest state). Local identity check only -- no network.
-  $haveEmail = "$(& git -C $top config user.email)".Trim()
-  $idNote = if ($haveEmail) { '' } else { ' Set your git name/email before your first commit.' }
+  if ($env:CLAUDE_CODE_EFFORT_LEVEL) { $lines += Fill (Get-Note 'session-greeting' 'env') @{ name = 'CLAUDE_CODE_EFFORT_LEVEL' } }
+  if ($env:CLAUDE_CODE_SUBAGENT_MODEL_FORCE -eq '1') { $lines += Fill (Get-Note 'session-greeting' 'env') @{ name = 'CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1' } }
 
-  if ($hookOn -and $readerMissing) {
-    $msg = "Gates armed: the issue-reference commit-msg hook is active. The ownership wall's state could not be read -- tools/repo-profile-core.ps1 is missing, so whether the parent-ownership pre-commit hook is protecting this repo is unknown. Goal gate + loop gate loaded.$idNote"
-  } elseif ($hookOn -and -not $profileExists) {
-    $msg = "Gates armed: the issue-reference commit-msg hook is active. The parent-ownership pre-commit hook is installed but inert here -- no repo-profile.json declares this repo a child, so it enforces nothing here. Goal gate + loop gate loaded.$idNote"
-  } elseif ($hookOn -and $isGovernanceHome) {
-    $msg = "Gates armed: the issue-reference commit-msg hook is active. The parent-ownership pre-commit hook is installed but inert here -- this repo is the governance home, so it enforces nothing here by design. Goal gate + loop gate loaded.$idNote"
-  } elseif ($hookOn) {
-    $msg = "Gates armed: the issue-reference commit-msg hook and the parent-ownership pre-commit hook are both active, goal gate + loop gate loaded. You're protected -- direct away.$idNote"
-  } elseif ($missingHooks.Count -gt 0) {
-    $msg = "Goal gate + loop gate loaded, but $($missingHooks -join ' and ') missing -- check .githooks/, or run: powershell -ExecutionPolicy Bypass -File tools/setup-hooks.ps1"
-  } else {
-    $msg = "Goal gate + loop gate loaded, but git config core.hooksPath could not be set -- run: powershell -ExecutionPolicy Bypass -File tools/setup-hooks.ps1 to see the error"
-  }
-  Write-Output (@{ systemMessage = $msg } | ConvertTo-Json -Compress)
+  try {
+    if ($seats -and $root) {
+      $cap = Get-LowestCap $root
+      if ($cap -ge 0) {
+        # The first seat, roles then hard awards, whose effort is above the cap.
+        $candidates = @($seats.roles.PSObject.Properties | ForEach-Object { @{ label = $_.Name; effort = $_.Value.effort } })
+        $hardAwards = Get-HardAwards $seats
+        if ($hardAwards) {
+          $candidates += @($hardAwards.PSObject.Properties | ForEach-Object { @{ label = "$($_.Name) hard"; effort = $_.Value.effort } })
+        }
+        $found = $null
+        foreach ($c in $candidates) {
+          if (-not $found -and $EFFORTS.IndexOf([string]$c.effort) -gt $cap) { $found = $c }
+        }
+        if ($found) {
+          $lines += Fill (Get-Note 'session-greeting' 'cap') @{ cap = $EFFORTS[$cap]; role = $found.label; effort = $found.effort }
+        }
+      }
+    }
+  } catch { }
+
+  try {
+    if ($root -and (Test-Path -LiteralPath (Join-Path $root '.run_state/hard') -PathType Leaf)) {
+      $lines += Get-Note 'session-greeting' 'marker'
+    }
+  } catch { }
+
+  $out = [ordered]@{ hookSpecificOutput = [ordered]@{
+      hookEventName = 'SessionStart'; additionalContext = (@($lines | Where-Object { $_ }) -join ' ') } }
+  Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
+  exit 0
 } catch {
   exit 0
 }

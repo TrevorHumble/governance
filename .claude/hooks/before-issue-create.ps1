@@ -28,7 +28,7 @@ $MAX_READ = 1MB
 # Caps on the work done, so a pathological command cannot stall the hook past its timeout.
 $MAX_TEXT = 10000
 $MAX_GH = 12
-$FALLBACK = 'denied; see _claude/hooks/notes.md.'
+$FALLBACK = 'denied; see .claude/hooks/notes.md.'
 $coreLoaded = $false
 try { . (Join-Path $PSScriptRoot 'hook-core.ps1'); $coreLoaded = $true } catch { }
 

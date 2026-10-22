@@ -2,7 +2,7 @@
 name: build
 description: Use when the owner gives a goal with /build, so the run opens with the hard test and then goes through every step.
 metadata:
-  reads: 'pipeline/PIPELINE.md _claude/skills/working-autonomously/SKILL.md'
+  reads: 'pipeline/PIPELINE.md .claude/skills/working-autonomously/SKILL.md'
 ---
 
 # Build

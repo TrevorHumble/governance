@@ -1,5 +1,5 @@
 // tests/hook-core.test.js
-// Tests for _claude/hooks/hook-core.ps1, the logic every hook shares: Fill, Get-Family, Get-Note,
+// Tests for .claude/hooks/hook-core.ps1, the logic every hook shares: Fill, Get-Family, Get-Note,
 // Get-RoleTag, Get-ProjectRoot, Get-ReviewerRoles, Get-HardAwards, Read-Seats.
 'use strict';
 
@@ -9,7 +9,7 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const CORE = path.join(__dirname, '..', '_claude', 'hooks', 'hook-core.ps1');
+const CORE = path.join(__dirname, '..', '.claude', 'hooks', 'hook-core.ps1');
 
 // Dot-sources the core and runs a PowerShell expression that returns a value; the value comes back as JSON.
 function ps(expression, env = {}) {
@@ -28,7 +28,7 @@ const maybeDescribe = launcherMissing
   ? describe.skip.bind(describe, skipTitle('hook-core'))
   : describe;
 
-maybeDescribe('_claude/hooks/hook-core.ps1: Fill', () => {
+maybeDescribe('.claude/hooks/hook-core.ps1: Fill', () => {
   it('fills each {key} once, in a single pass', () => {
     expect(ps(`Fill 'a {x} b {y}' @{ x = '1'; y = '2' }`)).toBe('a 1 b 2');
   });
@@ -44,7 +44,7 @@ maybeDescribe('_claude/hooks/hook-core.ps1: Fill', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/hook-core.ps1: Get-Family', () => {
+maybeDescribe('.claude/hooks/hook-core.ps1: Get-Family', () => {
   it.each([
     ['claude-sonnet-5-5', 'sonnet'],
     ['claude-opus-5-5[1m]', 'opus'],
@@ -62,7 +62,7 @@ maybeDescribe('_claude/hooks/hook-core.ps1: Get-Family', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/hook-core.ps1: notes, tags, seats, root', () => {
+maybeDescribe('.claude/hooks/hook-core.ps1: notes, tags, seats, root', () => {
   it('reads a section as one line, and a key from it', () => {
     expect(ps(`Get-Note 'goal-check'`)).toContain('standards/deciding.md');
     expect(ps(`Get-Note 'spawn-check' 'foreground'`)).toContain('run_in_background false');
