@@ -100,8 +100,8 @@ check:emdash"}`.
   syncs; required whenever `governanceHome` is not `"self"`. This repo does not declare it.
 - `governanceRef` (string). Optional. Allowed: a tag or branch name of the governance home, which
   `tools/governance-sync.ps1` pulls instead of the home's default branch. Absent means the default
-  branch. A raw commit hash is not allowed, since a depth-1 clone takes a tag or branch name with
-  `--branch` but not a hash. This repo does not declare it.
+  branch. Validation and exit codes: `standards/governance-sync.md` § "Adoption fields". This repo
+  does not declare it.
 - `acknowledgedDivergentPaths` (array of strings). Allowed: any list of repo-relative paths, or
   `[]`; the retained-divergent paths (§ "Governance sync" below, "The `retired` entry schema and
   provenance-checked pruning") this child means to keep un-pruned on purpose. A path in this list
@@ -663,8 +663,8 @@ synced holds diverged content, and a plan computed against the stale tree would 
 content the branch being synced never actually matched.
 
 **One profile, parsed once.** The wrapper reads the resolved profile file exactly once as JSON;
-`governanceHome` and `syncIssue` come directly off that parsed object (property presence, not
-just value, decides `governanceHome`'s outcome), while `defaultBranch` and `ghPath` go through
+`governanceHome`, `syncIssue`, and `governanceRef` come directly off that parsed object (property
+presence, not just value, decides `governanceHome`'s outcome), while `defaultBranch` and `ghPath` go through
 `Get-RepoProfileValue -ProfilePath <that same file>` so their fallback defaults stay single-homed
 in `tools/repo-profile-core.ps1`'s `$FieldDefaults` table. `governanceHome` deliberately gets no
 `$FieldDefaults` entry: there is no safe default for "where is my governance home," and a

@@ -1465,7 +1465,7 @@ function expectPinnedSync(fx, ref, expectedContent) {
     `governance sync from ${ref} (${sha}) (#${fx.syncIssue})`
   );
   const create = readGhLog(fx.ghLogPath).find((c) => c.args.startsWith('pr create'));
-  expect(create.body).toContain(`Governance sync from ${fx.parentDir} at ${ref} (${sha}).`);
+  expect(create.body).toContain(`Governance sync from ${fx.parentDir} at \`${ref}\` (${sha}).`);
   expect(create.args).toContain(
     `--title governance sync from ${sha.substring(0, 8)} (#${fx.syncIssue})`
   );
@@ -1505,6 +1505,12 @@ maybeDescribe('governance-sync.ps1 governanceRef pin', () => {
     ['null', null, 1],
     ['a number', 123, 1],
     ['a leading dash', '--upload-pack=x', 1],
+    ['a space', 'a b', 1],
+    ['a double quote', 'a"b', 1],
+    ['a space and a quote that would re-split', 'a b" --upload-pack=x "c', 1],
+    ['a newline', 'v-pin\n', 1],
+    ['an @', 'v@pin', 1],
+    ['a double dot', 'v..pin', 1],
     ['a ref that does not exist', 'no-such-ref', 2],
   ];
   for (const [label, ref, code] of invalidRefs) {

@@ -322,7 +322,9 @@ maybeDescribe('.githooks/pre-commit', () => {
     });
     const res = tryCommit(dir, { 'notes.txt': 'anything\n' }, 'feat/whatever');
     expect(res.status).not.toBe(0);
-    expect(`${res.stdout}${res.stderr}`).toContain('BLOCKED');
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+    expect(out).toContain('ownership scan did not complete');
   });
 
   it('blocks when the ownership scan fails to complete: governance-sync-core.ps1 unloadable', () => {
@@ -333,7 +335,9 @@ maybeDescribe('.githooks/pre-commit', () => {
     });
     const res = tryCommit(dir, { 'notes.txt': 'anything\n' }, 'feat/whatever');
     expect(res.status).not.toBe(0);
-    expect(`${res.stdout}${res.stderr}`).toContain('BLOCKED');
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+    expect(out).toContain('ownership scan did not complete');
   });
 
   // governance-manifest.json parses but carries no sharedPaths array:

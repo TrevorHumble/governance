@@ -438,15 +438,24 @@ if (-not $syncIssueValid) {
 
 # governanceRef: optional tag or branch of the governance home to pull. Absent
 # means the home's default branch, as before. Present (null included) must be
-# a non-empty string that does not start with '-', checked before any clone or
-# network access. git takes the token after --branch as its value, so the '-'
-# check is defense in depth.
+# a string on a strict allowlist, checked before any clone or network access.
+# The allowlist is stricter than git's ref rules on purpose: Windows PowerShell
+# 5.1 re-splits a native argument holding a space and a double quote, so a
+# value like 'a b" --upload-pack=x "c' would reach git as extra options ahead
+# of the '--'. '\z' rather than '$' so a trailing newline does not slip past.
 $governanceRefProp = $profileObj.PSObject.Properties['governanceRef']
 $governanceRef = $null
 if ($null -ne $governanceRefProp) {
   $governanceRef = $governanceRefProp.Value
-  if ($governanceRef -isnot [string] -or [string]::IsNullOrWhiteSpace($governanceRef) -or $governanceRef.StartsWith('-')) {
-    [Console]::Error.WriteLine('governance-sync: governanceRef in repo-profile.json must be a non-empty string naming a tag or branch, not starting with "-"')
+  $governanceRefValid = $governanceRef -is [string] -and
+    $governanceRef -cmatch '^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}\z' -and
+    -not $governanceRef.Contains('..') -and
+    -not $governanceRef.Contains('//') -and
+    -not $governanceRef.EndsWith('/') -and
+    -not $governanceRef.EndsWith('.') -and
+    -not $governanceRef.EndsWith('.lock')
+  if (-not $governanceRefValid) {
+    [Console]::Error.WriteLine('governance-sync: governanceRef in repo-profile.json must name a tag or branch: 1 to 200 characters of letters, digits, ".", "_", "/" and "-", starting with a letter or digit, with no "..", no "//", and no trailing "/", "." or ".lock"')
     exit 1
   }
 }
@@ -743,9 +752,12 @@ try {
   # Step j: open or refresh the sync PR. gh resolves its target repo from the
   # current directory, so every gh call below runs with the child repo as the
   # working directory.
+  # When two refs resolve to the same commit the branch name is the same, the
+  # existing-PR path keeps the earlier body, and its ref line can be stale;
+  # the content is still correct.
   $bodyLines = New-Object System.Collections.Generic.List[string]
   if ($null -ne $governanceRef) {
-    $bodyLines.Add("Governance sync from $governanceHome at $governanceRef ($parentSha).")
+    $bodyLines.Add("Governance sync from $governanceHome at ``$governanceRef`` ($parentSha).")
   } else {
     $bodyLines.Add("Governance sync from $governanceHome at $parentSha.")
   }
