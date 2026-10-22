@@ -4,6 +4,8 @@
 // filesystem, or git access here.
 'use strict';
 
+const { effectiveSeats } = require('./check-seats-core');
+
 // The same tag rule as _claude/hooks/hook-core.ps1 ($ROLE_TAG): `[<role>]` or `[<role> hard]` at
 // the start of a spawn description. A different language means a second copy, kept in step by hand.
 const ROLE_TAG = /^\s*\[([a-z][a-z0-9-]*)(?:\s+(hard))?\]/;
@@ -29,10 +31,9 @@ function roleTag(description) {
  * @returns {{model: string, effort: string} | null} null when seats.json has no such role
  */
 function seatFor(seats, tag) {
-  const base = isObject(seats) && isObject(seats.roles) ? seats.roles[tag.role] : undefined;
-  if (!isObject(base)) return null;
-  const award = tag.hard ? seats.awards?.hard?.[tag.role] : undefined;
-  return { ...base, ...(isObject(award) ? award : {}) };
+  if (!isObject(seats) || !isObject(seats.roles) || !isObject(seats.roles[tag.role])) return null;
+  const award = tag.hard ? seats.awards?.hard : undefined;
+  return effectiveSeats(seats.roles, isObject(award) ? award : {})[tag.role];
 }
 
 /**

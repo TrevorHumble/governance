@@ -289,6 +289,7 @@ function run(headSeats, base) {
 module.exports = {
   REQUIRED_ROLES,
   validateSeats,
+  effectiveSeats,
   classifyPr,
   run,
   failLine,

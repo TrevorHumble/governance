@@ -1,6 +1,6 @@
 // tests/workflows.test.js
 // Vitest tests that read the workflow files as text (no YAML parser is a dependency): the reusable
-// governance-ci.yml runs the same steps as ci.yml's `build` job, and dependabot-auto-merge.yml keeps
+// governance-ci.yml runs the same `build` job as ci.yml, and dependabot-auto-merge.yml keeps
 // its trigger, actor check, permissions, and pinned action.
 'use strict';
 
@@ -17,11 +17,17 @@ const code = (text) =>
     .filter((l) => l.trim() !== '' && !l.trim().startsWith('#'))
     .join('\n');
 
-// The text of the `build` job's steps: from its `steps:` line to the end of the file. `build` is the
-// last job in both files; the test below fails first if a job is added after it.
-function buildSteps(text) {
-  const at = text.indexOf('\n    steps:\n');
+// The text of the whole `build` job (name, runs-on, if, env, steps): from its key to the end of the
+// file. `build` is the last job in both files; the test below fails first if a job is added after it.
+function buildJob(text) {
+  const at = text.indexOf('\n  build:\n');
   return at === -1 ? undefined : code(text.slice(at));
+}
+
+// A workflow-level block (`env:`, `permissions:`): its key and indented lines, or '' when absent.
+function topBlock(text, key) {
+  const m = new RegExp(`^${key}:\\n(?: {2}.*\\n)+`, 'm').exec(code(text) + '\n');
+  return m ? m[0] : '';
 }
 
 describe('governance-ci.yml', () => {
@@ -41,9 +47,9 @@ describe('governance-ci.yml', () => {
     }
   });
 
-  it('runs the same steps as ci.yml build, with the same checkout depth and em-dash condition', () => {
-    const a = buildSteps(reusable);
-    const b = buildSteps(ci);
+  it('runs the same build job as ci.yml, with the same checkout depth and em-dash condition', () => {
+    const a = buildJob(reusable);
+    const b = buildJob(ci);
     expect(a).toBeDefined();
     expect(a).toBe(b);
     expect(a).toContain('fetch-depth: 0');
@@ -63,9 +69,31 @@ describe('governance-ci.yml', () => {
     expect(a).toMatch(/run: npm run check:emdash$/m);
   });
 
+  it('has the same workflow-level env and permissions as ci.yml', () => {
+    expect(topBlock(reusable, 'permissions')).toBe(topBlock(ci, 'permissions'));
+    expect(topBlock(reusable, 'permissions')).not.toBe('');
+    expect(topBlock(reusable, 'env')).toBe(topBlock(ci, 'env'));
+  });
+
+  it('sees a difference in runs-on, an if, an env, or a workflow-level env', () => {
+    const whole = (t) => buildJob(t);
+    expect(whole(ci.replace('runs-on: ubuntu-latest', 'runs-on: windows-latest'))).not.toBe(
+      whole(reusable)
+    );
+    expect(whole(ci.replace('  build:\n', "  build:\n    if: github.ref == 'x'\n"))).not.toBe(
+      whole(reusable)
+    );
+    expect(whole(ci.replace('    steps:\n', '    env:\n      A: b\n    steps:\n'))).not.toBe(
+      whole(reusable)
+    );
+    expect(topBlock(ci.replace('\njobs:\n', '\nenv:\n  A: b\n\njobs:\n'), 'env')).not.toBe(
+      topBlock(reusable, 'env')
+    );
+  });
+
   it('fails the comparison when a step differs', () => {
     const changed = ci.replace('run: npm run check:banned', 'run: npm run check:banned -- --x');
-    expect(buildSteps(changed)).not.toBe(buildSteps(reusable));
+    expect(buildJob(changed)).not.toBe(buildJob(reusable));
   });
 
   it('asks for read access only', () => {
@@ -82,8 +110,10 @@ describe('dependabot-auto-merge.yml', () => {
     expect(body).not.toMatch(/^\s+pull_request:/m);
   });
 
-  it('runs only for the dependabot actor', () => {
-    expect(body).toContain("if: github.actor == 'dependabot[bot]'");
+  it('runs only for the dependabot actor and a pull request Dependabot opened', () => {
+    expect(body).toContain(
+      "if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'"
+    );
   });
 
   it('holds exactly contents: write and pull-requests: write', () => {

@@ -1,3 +1,3 @@
-{"type": "user", "message": {"role": "user", "content": "You run the baseline step (plan step 1) of issue #117 in the governance repo at /home/user/governance (branch at origin/v2). The issue text is /tmp/claude-0/-home-user-governance/f3947410-6dcf-58c0-85"}}
+{"type": "user", "message": {"role": "user", "content": "(briefing omitted)"}}
 {"type": "assistant", "message": {"role": "assistant", "model": "claude-opus-5-5", "content": [{"type": "text", "text": "trimmed"}]}}
 {"type": "assistant", "message": {"role": "assistant", "model": "claude-opus-5-5", "content": [{"type": "text", "text": "trimmed"}]}}

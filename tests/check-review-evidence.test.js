@@ -43,16 +43,16 @@ describe('findCitations', () => {
       'Also ./docs/c.md:1.',
     ].join('\n');
     expect(findCitations(review)).toEqual([
-      { path: 'scripts/a.js', from: 12, to: 12, text: 'scripts/a.js:12' },
-      { path: 'tests/b.test.js', from: 3, to: 9, text: 'tests/b.test.js:3-9' },
-      { path: 'package.json', from: 4, to: 4, text: 'package.json:4' },
-      { path: 'docs/c.md', from: 1, to: 1, text: './docs/c.md:1' },
+      { path: 'scripts/a.js', from: 12, to: 12, text: 'scripts/a.js:12', unreadable: false },
+      { path: 'tests/b.test.js', from: 3, to: 9, text: 'tests/b.test.js:3-9', unreadable: false },
+      { path: 'package.json', from: 4, to: 4, text: 'package.json:4', unreadable: false },
+      { path: 'docs/c.md', from: 1, to: 1, text: './docs/c.md:1', unreadable: false },
     ]);
   });
 
   it('reads path:line:column as the line', () => {
     expect(findCitations('src/x.js:7:3')).toEqual([
-      { path: 'src/x.js', from: 7, to: 7, text: 'src/x.js:7' },
+      { path: 'src/x.js', from: 7, to: 7, text: 'src/x.js:7', unreadable: false },
     ]);
   });
 
@@ -65,6 +65,28 @@ describe('findCitations', () => {
     expect(texts(review)).toEqual([]);
   });
 
+  it('reads absolute paths, Windows paths, and en and em dash ranges', () => {
+    const found = findCitations(
+      '/home/u/repo/src/a.js:5 C:\\repo\\src\\a.js:6 src\\a.js:7 b.js:12\u201314 b.js:3\u20145'
+    );
+    expect(found.map((c) => [c.path, c.from, c.to])).toEqual([
+      ['/home/u/repo/src/a.js', 5, 5],
+      ['C:/repo/src/a.js', 6, 6],
+      ['src/a.js', 7, 7],
+      ['b.js', 12, 14],
+      ['b.js', 3, 5],
+    ]);
+  });
+
+  it('keeps a range with no end number and marks it unreadable', () => {
+    for (const review of ['a.js:12- then', 'a.js:12\u2013 then', 'a.js:12-']) {
+      expect(findCitations(review)).toEqual([
+        expect.objectContaining({ from: 12, unreadable: true }),
+      ]);
+    }
+    expect(findCitations('a.js:12-ish')).toEqual([expect.objectContaining({ unreadable: false })]);
+  });
+
   it('does not start a citation in the middle of a longer path', () => {
     expect(texts('a/b.js:5')).toEqual(['a/b.js:5']);
     expect(texts('see x/a/b.js:5')).toEqual(['x/a/b.js:5']);
@@ -73,7 +95,10 @@ describe('findCitations', () => {
 
 describe('citationProblems', () => {
   const lines = { 'a.js': 10, 'empty.txt': 0 };
-  const count = (p) => lines[p];
+  const count = (p) =>
+    lines[p] === undefined
+      ? { problem: `${p} is not a file in the working tree` }
+      : { lines: lines[p] };
   const problems = (text) => citationProblems(findCitations(text), count);
 
   it('passes lines inside the file, including the last line and a full range', () => {
@@ -91,6 +116,10 @@ describe('citationProblems', () => {
     expect(problems('empty.txt:1')).toEqual(['empty.txt:1: empty.txt has 0 line(s)']);
   });
 
+  it('fails an unreadable range rather than dropping its end', () => {
+    expect(problems('a.js:3-')).toEqual(['a.js:3-: the range has no end line']);
+  });
+
   it('fails a file that does not exist', () => {
     expect(problems('src/ghost.js:3')).toEqual([
       'src/ghost.js:3: src/ghost.js is not a file in the working tree',
@@ -103,8 +132,9 @@ describe('citationProblems', () => {
 });
 
 describe('run', () => {
-  const lineCount = (p) => (p === 'a.js' ? 10 : undefined);
-  const verdict = (review, currentTree = ID) => run({ review, currentTree, lineCount });
+  const resolve = (p) =>
+    p === 'a.js' ? { lines: 10 } : { problem: `${p} is not a file in the working tree` };
+  const verdict = (review, currentTree = ID) => run({ review, currentTree, resolve });
 
   it('passes when the echo matches and every citation exists', () => {
     const r = verdict(`Reviewed tree: ${ID}\npraise: a.js:4 does it.`);
@@ -226,6 +256,51 @@ describe('the CLI on a temp repo', () => {
     expect(r.lines).toHaveLength(3);
     expect(r.lines[0]).toContain('src/a.js has 3 line(s)');
     expect(r.lines[1]).toContain('.review_state/notes.txt is not a file');
+  });
+
+  describe('absolute paths and bare names', () => {
+    const verdict = (...cites) => {
+      const review = saveReview(`Reviewed tree: ${workingTreeId(root)}\n${cites.join(' ')}\n`);
+      return main({ root, argv: [review] });
+    };
+
+    it('reads an absolute path inside the repo as repo-relative', () => {
+      expect(verdict(`${path.join(root, 'src/a.js')}:2-3`).exitCode).toBe(0);
+      expect(verdict(`${fs.realpathSync(root)}/src/a.js:1`).exitCode).toBe(0);
+    });
+
+    it('fails an absolute citation to a line past the end of the file', () => {
+      const r = verdict(`${path.join(root, 'src/a.js')}:4`);
+      expect(r.exitCode).toBe(1);
+      expect(r.lines[0]).toContain('has 3 line(s)');
+    });
+
+    it('fails an absolute path outside the repo, and an absolute path to a missing file', () => {
+      const outsideFile = path.join(outside, 'x.js');
+      fs.writeFileSync(outsideFile, 'x\n');
+      const r = verdict(`${outsideFile}:1`, `${path.join(root, 'src/none.js')}:1`);
+      expect(r.lines).toHaveLength(2);
+      expect(r.lines[0]).toContain('absolute path outside the repo');
+      expect(r.lines[1]).toContain('src/none.js is not a file');
+    });
+
+    it('reads a backslash path as a repo path', () => {
+      expect(verdict('src\\a.js:3').exitCode).toBe(0);
+      expect(verdict('src\\a.js:4').exitCode).toBe(1);
+    });
+
+    it('resolves a bare name only when one file has it', () => {
+      expect(verdict('a.js:3').exitCode).toBe(0);
+      write('lib/a.js', 'x\n');
+      const r = verdict('a.js:1');
+      expect(r.exitCode).toBe(1);
+      expect(r.lines[0]).toContain('a.js is ambiguous (');
+      expect(verdict('nothing.js:1').lines[0]).toContain('nothing.js is not a file');
+    });
+
+    it('fails a range with no end line', () => {
+      expect(verdict('src/a.js:1-').lines[0]).toContain('the range has no end line');
+    });
   });
 
   it('counts a last line with no trailing newline', () => {

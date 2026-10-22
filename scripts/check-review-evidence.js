@@ -52,21 +52,64 @@ function citablePaths(root) {
   return new Set(out.split('\0').filter(Boolean));
 }
 
-function lineCounter(root) {
+const slashes = (p) => p.replace(/\\/g, '/');
+const isAbsolute = (p) => /^(?:[A-Za-z]:)?\//.test(p);
+
+// The repo-relative form of an absolute path inside the repo, or undefined for any other. The root
+// is tried as given and as its real path, since a reviewer may cite either.
+function underRoot(root, abs) {
+  const roots = new Set([slashes(root)]);
+  try {
+    roots.add(slashes(fs.realpathSync(root)));
+  } catch {
+    // An unresolvable root leaves only the given form.
+  }
+  const fold = process.platform === 'win32' ? (t) => t.toLowerCase() : (t) => t;
+  for (const r of roots) {
+    const base = r.replace(/\/+$/, '') + '/';
+    if (fold(abs).startsWith(fold(base))) return abs.slice(base.length);
+  }
+  return undefined;
+}
+
+function countLines(full) {
+  let text;
+  try {
+    if (!fs.statSync(full).isFile()) return undefined;
+    text = fs.readFileSync(full, 'utf8');
+  } catch {
+    return undefined;
+  }
+  if (text === '') return 0;
+  const breaks = text.split('\n').length - 1;
+  return text.endsWith('\n') ? breaks : breaks + 1;
+}
+
+// Resolves a citation's path to a file of the working tree. An absolute path counts only inside the
+// repo; a bare name only when exactly one citable file has it.
+function resolver(root) {
   const paths = citablePaths(root);
-  return (rel) => {
-    if (!paths.has(rel)) return undefined;
-    let text;
-    try {
-      const full = path.join(root, rel);
-      if (!fs.statSync(full).isFile()) return undefined;
-      text = fs.readFileSync(full, 'utf8');
-    } catch {
-      return undefined;
+  const byName = new Map();
+  for (const p of paths) {
+    const name = p.slice(p.lastIndexOf('/') + 1);
+    byName.set(name, [...(byName.get(name) ?? []), p]);
+  }
+  return (cited) => {
+    let rel = cited;
+    if (isAbsolute(cited)) {
+      rel = underRoot(root, cited);
+      if (rel === undefined) return { problem: `${cited} is an absolute path outside the repo` };
+    } else if (!cited.includes('/')) {
+      const same = byName.get(cited) ?? [];
+      if (same.length > 1) {
+        return { problem: `${cited} is ambiguous (${same.join(', ')}); cite the repo path` };
+      }
+      rel = same[0] ?? cited;
     }
-    if (text === '') return 0;
-    const breaks = text.split('\n').length - 1;
-    return text.endsWith('\n') ? breaks : breaks + 1;
+    const lines = paths.has(rel) ? countLines(path.join(root, rel)) : undefined;
+    return lines === undefined
+      ? { problem: `${rel} is not a file in the working tree` }
+      : { lines };
   };
 }
 
@@ -85,7 +128,7 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2) } = {}) {
     } catch (err) {
       return fail(`cannot read the review file ${args[0]} (${err.message}).`);
     }
-    return run({ review, currentTree: workingTreeId(root), lineCount: lineCounter(root) });
+    return run({ review, currentTree: workingTreeId(root), resolve: resolver(root) });
   } catch (err) {
     return fail(`git failed (${err.message.split('\n')[0]}).`);
   }
