@@ -977,7 +977,10 @@ describe('new-tree.json', () => {
   const root = path.join(__dirname, '..');
   const tree = JSON.parse(fs.readFileSync(path.join(root, 'new-tree.json'), 'utf8'));
   const profile = JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8'));
-  const budgetOf = (f) => (f.group ? tree.groups[f.group] : f.budget);
+  // A staged file declares no budget; it is held to the pending entry it names.
+  const pendingBudget = (path) => tree.pending.find((p) => p.path === path)?.budget;
+  const budgetOf = (f) =>
+    f.group ? tree.groups[f.group] : f.staging ? pendingBudget(f.staging) : f.budget;
 
   it('has every listed file on disk, and each placeholder names its budget', () => {
     for (const f of tree.files) {
@@ -995,10 +998,33 @@ describe('new-tree.json', () => {
   });
 
   it('has listed and pending budgets that sum to the total cap or less, counting a group once', () => {
-    const own = tree.files.filter((f) => !f.group).reduce((sum, f) => sum + f.budget, 0);
+    const own = tree.files
+      .filter((f) => !f.group && !f.staging)
+      .reduce((sum, f) => sum + f.budget, 0);
     const shared = Object.values(tree.groups).reduce((sum, b) => sum + b, 0);
     const pending = tree.pending.reduce((sum, p) => sum + p.budget, 0);
     expect(own + shared + pending).toBeLessThanOrEqual(profile.budget.total);
+  });
+
+  it('holds each staged file to the pending budget it names, counted the way the gate counts', () => {
+    const staged = tree.files.filter((f) => f.staging);
+    expect(staged.length).toBeGreaterThan(0);
+    for (const f of staged) {
+      expect(f.budget, f.path).toBeUndefined();
+      expect(f.group, f.path).toBeUndefined();
+      expect(
+        tree.pending.map((p) => p.path),
+        f.path
+      ).toContain(f.staging);
+      const body = fs.readFileSync(path.join(root, f.path), 'utf8');
+      // The gate's own count: a lone listed file plus one empty reviewer skill, which adds nothing.
+      const r = core.run(
+        [f.path, '_claude/skills/reviewing-x/SKILL.md'],
+        (file) => (file === f.path ? body : ''),
+        CAPS
+      );
+      expect(r.total, f.path).toBeLessThanOrEqual(pendingBudget(f.staging));
+    }
   });
 
   it('records the six shared-path files as pending and lists none of them as a file', () => {
