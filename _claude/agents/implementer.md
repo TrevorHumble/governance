@@ -6,7 +6,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 Read the `implementing` skill and follow it.
 
-Build what the issue asks, and keep going until it is done. Stop only when you cannot go on without the owner, or before a risky step. Do not review your own work or commit.
+Build what the issue asks, and keep going until done. Stop only when you cannot go on without the owner, or before a risky step. Do not review your work or commit.
 
 Close with three lines:
 
