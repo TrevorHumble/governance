@@ -619,7 +619,9 @@ function baseManifest() {
 // `opts.childGitignore` seeds the child's own `.gitignore` content;
 // `opts.childHook` seeds HOOK_REL_PATH in the child's initial commit (mode
 // 100644, since writing the file sets no exec bit), for a case that then
-// gives the parent the same content under the same path.
+// gives the parent the same content under the same path; `opts.governanceRef`
+// (any JSON value, `null` included) sets that field in the child's profile,
+// and leaving the key off leaves the field out.
 function makeE2EFixture(opts) {
   opts = opts || {};
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-e2e-'));
@@ -666,6 +668,9 @@ function makeE2EFixture(opts) {
     defaultBranch: 'trunk',
     ghPath: 'gh-stub-does-not-exist-on-path',
   };
+  if ('governanceRef' in opts) {
+    childProfile.governanceRef = opts.governanceRef;
+  }
   if (opts.childCiCheckNames !== undefined) {
     childProfile.ciCheckNames = opts.childCiCheckNames;
   }
@@ -1429,4 +1434,97 @@ maybeDescribe('governance-sync.ps1 end-to-end (AC 6)', () => {
     const calls = readGhLog(fx.ghLogPath);
     expect(calls.some((c) => c.args === 'pr close 55 --delete-branch')).toBe(true);
   });
+});
+
+// Parent refs for the governanceRef cases: an annotated tag and a branch, each
+// carrying content that differs from the default branch's tip, so a sync that
+// pulled the wrong ref shows up as wrong file content.
+function addPinnableRefs(fx) {
+  const defaultBranch = git(fx.parentDir, ['rev-parse', '--abbrev-ref', 'HEAD']).trim();
+  git(fx.parentDir, ['checkout', '-q', '-b', 'tag-source']);
+  writeFile(fx.parentDir, 'shared/hello.txt', 'tagged\n');
+  git(fx.parentDir, ['commit', '-q', '-am', 'tagged content']);
+  git(fx.parentDir, ['tag', '-a', 'v-pin', '-m', 'pin tag']);
+  git(fx.parentDir, ['checkout', '-q', '-b', 'pin-branch', defaultBranch]);
+  writeFile(fx.parentDir, 'shared/hello.txt', 'branched\n');
+  git(fx.parentDir, ['commit', '-q', '-am', 'branch content']);
+  git(fx.parentDir, ['checkout', '-q', defaultBranch]);
+  writeFile(fx.parentDir, 'shared/hello.txt', 'default tip\n');
+  git(fx.parentDir, ['commit', '-q', '-am', 'default tip content']);
+}
+
+function expectPinnedSync(fx, ref, expectedContent) {
+  const sha = git(fx.parentDir, ['rev-parse', `${ref}^{commit}`]).trim();
+  const branchName = `issue-${fx.syncIssue}-governance-sync-${sha.substring(0, 8)}`;
+  const r = runE2EWrapper(fx);
+  expect(r.status).toBe(0);
+  expect(r.stdout.trim().split('\n').pop()).toMatch(/^sync PR opened: /);
+
+  expect(git(fx.originDir, ['show', `${branchName}:shared/hello.txt`])).toBe(expectedContent);
+  expect(git(fx.originDir, ['log', '-1', '--format=%s', branchName]).trim()).toBe(
+    `governance sync from ${ref} (${sha}) (#${fx.syncIssue})`
+  );
+  const create = readGhLog(fx.ghLogPath).find((c) => c.args.startsWith('pr create'));
+  expect(create.body).toContain(`Governance sync from ${fx.parentDir} at \`${ref}\` (${sha}).`);
+  expect(create.args).toContain(
+    `--title governance sync from ${sha.substring(0, 8)} (#${fx.syncIssue})`
+  );
+}
+
+maybeDescribe('governance-sync.ps1 governanceRef pin', () => {
+  it('a tag pin syncs the tag content, not the default branch tip, and names the ref and commit', () => {
+    const fx = makeE2EFixture({ governanceRef: 'v-pin' });
+    addPinnableRefs(fx);
+    expectPinnedSync(fx, 'v-pin', 'tagged\n');
+  });
+
+  it('a branch pin syncs the branch content, not the default branch tip, and names the ref and commit', () => {
+    const fx = makeE2EFixture({ governanceRef: 'pin-branch' });
+    addPinnableRefs(fx);
+    expectPinnedSync(fx, 'pin-branch', 'branched\n');
+  });
+
+  it('no governanceRef field: pulls the default branch and keeps the subject and body line as before', () => {
+    const fx = makeE2EFixture({});
+    addPinnableRefs(fx);
+    const sha = git(fx.parentDir, ['rev-parse', 'HEAD']).trim();
+    const branchName = `issue-${fx.syncIssue}-governance-sync-${sha.substring(0, 8)}`;
+    const r = runE2EWrapper(fx);
+    expect(r.status).toBe(0);
+
+    expect(git(fx.originDir, ['show', `${branchName}:shared/hello.txt`])).toBe('default tip\n');
+    expect(git(fx.originDir, ['log', '-1', '--format=%s', branchName]).trim()).toBe(
+      `governance sync from ${sha} (#${fx.syncIssue})`
+    );
+    const create = readGhLog(fx.ghLogPath).find((c) => c.args.startsWith('pr create'));
+    expect(create.body).toContain(`Governance sync from ${fx.parentDir} at ${sha}.`);
+  });
+
+  const invalidRefs = [
+    ['empty', '', 1],
+    ['null', null, 1],
+    ['a number', 123, 1],
+    ['a leading dash', '--upload-pack=x', 1],
+    ['a space', 'a b', 1],
+    ['a double quote', 'a"b', 1],
+    ['a space and a quote that would re-split', 'a b" --upload-pack=x "c', 1],
+    ['a newline', 'v-pin\n', 1],
+    ['an @', 'v@pin', 1],
+    ['a double dot', 'v..pin', 1],
+    ['a ref that does not exist', 'no-such-ref', 2],
+  ];
+  for (const [label, ref, code] of invalidRefs) {
+    it(`governanceRef ${label}: exits ${code} with a governance-sync error and opens nothing`, () => {
+      const fx = makeE2EFixture({ governanceRef: ref });
+      addPinnableRefs(fx);
+      const r = runE2EWrapper(fx);
+      expect(r.status).toBe(code);
+      expect(r.stderr).toContain('governance-sync:');
+      if (label === 'a ref that does not exist') {
+        expect(r.stderr).toContain('no-such-ref');
+      }
+      expect(git(fx.originDir, ['branch', '--list', 'issue-*']).trim()).toBe('');
+      expect(readGhLog(fx.ghLogPath)).toEqual([]);
+    });
+  }
 });

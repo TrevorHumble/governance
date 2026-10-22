@@ -436,6 +436,30 @@ if (-not $syncIssueValid) {
   exit 1
 }
 
+# governanceRef: optional tag or branch of the governance home to pull. Absent
+# means the home's default branch, as before. Present (null included) must be
+# a string on a strict allowlist, checked before any clone or network access.
+# The allowlist is stricter than git's ref rules on purpose: Windows PowerShell
+# 5.1 re-splits a native argument holding a space and a double quote, so a
+# value like 'a b" --upload-pack=x "c' would reach git as extra options ahead
+# of the '--'. '\z' rather than '$' so a trailing newline does not slip past.
+$governanceRefProp = $profileObj.PSObject.Properties['governanceRef']
+$governanceRef = $null
+if ($null -ne $governanceRefProp) {
+  $governanceRef = $governanceRefProp.Value
+  $governanceRefValid = $governanceRef -is [string] -and
+    $governanceRef -cmatch '^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}\z' -and
+    -not $governanceRef.Contains('..') -and
+    -not $governanceRef.Contains('//') -and
+    -not $governanceRef.EndsWith('/') -and
+    -not $governanceRef.EndsWith('.') -and
+    -not $governanceRef.EndsWith('.lock')
+  if (-not $governanceRefValid) {
+    [Console]::Error.WriteLine('governance-sync: governanceRef in repo-profile.json must name a tag or branch: 1 to 200 characters of letters, digits, ".", "_", "/" and "-", starting with a letter or digit, with no "..", no "//", and no trailing "/", "." or ".lock"')
+    exit 1
+  }
+}
+
 # defaultBranch and ghPath ride the shared reader against this same profile
 # file, so their fallback stays single-homed in repo-profile-core.ps1's
 # $FieldDefaults rather than a second copy here.
@@ -464,10 +488,18 @@ $pushedLocation = $false
 
 try {
   # Step d: clone the parent shallow.
-  & git clone --quiet --depth 1 $governanceHome $tempCloneDir | Out-Null
-  if ($LASTEXITCODE -ne 0) {
-    [Console]::Error.WriteLine("governance-sync: git clone of governance home '$governanceHome' failed (exit $LASTEXITCODE)")
-    exit 2
+  if ($null -ne $governanceRef) {
+    & git clone --quiet --depth 1 --branch $governanceRef -- $governanceHome $tempCloneDir | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      [Console]::Error.WriteLine("governance-sync: git clone of governance home '$governanceHome' at ref '$governanceRef' failed (exit $LASTEXITCODE)")
+      exit 2
+    }
+  } else {
+    & git clone --quiet --depth 1 $governanceHome $tempCloneDir | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      [Console]::Error.WriteLine("governance-sync: git clone of governance home '$governanceHome' failed (exit $LASTEXITCODE)")
+      exit 2
+    }
   }
   $parentSha = "$(& git -C $tempCloneDir rev-parse HEAD)".Trim()
   if ($LASTEXITCODE -ne 0 -or -not $parentSha) {
@@ -702,7 +734,11 @@ try {
       exit 2
     }
   }
-  & git -C $syncWorktreeDir commit --quiet -m "governance sync from $parentSha (#$syncIssue)" | Out-Null
+  $commitSubject = "governance sync from $parentSha (#$syncIssue)"
+  if ($null -ne $governanceRef) {
+    $commitSubject = "governance sync from $governanceRef ($parentSha) (#$syncIssue)"
+  }
+  & git -C $syncWorktreeDir commit --quiet -m $commitSubject | Out-Null
   if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("governance-sync: git commit failed in the sync worktree (exit $LASTEXITCODE)")
     exit 2
@@ -716,8 +752,15 @@ try {
   # Step j: open or refresh the sync PR. gh resolves its target repo from the
   # current directory, so every gh call below runs with the child repo as the
   # working directory.
+  # When two refs resolve to the same commit the branch name is the same, the
+  # existing-PR path keeps the earlier body, and its ref line can be stale;
+  # the content is still correct.
   $bodyLines = New-Object System.Collections.Generic.List[string]
-  $bodyLines.Add("Governance sync from $governanceHome at $parentSha.")
+  if ($null -ne $governanceRef) {
+    $bodyLines.Add("Governance sync from $governanceHome at ``$governanceRef`` ($parentSha).")
+  } else {
+    $bodyLines.Add("Governance sync from $governanceHome at $parentSha.")
+  }
   $bodyLines.Add('')
   $bodyLines.Add('Merges on green CI per `standards/governance-sync.md`: no reviewer.')
   $bodyLines.Add('')
