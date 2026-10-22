@@ -574,3 +574,107 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file must be a re
     }
   });
 });
+
+maybeDescribe(
+  '_claude/hooks/before-issue-create.ps1: gh api filing (the cloud session way)',
+  () => {
+    const api = (fields, head = 'gh api repos/{owner}/{repo}/issues') => `${head} ${fields}`;
+    const ok = `-f title=T -F body=@ok.md -f 'labels[]=${LABEL}'`;
+
+    it('passes the REST command the cloud session uses', () => {
+      expect(
+        run(api(`-f title=T -F body=@ok.md -f 'labels[]=${LABEL}' -f 'labels[]=owner-approved'`))
+          .decision
+      ).toBe('allow');
+    });
+
+    it('passes the other ways to write the same fields', () => {
+      expect(
+        decisions([
+          api(ok, 'gh api -X POST repos/o/r/issues'),
+          api(`-f title=T --field body=@ok.md --raw-field "labels[]=${LABEL}"`),
+          api(`-f title=T --field=body=@ok.md --field=labels[]=${LABEL}`),
+          api(`-f title=T -Fbody=@ok.md -F labels[]=${LABEL}`),
+          api(`-f title=T -f=labels[]=${LABEL} -F "body=@ok.md"`),
+          api(`-f title=T -F body=@${path.join(dir, 'ok.md')} -f labels[]=${LABEL}`),
+          api(`-f title=T -F body=@ok.md -f labels[]=${LABEL} --jq .html_url -H 'X-Y: z'`),
+        ])
+      ).toEqual(Array(7).fill('allow'));
+    });
+
+    it('denies a call without the label, and says so', () => {
+      const res = run(api('-f title=T -F body=@ok.md -f labels[]=bug'));
+      expect(res.decision).toBe('deny');
+      expect(res.reason).toContain(`it has no ${LABEL} label`);
+      expect(run(api('-f title=T -F body=@ok.md')).decision).toBe('deny');
+      expect(run(api(`-f title=T -F body=@ok.md -f labels=${LABEL}`)).decision).toBe('deny');
+      expect(
+        run(api(`-f title=T -F body=@ok.md -f 'labels[]=${LABEL.toUpperCase()}'`)).decision
+      ).toBe('deny');
+    });
+
+    it('denies an inline body, however it is sent', () => {
+      for (const body of [
+        `-f "body=${LINE}"`,
+        `-F "body=${LINE}"`,
+        `--raw-field body=@ok.md`,
+        `-f body=@ok.md`,
+      ]) {
+        const res = run(api(`-f title=T ${body} -f 'labels[]=${LABEL}'`));
+        expect(res.decision).toBe('deny');
+        expect(res.reason).toContain('its body is inline');
+      }
+    });
+
+    it('denies a body file whose first line is wrong, missing, or not a regular file', () => {
+      const bad = run(api(`-f title=T -F body=@bad.md -f 'labels[]=${LABEL}'`));
+      expect(bad.reason).toContain("first line of 'bad.md' is not 'Owner-approved: yes'");
+      const gone = run(api(`-f title=T -F body=@nope.md -f 'labels[]=${LABEL}'`));
+      expect(gone.reason).toContain('nope.md');
+      expect(run(api(`-f title=T -F body=@sub -f 'labels[]=${LABEL}'`)).decision).toBe('deny');
+    });
+
+    it.skipIf(process.platform !== 'linux')('denies a device as the body file', () => {
+      const res = run(api(`-f title=T -F body=@/dev/null -f 'labels[]=${LABEL}'`));
+      expect(res.reason).toContain('is not a regular file');
+    });
+
+    it('denies --input and a body from stdin, with a note', () => {
+      const input = run(api(`-f title=T --input body.json -f 'labels[]=${LABEL}'`));
+      expect(input.decision).toBe('deny');
+      expect(input.reason).toContain('--input');
+      expect(run(api(`--input=body.json -f 'labels[]=${LABEL}'`)).decision).toBe('deny');
+      const stdin = run(api(`-f title=T -F body=@- -f 'labels[]=${LABEL}'`));
+      expect(stdin.decision).toBe('deny');
+      expect(stdin.reason).toContain('stdin');
+    });
+
+    it('denies two body fields, and two issue POSTs in one command', () => {
+      expect(run(api(`-F body=@ok.md -F body=@ok.md -f 'labels[]=${LABEL}'`)).reason).toContain(
+        'more than one body field'
+      );
+      const twice = run(`${api(ok)} && ${api(ok)}`);
+      expect(twice.decision).toBe('deny');
+      expect(twice.reason).toContain('names issue creation more than once');
+      expect(run(`${api(ok)}; gh issue create --label ${LABEL} --body-file ok.md`).decision).toBe(
+        'deny'
+      );
+    });
+
+    it('does not take a label from a word that is the value of another flag', () => {
+      expect(run(api(`-F body=@ok.md --jq 'labels[]=${LABEL}'`)).decision).toBe('deny');
+      expect(run(api(`-F body=@ok.md -H -f labels[]=${LABEL}`)).decision).toBe('deny');
+      expect(run(api(`-F body=@ok.md -- -f labels[]=${LABEL}`)).decision).toBe('deny');
+    });
+
+    it('keeps passing a GET and the other endpoints, with no label needed', () => {
+      expect(
+        decisions([
+          'gh api repos/{owner}/{repo}/issues',
+          'gh api repos/{owner}/{repo}/issues/5/comments -f body=hi',
+          'gh api -X PATCH repos/o/r/issues/5 -f state=closed',
+        ])
+      ).toEqual(['allow', 'allow', 'allow']);
+    });
+  }
+);
