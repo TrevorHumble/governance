@@ -42,8 +42,9 @@ const git = (cwd, args) => spawnSync('git', args, { cwd, encoding: 'utf8' });
 const hooksPath = (cwd) => git(cwd, ['config', '--get', 'core.hooksPath']).stdout.trim();
 
 // The hello line, then the git hooks line for the two states.
-const hooksLine = (commitMsg, preCommit) =>
-  notes().githooks.replace('{commitMsg}', commitMsg).replace('{preCommit}', preCommit);
+const hooksLine = (commitMsg, preCommit, why = '') =>
+  notes().githooks.replace('{commitMsg}', commitMsg).replace('{preCommit}', preCommit) +
+  (why ? ` ${notes()[why]}` : '');
 const armed = () => `${notes().hello} ${hooksLine('armed', 'armed')}`;
 
 // A scratch repo with the two git hooks and the script that arms them, in the hook's own layout.
@@ -164,22 +165,59 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: the git hooks', () => {
     expect(hooksPath(own)).toBe('.githooks');
   });
 
-  it('says a hook is not armed when its file is missing, and names which', () => {
+  it('arms commit-msg and says pre-commit is not armed when only its file is missing', () => {
     const own = repo({ hooks: ['commit-msg'] });
     expect(run(start('sonnet'), { project: own })).toBe(
       `${notes().hello} ${hooksLine('armed', 'not armed')}`
     );
-    const other = repo({ hooks: ['pre-commit'] });
-    expect(run(start('sonnet'), { project: other })).toBe(
-      `${notes().hello} ${hooksLine('not armed', 'armed')}`
-    );
+    expect(hooksPath(own)).toBe('.githooks');
   });
 
-  it('says neither is armed when the project is not a git repo', () => {
+  it('writes nothing and says why when .githooks/commit-msg is missing', () => {
+    const own = repo({ hooks: ['pre-commit'] });
+    expect(run(start('sonnet'), { project: own })).toBe(
+      `${notes().hello} ${hooksLine('not armed', 'not armed', 'githooks-missing')}`
+    );
+    expect(hooksPath(own)).toBe('');
+  });
+
+  it('leaves a custom core.hooksPath alone and reports it', () => {
+    const own = repo();
+    git(own, ['config', 'core.hooksPath', 'my-hooks']);
+    expect(run(start('sonnet'), { project: own })).toBe(
+      `${notes().hello} ${hooksLine('not armed', 'not armed', 'githooks-kept')}`
+    );
+    expect(hooksPath(own)).toBe('my-hooks');
+  });
+
+  it('keeps core.hooksPath at .githooks and reports armed when it is already set', () => {
+    const own = repo();
+    git(own, ['config', 'core.hooksPath', '.githooks']);
+    expect(run(start('sonnet'), { project: own })).toBe(armed());
+  });
+
+  it('writes nothing to an enclosing repo when the project dir is nested inside it', () => {
+    const outer = repo();
+    const nested = path.join(outer, 'packages', 'app');
+    fs.mkdirSync(path.join(nested, '.githooks'), { recursive: true });
+    fs.mkdirSync(path.join(nested, 'tools'));
+    fs.writeFileSync(path.join(nested, '.githooks', 'commit-msg'), '#!/bin/sh\nexit 0\n');
+    fs.copyFileSync(
+      path.join(REPO, 'tools', 'setup-hooks.ps1'),
+      path.join(nested, 'tools', 'setup-hooks.ps1')
+    );
+    expect(run(start('sonnet'), { project: nested })).toBe(
+      `${notes().hello} ${hooksLine('not armed', 'not armed', 'githooks-elsewhere')}`
+    );
+    expect(hooksPath(outer)).toBe('');
+    expect(hooksPath(nested)).toBe('');
+  });
+
+  it('writes nothing and says why when the project is not a git repo', () => {
     const own = repo();
     fs.rmSync(path.join(own, '.git'), { recursive: true, force: true });
     expect(run(start('sonnet'), { project: own })).toBe(
-      `${notes().hello} ${hooksLine('not armed', 'not armed')}`
+      `${notes().hello} ${hooksLine('not armed', 'not armed', 'githooks-elsewhere')}`
     );
   });
 

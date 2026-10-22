@@ -45,19 +45,37 @@ try {
     $setup = if ($root) { Join-Path $root 'tools/setup-hooks.ps1' } else { $null }
     if ($setup -and (Test-Path -LiteralPath $setup -PathType Leaf)) {
       . $setup
+      # Write core.hooksPath only when the project dir is itself the repo root (an enclosing repo's
+      # config is never touched), the path is unset or already .githooks (a custom one is kept), and
+      # .githooks/commit-msg exists. Otherwise skip and say why.
       $top = "$(& git -C $root rev-parse --show-toplevel 2>$null)".Trim()
+      $prefix = "$(& git -C $root rev-parse --show-prefix 2>$null)".Trim()
       $path = ''
-      if ($top) {
-        $null = Set-HooksPath -RepoRoot $top
+      $why = ''
+      if (-not $top -or $prefix) {
+        $why = Get-Note 'session-greeting' 'githooks-elsewhere'
+      } else {
         $path = "$(& git -C $top config --get core.hooksPath 2>$null)".Trim()
+        if ($path -and $path -ne '.githooks') {
+          $why = Get-Note 'session-greeting' 'githooks-kept'
+        } elseif (-not (Test-Path -LiteralPath (Join-Path $top '.githooks/commit-msg') -PathType Leaf)) {
+          $why = Get-Note 'session-greeting' 'githooks-missing'
+        } elseif ($path -ne '.githooks') {
+          $null = Set-HooksPath -RepoRoot $top
+          $path = "$(& git -C $top config --get core.hooksPath 2>$null)".Trim()
+        }
       }
       $state = @{}
       foreach ($name in @('commit-msg', 'pre-commit')) {
-        $armed = $path -eq '.githooks' -and (Test-Path -LiteralPath (Join-Path $top ".githooks/$name") -PathType Leaf)
+        $armed = $top -and $path -eq '.githooks' -and (Test-Path -LiteralPath (Join-Path $top ".githooks/$name") -PathType Leaf)
         $state[$name] = if ($armed) { 'armed' } else { 'not armed' }
       }
       $note = Get-Note 'session-greeting' 'githooks'
-      if ($note) { $lines += Fill $note @{ commitMsg = $state['commit-msg']; preCommit = $state['pre-commit'] } }
+      if ($note) {
+        $text = Fill $note @{ commitMsg = $state['commit-msg']; preCommit = $state['pre-commit'] }
+        if ($why) { $text = "$text $why" }
+        $lines += $text
+      }
     }
   } catch { }
   $seats = Read-Seats $root

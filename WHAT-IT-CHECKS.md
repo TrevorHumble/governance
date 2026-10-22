@@ -1,6 +1,6 @@
 # What it checks
 
-Each line: what a check catches, then what it misses. CI runs the scripts below except `check:evidence` and `check:served`.
+Each line: what a check catches, then what it misses. CI runs the `npm` scripts below except `check:evidence` and `check:served`.
 
 - `npm test`: a failing test. Misses code no test covers.
 - `lint`: ESLint findings in JavaScript. Misses PowerShell and prose.
@@ -16,7 +16,7 @@ Each line: what a check catches, then what it misses. CI runs the scripts below 
 - `pre-commit`: a child staging a shared path outside a sync branch. `--no-verify` skips it; CI does not back it.
 - `before-issue-create`: `gh issue create` lacking the `needs-issue-review` label or a body file opening `Owner-approved: yes`. An agent can type `Owner-approved: yes` itself. Sees only Bash.
 - `spawn-check`: an `Agent` call with no role tag, a model or effort off its seat, or a reviewer in the background. Misses `claude -p` and remote sessions; allows if `seats.json` is unreadable. The tag is the agent's word.
-- `session-greeting`: sets `core.hooksPath` and says if both git hooks are armed; warns on a wrong model, an effort override, a low `maxEffortLevel` or a leftover `.run_state/hard`. Never blocks; misses an unreported model.
+- `session-greeting`: sets `core.hooksPath` and says if both git hooks are armed; warns on a wrong model, an effort override, a low `maxEffortLevel` or a leftover `.run_state/hard`. Misses an unreported model.
 - `goal-check`, `after-edit`, `before-stop`, `reviewer-done`: add a note, never block. Nothing checks they were acted on.
 - `issue-guard.yml`: labels `unverified-issue` on an issue opened without `needs-issue-review`; never blocks.
 - Dependabot auto-merge: merges a Dependabot PR on green `build`. Misses whether the bump is safe.
