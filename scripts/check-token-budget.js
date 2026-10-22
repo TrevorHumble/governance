@@ -102,27 +102,40 @@ function notCountedOf(budget, where) {
   return list;
 }
 
+// The manifest's shared paths decide what counts. Each side is filtered by its own manifest, so a
+// PR that drops a path from sharedPaths shows up as a file that leaves the count.
+function sharedPathsOf(manifest, where) {
+  if (
+    !Array.isArray(manifest.sharedPaths) ||
+    !manifest.sharedPaths.every((e) => typeof e === 'string')
+  ) {
+    throw new Error(`sharedPaths in governance-manifest.json ${where} must be an array of strings`);
+  }
+  return manifest.sharedPaths;
+}
+
 function readHead(root) {
   const profile = JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8'));
-  const treeFile = path.join(root, 'new-tree.json');
   const budget = profile.budget || {};
   return {
     profile,
     caps: { total: budget.total, reviewer: budget.reviewer },
     view: {
-      tree: fs.existsSync(treeFile) ? JSON.parse(fs.readFileSync(treeFile, 'utf8')) : null,
       listing: gitLines(root, ['ls-files']),
       notCounted: notCountedOf(budget, 'repo-profile.json'),
+      sharedPaths: sharedPathsOf(
+        JSON.parse(fs.readFileSync(path.join(root, 'governance-manifest.json'), 'utf8')),
+        'on the head'
+      ),
     },
   };
 }
 
 // The base's data, from git alone. An unreadable file is an error, never "no budget key".
-function readBase(root, ref) {
+function readBase(root, ref, headSharedPaths) {
   const show = (file) => git(root, ['show', `${ref}:${file}`]);
   const listing = gitLines(root, ['ls-tree', '-r', '--name-only', ref]);
   let profile;
-  let tree = null;
   try {
     profile = JSON.parse(show('repo-profile.json'));
   } catch (err) {
@@ -130,13 +143,16 @@ function readBase(root, ref) {
       cause: err,
     });
   }
-  if (listing.includes('new-tree.json')) {
+  // A base that predates the manifest is counted by the head's shared paths.
+  let sharedPaths = headSharedPaths;
+  if (listing.includes('governance-manifest.json')) {
     try {
-      tree = JSON.parse(show('new-tree.json'));
+      sharedPaths = sharedPathsOf(JSON.parse(show('governance-manifest.json')), `at ${ref}`);
     } catch (err) {
-      throw new Error(`cannot read new-tree.json at ${ref} (${err.message.split('\n')[0]})`, {
-        cause: err,
-      });
+      throw new Error(
+        `cannot read governance-manifest.json at ${ref} (${err.message.split('\n')[0]})`,
+        { cause: err }
+      );
     }
   }
   const budget = profile.budget || LEGACY_BUDGET;
@@ -147,7 +163,7 @@ function readBase(root, ref) {
     profile,
     guarded: 'budget' in profile,
     caps: { total: budget.total, reviewer: budget.reviewer },
-    view: { tree, listing, notCounted: notCountedOf(budget, `repo-profile.json at ${ref}`) },
+    view: { listing, notCounted: notCountedOf(budget, `repo-profile.json at ${ref}`), sharedPaths },
     read: (file) => show(file),
   };
 }
@@ -173,9 +189,8 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
       return fail(`the base ${found.ref} does not resolve to a commit.`);
     }
     try {
-      const base = readBase(root, found.ref);
-      const inputs = countInputs(base.view);
-      baseCounts = run(inputs.files, base.read, base.caps, { pending: inputs.pending });
+      const base = readBase(root, found.ref, head.view.sharedPaths);
+      baseCounts = run(countInputs(base.view), base.read, base.caps);
       if (base.guarded) {
         const changed = changedFiles(root, found.ref);
         guardLines.push(
@@ -194,14 +209,17 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
   } catch (err) {
     return fail(`cannot read reviewer-library.json (${err.message}).`);
   }
-  const inputs = countInputs(head.view);
-  const result = run(inputs.files, (f) => fs.readFileSync(path.join(root, f), 'utf8'), head.caps, {
-    ...extra,
-    pending: inputs.pending,
-    library,
-    vendorHashes: vendorHashes(root),
-    tracked: new Set(head.view.listing),
-  });
+  const result = run(
+    countInputs(head.view),
+    (f) => fs.readFileSync(path.join(root, f), 'utf8'),
+    head.caps,
+    {
+      ...extra,
+      library,
+      vendorHashes: vendorHashes(root),
+      tracked: new Set(head.view.listing),
+    }
+  );
   return {
     lines: [...result.lines, ...guardLines],
     exitCode: result.exitCode || guardLines.length > 0 ? 1 : 0,

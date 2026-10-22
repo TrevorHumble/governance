@@ -1,6 +1,7 @@
 // scripts/check-seats.js
 // CI gate: seats.json holds every rule (a seat per role, known providers and efforts, models that
-// differ where independence needs it), and a PR that changes only seat values is reported as
+// differ where independence needs it, agents, skills and lenses that name real files, no model ID
+// in shared markdown), and a PR that changes only seat values is reported as
 // seats-only with a before/after table for the owner. The rules live in check-seats-core.js; this
 // file reads disk and git. The base comes from the budget gate's handling of --base and CI events.
 //
@@ -10,6 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const { run, failLine } = require('./check-seats-core');
+const { isSharedPath } = require('./check-token-budget-core');
 const { baseRef, git, changedFiles } = require('./check-token-budget');
 
 const REPO_ROOT = path.join(__dirname, '..');
@@ -27,6 +29,19 @@ function readBaseSeats(root, ref) {
   }
 }
 
+// What the file-name and model-ID rules read: the tracked files, the profile's lenses, and the text
+// of every shared .md file. A missing manifest or profile is an error, never "nothing to check".
+function readRefs(root) {
+  const readJson = (file) => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+  const manifest = readJson('governance-manifest.json');
+  const profile = readJson('repo-profile.json');
+  const tracked = git(root, ['ls-files']).split('\n').filter(Boolean);
+  const sharedMarkdown = tracked
+    .filter((f) => f.endsWith('.md') && isSharedPath(f, manifest.sharedPaths))
+    .map((f) => ({ path: f, text: fs.readFileSync(path.join(root, f), 'utf8') }));
+  return { tracked, lenses: profile.lenses ?? [], sharedMarkdown };
+}
+
 function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.env } = {}) {
   let headSeats;
   try {
@@ -35,9 +50,16 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
     return fail(`cannot read ${SEATS_FILE} (${err.message}).`);
   }
 
+  let refs;
+  try {
+    refs = readRefs(root);
+  } catch (err) {
+    return fail(`cannot read the files the name checks need (${err.message}).`);
+  }
+
   const found = baseRef(argv, env);
   if (found.error) return fail(found.error);
-  if (!found.ref) return run(headSeats);
+  if (!found.ref) return run(headSeats, undefined, refs);
 
   try {
     git(root, ['rev-parse', '--verify', '--quiet', `${found.ref}^{commit}`]);
@@ -52,7 +74,11 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
       `cannot list the files changed since ${found.ref} (${err.message.split('\n')[0]}).`
     );
   }
-  return run(headSeats, { ref: found.ref, baseSeats: readBaseSeats(root, found.ref), changed });
+  return run(
+    headSeats,
+    { ref: found.ref, baseSeats: readBaseSeats(root, found.ref), changed },
+    refs
+  );
 }
 
 if (require.main === module) {

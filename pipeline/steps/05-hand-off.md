@@ -12,7 +12,7 @@ Story: As ..., I want ..., so that ...
 Done when:
 1. ...
 Hard: yes or no, and why
-Token change: a number, or "none". Cut proposed: none, what and why, or a request to raise the cap.
+Token change: a number, or "none". Cut proposed: none, or what and why.
 Ok to file?
 ```
 

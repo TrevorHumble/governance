@@ -2,7 +2,7 @@
 // Vitest tests for tools/check-freshness.ps1: behind-count reporting, the
 // MAX_DRIFT_COMMITS boundary, and overlap detection including the append-only
 // carve-out. Uses a git-scratch-repo (makeRepo) and -File/-Command split
-// pattern mirrored from tests/classify-dep-pr.test.js. Launcher resolution is
+// pattern of the other PowerShell tests. Launcher resolution is
 // shared: see tests/ps-launcher.js.
 'use strict';
 

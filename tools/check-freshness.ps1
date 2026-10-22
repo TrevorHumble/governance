@@ -1,5 +1,5 @@
 # check-freshness: read-only staleness + overlap check, shared by the owner-review
-# path (README.md) and the build-session path (standards/pipeline/PIPELINE.md step 01,
+# path (README.md) and the build-session path (pipeline/steps/01-isolate.md,
 # .claude/skills/realign/SKILL.md). Rationale: DESIGN.md at the governance-v1 tag
 # (items 10-11); the incident history behind this failure mode
 # lives in the wedding-scavenger-hunt repo's own DESIGN.md, not duplicated here.
@@ -46,7 +46,7 @@ $MAX_DRIFT_COMMITS = 10
 # CARVE_OUT_PATHS (append-only): paths whose overlap with the drift range never
 # counts as a hard resync/collision trigger, because two writers both appending
 # to them in the same drift window cannot corrupt each other's entries. Only
-# BUILDLOG.md qualifies today; governance files (standards/, agents/, DESIGN.md,
+# BUILDLOG.md qualifies today; governance files (standards/, pipeline/, DESIGN.md,
 # .claude/, etc.) are deliberately NOT carved out, since they can carry real
 # behavioral drift an overlap must still flag.
 $CARVE_OUT_PATHS = @('BUILDLOG.md')
@@ -117,9 +117,6 @@ if ($MyInvocation.InvocationName -ne '.') {
   $mergeBase = "$(& git merge-base $RemoteDefault HEAD 2>$null)".Trim()
   $explicitTouches = @()
   if ($Touches) {
-    # A richer Touches parse (backtick/annotation stripping, canonical-form
-    # normalization) lives in tools/file-claim-core.ps1's
-    # ConvertFrom-TouchesLine; a change to either parse belongs in both.
     $explicitTouches = @($Touches -split ',\s*' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
   }
   # NOTE: capture git's line-per-file output directly as an array (no

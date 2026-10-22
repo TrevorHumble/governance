@@ -2,7 +2,7 @@
 
 ## Decide from the goals
 
-Before you ask anyone, check `NORTH-STAR.md` (the goals), the issue, its acceptance criteria, `CLAUDE.md`, and the standard that applies. One of them usually settles it. If so, act.
+Before you ask anyone, check the goals `AGENTS.md` points to, the issue, its acceptance criteria, `CLAUDE.md`, and the standard that applies. One of them usually settles it. If so, act.
 
 If both options meet the goals, pick the one that is easier to undo. If they are equal, pick the one that touches fewer files. Write the choice and the reason in one line in the PR body.
 

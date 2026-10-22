@@ -9,7 +9,8 @@
 # Exit-code contract, the same-tree invariant, and the one-profile-parsed-once
 # rule this wrapper implements: DESIGN.md at the governance-v1 tag.
 # Merge-on-green mechanics, the CI-guard gate, the superseded-PR
-# sweep, and the retained-divergent issue: standards/governance-sync.md.
+# sweep, and the retained-divergent issue: AGENTS.md "Parent and children" for the rules in one
+# line each; the code below is the rest.
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||. Native
 # command output is redirected on stdout only, never merged via 2>&1 (that
@@ -28,8 +29,7 @@ param(
 . (Join-Path $PSScriptRoot 'governance-sync-core.ps1')
 . (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
 
-# The two standing issues: standards/governance-sync.md § "The standing-issue
-# rule". One open issue per title per child; the constant titles let
+# The two standing issues. One open issue per title per child; the constant titles let
 # Find-IssueByTitle match exactly, never via gh's own partial-match --search.
 $StructureIssueTitle = 'governance sync: structure change pending adoption'
 $DivergentIssueTitle = 'governance sync: retained divergent paths pending disposition'
@@ -133,8 +133,7 @@ function Close-IssueByTitle {
 }
 
 # Set-StandingStructureIssue / Close-StandingStructureIssue -- the structure
-# issue's own body shape (standards/governance-sync.md § "The standing-issue
-# rule") on top of the generic pair above.
+# issue's own body shape on top of the generic pair above.
 function Set-StandingStructureIssue {
   param(
     [Parameter(Mandatory = $true)] [string]$Gh,
@@ -368,8 +367,8 @@ function Get-Classification {
 
 # Write-ClassificationLines -- prints the issue #14 AC5 contract for $Classification:
 # one `classify <class>: <path> (<reason>)` line per plan path, then one
-# `classify RUN <content|structure>: <reason>` line (`standards/pipeline/PIPELINE.md`
-# step 02 branches on that marker). The one call both the dry-run and
+# `classify RUN <content|structure>: <reason>` line (`pipeline/steps/02-sync.md`
+# branches on that marker). The one call both the dry-run and
 # real-run branches make, so the printed contract can never drift between
 # the two.
 function Write-ClassificationLines {
@@ -559,8 +558,7 @@ try {
 
   $isEmpty = ($plan.Adds.Count -eq 0) -and ($plan.Updates.Count -eq 0) -and ($plan.Prunes.Count -eq 0)
   if ($isEmpty) {
-    # Best-effort only (standards/governance-sync.md § "The standing-issue
-    # rule"): a human can adopt a structure change by hand, leaving a stale
+    # Best-effort only: a human can adopt a structure change by hand, leaving a stale
     # open issue this cleans up, but "nothing to sync" must still print and
     # exit 0 even when gh cannot be resolved or reached. The divergence issue
     # (issue #15 AC6) and the superseded-PR sweep (issue #15 AC5) share the same best-effort
@@ -622,7 +620,7 @@ try {
     Write-Output "structure change: partial withhold ($($classification.RunReason)); child issue: $issueUrl"
     # Ship from Shipped, the classifier's own answer, rather than re-filtering
     # against Withheld. $plan.Prunes needs no such filter: rule 0
-    # (standards/ownership-map.md § "Change classes") classifies every Prune
+    # of Get-PlanPathClassification classifies every Prune
     # content, so a Prune never appears in Withheld.
     $shippedSet = New-Object 'System.Collections.Generic.HashSet[string]'
     foreach ($p in @($classification.Shipped)) { [void]$shippedSet.Add($p) }
@@ -754,7 +752,7 @@ try {
     $bodyLines.Add("Governance sync from $governanceHome at $parentSha.")
   }
   $bodyLines.Add('')
-  $bodyLines.Add('Merges on green CI per `standards/governance-sync.md`: no reviewer.')
+  $bodyLines.Add('Merges on green CI per `AGENTS.md`: no reviewer.')
   $bodyLines.Add('')
   $bodyLines.Add('Add:')
   foreach ($p in $plan.Adds) { $bodyLines.Add("- $p") }

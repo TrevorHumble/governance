@@ -8,12 +8,12 @@ How to work in this repo. `CLAUDE.md` imports this file, and any tool that reads
 
 ## Where things live
 
-- Goals, checked before you ask anything: `NORTH-STAR.md`.
+- Goals, checked before you ask anything, if the file is present: `NORTH-STAR.md`.
 - The twelve steps of a build: `pipeline/PIPELINE.md`.
 - Standards: `standards/`.
 - Which model and effort each role runs on: `seats.json`.
 - When a change is done: `definition-of-done.md`.
-- What the owner has already declined: `owner-declines.md`. Check it before a note goes to the owner; a match is dropped.
+- What the owner has already declined, if the file is present: `owner-declines.md`. Check it before a note goes to the owner; a match is dropped.
 
 ## Rules
 
@@ -29,7 +29,7 @@ How to work in this repo. `CLAUDE.md` imports this file, and any tool that reads
 - `needs-issue-review`: every issue is born with it. Clear it when the issue review passes.
 - `owner-approved`: the owner said yes at the hand-off. The issue body's first line is `Owner-approved: yes`.
 - `hard`: the run uses the `hard` award in `seats.json`.
-- `unverified-issue`: added by `issue-guard.yml` to an issue opened without `needs-issue-review`. No agent applies it.
+- `unverified-issue`: set by CI, never by an agent (`WHAT-IT-CHECKS.md`).
 
 ## Parent and children
 

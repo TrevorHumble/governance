@@ -10,7 +10,7 @@ const { execFileSync } = require('child_process');
 const core = require('../scripts/check-seats-core');
 const { main } = require('../scripts/check-seats');
 
-const { validateSeats, classifyPr, run, REQUIRED_ROLES } = core;
+const { validateSeats, referenceProblems, modelIdProblems, classifyPr, run, REQUIRED_ROLES } = core;
 
 const seat = (model, effort = 'medium', extra = {}) => ({
   provider: 'anthropic',
@@ -329,6 +329,136 @@ describe('a malformed file', () => {
   });
 });
 
+// The files valid() points at: one agent file per agent, one skill folder per skill.
+const TRACKED = [
+  '.claude/agents/orchestrator.md',
+  '.claude/agents/issue-writer.md',
+  '.claude/agents/reviewer.md',
+  '.claude/agents/implementer.md',
+  '.claude/agents/researcher.md',
+  '.claude/skills/reviewing-issues/SKILL.md',
+  '.claude/skills/reviewing-prs/SKILL.md',
+  '.claude/skills/reviewing-docs/SKILL.md',
+  '.claude/skills/refereeing/SKILL.md',
+  'seats.json',
+];
+
+describe('agents, skills and lenses name real files', () => {
+  const refs = (edit, tracked = TRACKED, lenses = []) =>
+    referenceProblems(withChange(edit), tracked, lenses);
+
+  it('passes when every name has its file', () => {
+    expect(refs(() => {})).toEqual([]);
+    expect(referenceProblems(valid(), TRACKED, ['reviewing-prs'])).toEqual([]);
+  });
+
+  it('fails an agent with no file in .claude/agents/, and names role and agent', () => {
+    const list = refs((s) => (s.roles.researcher.agent = 'no-such-agent'));
+    expect(list).toEqual([
+      'role "researcher" agent "no-such-agent" is not a file in .claude/agents/',
+    ]);
+  });
+
+  it('fails an agent that is only a folder, a nested file, or in another folder', () => {
+    for (const bad of ['.claude/agents/nested/researcher.md', '.claude/skills/researcher/x.md']) {
+      const tracked = TRACKED.filter((f) => f !== '.claude/agents/researcher.md').concat(bad);
+      expect(
+        has(
+          refs(() => {}, tracked),
+          'agent "researcher"'
+        )
+      ).toBe(true);
+    }
+    expect(
+      has(
+        refs((s) => (s.roles.researcher.agent = 'a/b')),
+        'agent "a/b"'
+      )
+    ).toBe(true);
+  });
+
+  it('fails a skill with no folder in .claude/skills/', () => {
+    const list = refs((s) => s.roles['code-reviewer'].skills.push('reviewing-nothing'));
+    expect(list).toEqual([
+      'role "code-reviewer" skill "reviewing-nothing" is not a folder in .claude/skills/',
+    ]);
+  });
+
+  it('fails a skill whose name is a file, not a folder', () => {
+    const tracked = TRACKED.concat('.claude/skills/loose.md');
+    const list = refs((s) => s.roles.researcher.skills.push('loose.md'), tracked);
+    expect(has(list, 'skill "loose.md"')).toBe(true);
+  });
+
+  it('fails a lens with no folder in .claude/skills/', () => {
+    const list = referenceProblems(valid(), TRACKED, ['reviewing-prs', 'ui-lens']);
+    expect(list).toEqual(['repo-profile.json lens "ui-lens" is not a folder in .claude/skills/']);
+  });
+
+  it('never throws on a malformed file; the shape rules report it', () => {
+    for (const bad of [null, 'x', [], { roles: [] }, { roles: { a: null, b: { skills: 'x' } } }]) {
+      expect(() => referenceProblems(bad, TRACKED, 'nope')).not.toThrow();
+    }
+  });
+});
+
+describe('model IDs in shared markdown', () => {
+  const md = (text, p = 'standards/x.md') => ({ path: p, text });
+
+  it('passes markdown that names no model', () => {
+    expect(modelIdProblems([md('Run on the seat in seats.json.')])).toEqual([]);
+  });
+
+  it.each([
+    'claude-opus-5-5',
+    'claude-sonnet-5',
+    'claude-haiku-4-5-20251001',
+    'claude-fable-5-1',
+    'claude-opus-4-20250514',
+    'see `claude-sonnet-5-5-preview` here',
+  ])('fails %s, dated and suffixed forms included', (id) => {
+    expect(modelIdProblems([md(`on line\n${id}`)])).toEqual([
+      'standards/x.md names a model ID; model IDs live in seats.json only',
+    ]);
+  });
+
+  it('does not fail a family word without a version, or a different family', () => {
+    expect(modelIdProblems([md('pass the family word, opus or claude-code-guide')])).toEqual([]);
+    expect(modelIdProblems([md('claude-other-5-5')])).toEqual([]);
+  });
+
+  it('names every file that carries one', () => {
+    const list = modelIdProblems([
+      md('claude-opus-5-5', 'a.md'),
+      md('plain', 'b.md'),
+      md('claude-haiku-5', 'c.md'),
+    ]);
+    expect(list.map((l) => l.split(' ')[0])).toEqual(['a.md', 'c.md']);
+  });
+
+  it('is run with the file-name rules, and fails the run', () => {
+    const refs = {
+      tracked: TRACKED,
+      lenses: [],
+      sharedMarkdown: [md('claude-opus-5-5', 'AGENTS.md')],
+    };
+    const r = run(valid(), undefined, refs);
+    expect(r.exitCode).toBe(1);
+    expect(r.lines).toEqual([
+      'check-seats: FAIL, AGENTS.md names a model ID; model IDs live in seats.json only',
+    ]);
+    expect(run(valid(), undefined, { ...refs, sharedMarkdown: [] }).exitCode).toBe(0);
+  });
+
+  it('fails the run on an agent with no file, and skips both rules when refs is omitted', () => {
+    const refs = { tracked: [], lenses: [], sharedMarkdown: [] };
+    const r = run(valid(), undefined, refs);
+    expect(r.exitCode).toBe(1);
+    expect(has(r.lines, 'is not a file in .claude/agents/')).toBe(true);
+    expect(run(valid()).exitCode).toBe(0);
+  });
+});
+
 describe('seats-only detection', () => {
   const classify = (edit, changed = ['seats.json'], base = valid()) =>
     classifyPr({ changed, baseSeats: base, headSeats: withChange(edit) });
@@ -504,6 +634,9 @@ describe('the CLI on temp git repos', () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-seats-'));
     git('init', '-q', '-b', 'trunk');
     write('seats.json', valid());
+    for (const f of TRACKED.filter((t) => t !== 'seats.json')) write(f, 'x');
+    write('governance-manifest.json', { sharedPaths: ['seats.json', 'standards/**', 'AGENTS.md'] });
+    write('repo-profile.json', { lenses: [] });
     commit('base');
     git('branch', 'base-copy');
     git('checkout', '-q', '-b', 'topic');
@@ -640,6 +773,39 @@ describe('the CLI on temp git repos', () => {
     expect(main({ root: dir, argv: [], env: {} }).exitCode).toBe(1);
   });
 
+  it('fails on a model ID in a shared .md file, and not in an unshared one', () => {
+    write('standards/x.md', 'run on claude-opus-5-5');
+    commit('model id');
+    const r = main({ root: dir, argv: [], env: {} });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines).toEqual([
+      'check-seats: FAIL, standards/x.md names a model ID; model IDs live in seats.json only',
+    ]);
+    git('rm', '-q', 'standards/x.md');
+    write('NOTES.md', 'run on claude-opus-5-5');
+    commit('unshared');
+    expect(main({ root: dir, argv: [], env: {} }).exitCode).toBe(0);
+  });
+
+  it('fails on an agent, a skill or a lens that names no file', () => {
+    fs.rmSync(path.join(dir, '.claude/agents/researcher.md'));
+    fs.rmSync(path.join(dir, '.claude/skills/refereeing'), { recursive: true });
+    write('repo-profile.json', { lenses: ['ui-lens'] });
+    commit('break names');
+    const r = main({ root: dir, argv: [], env: {} });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines.join('\n')).toContain('role "researcher" agent "researcher"');
+    expect(r.lines.join('\n')).toContain('role "referee" skill "refereeing"');
+    expect(r.lines.join('\n')).toContain('lens "ui-lens"');
+  });
+
+  it('fails, not crashes, on a missing manifest or profile', () => {
+    fs.rmSync(path.join(dir, 'governance-manifest.json'));
+    const r = main({ root: dir, argv: [], env: {} });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines[0]).toContain('cannot read the files the name checks need');
+  });
+
   it('exits 1 for a rule failure at the head', () => {
     write(
       'seats.json',
@@ -683,6 +849,18 @@ describe('the shipped seats.json', () => {
     });
   });
 
+  it('names real files and carries no model ID in shared markdown', () => {
+    const root = path.join(__dirname, '..');
+    const r = core.run(shipped, undefined, {
+      tracked: execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
+        .split('\n')
+        .filter(Boolean),
+      lenses: JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8')).lenses,
+      sharedMarkdown: [],
+    });
+    expect(r.lines).toEqual(['check-seats: ok, 7 roles and 1 award(s) hold every rule']);
+  });
+
   it('lists the reviewing skills under the code reviewer and the others under their roles', () => {
     expect(shipped.roles['code-reviewer'].skills).toEqual([
       'reviewing-prs',
@@ -706,6 +884,7 @@ describe('the shipped seats.json', () => {
     const manifest = json('governance-manifest.json');
     expect(manifest.sharedPaths).toContain('scripts/check-seats.js');
     expect(manifest.sharedPaths).toContain('scripts/check-seats-core.js');
-    expect(manifest.excludedPaths).toContain('seats.json');
+    expect(manifest.sharedPaths).toContain('seats.json');
+    expect(manifest.excludedPaths).not.toContain('seats.json');
   });
 });

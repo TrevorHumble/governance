@@ -81,24 +81,10 @@ describe('main on a scratch repo', () => {
     fs.writeFileSync(path.join(root, rel), text);
   };
 
-  function makeRepo(files, { tree = true, track = true } = {}) {
+  function makeRepo(files, { track = true } = {}) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'banned-words-'));
     repos.push(root);
     git(root, 'init', '-q', '-b', 'main');
-    put(
-      root,
-      'repo-profile.json',
-      JSON.stringify({
-        budget: { total: 25000, reviewer: 10000, notCounted: ['BUILDLOG.md', 'buildlog/'] },
-      })
-    );
-    if (tree) {
-      put(
-        root,
-        'new-tree.json',
-        JSON.stringify({ files: [{ path: 'standards/s.md' }], pending: [{ path: 'CLAUDE.md' }] })
-      );
-    }
     for (const [rel, text] of Object.entries(files)) put(root, rel, text);
     if (track) {
       git(root, 'add', '-A');
@@ -107,14 +93,14 @@ describe('main on a scratch repo', () => {
     return root;
   }
 
-  it('fails on a phrase in a new-tree file and prints path:line', () => {
+  it('fails on a phrase in a tracked .md file and prints path:line', () => {
     const r = main({ root: makeRepo({ 'standards/s.md': `ok\n${P1}\n` }) });
     expect(r.exitCode).toBe(1);
     expect(r.lines).toContain(`standards/s.md:2: banned word "${P1}"`);
     expect(r.lines.at(-1)).toBe('banned words: 1 hit(s) in 1 file(s)');
   });
 
-  it('fails on a filler word in a new-tree file and names the word', () => {
+  it('fails on a filler word in a tracked .md file and names the word', () => {
     const r = main({ root: makeRepo({ 'standards/s.md': `${FILL} thing` }) });
     expect(r.exitCode).toBe(1);
     expect(r.lines[0]).toBe(`standards/s.md:1: banned word "${FILL}"`);
@@ -134,7 +120,7 @@ describe('main on a scratch repo', () => {
     expect(r.exitCode).toBe(0);
   });
 
-  it('scans the design file, which the budget count leaves out', () => {
+  it('scans the design file', () => {
     const r = main({
       root: makeRepo({ 'standards/s.md': 'ok', 'DESIGN.md': `${P1}\n${FILL}` }),
     });
@@ -143,9 +129,10 @@ describe('main on a scratch repo', () => {
     expect(r.lines).toContain(`DESIGN.md:2: banned word "${FILL}"`);
   });
 
-  it('passes a phrase in a pending path', () => {
+  it("scans a repo's own file that is not shared, such as CLAUDE.md", () => {
     const r = main({ root: makeRepo({ 'standards/s.md': 'ok', 'CLAUDE.md': P1 }) });
-    expect(r.exitCode).toBe(0);
+    expect(r.exitCode).toBe(1);
+    expect(r.lines).toContain(`CLAUDE.md:1: banned word "${P1}"`);
   });
 
   it('passes a phrase in an untracked file', () => {
@@ -165,8 +152,8 @@ describe('main on a scratch repo', () => {
     expect(r).toEqual({ lines: ['banned words: clean (1 files checked)'], exitCode: 0 });
   });
 
-  it('still checks every counted tracked .md file when new-tree.json is absent', () => {
-    const root = makeRepo({ 'BUILDLOG.md': P1, 'top.md': `a ${FILL}` }, { tree: false });
+  it('checks every tracked .md file, shared or not', () => {
+    const root = makeRepo({ 'BUILDLOG.md': P1, 'top.md': `a ${FILL}` }, {});
     const r = main({ root });
     expect(r.exitCode).toBe(1);
     expect(r.lines).toContain(`BUILDLOG.md:1: banned word "${P1}"`);

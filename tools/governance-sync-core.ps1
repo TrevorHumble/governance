@@ -1,7 +1,6 @@
 # tools/governance-sync-core.ps1: pure planning logic for pulling shared governance
 # from the home repo into a child. Dot-source this file; do not run it directly
-# (mirrors the -core.ps1 convention of tools/repo-profile-core.ps1 and
-# tools/classify-dep-pr-core.ps1). No side effects beyond reading the filesystem,
+# (mirrors the -core.ps1 convention of tools/repo-profile-core.ps1). No side effects beyond reading the filesystem,
 # running read-only git commands (Invoke-GitCaptureRaw), and, in Resolve-GhPath,
 # probing commands: every git/gh mutation lives in the wrapper,
 # tools/governance-sync.ps1, not here, so this file's functions can be
@@ -235,8 +234,7 @@ function Resolve-SharedSet {
 }
 
 # Get-SyncPlan -- classifies a parent/child diff into Adds, Updates, Prunes,
-# and RetainedDivergent by content, never by count; see standards/governance-sync.md
-# for what each classification means to the reviewer.
+# and RetainedDivergent by content, never by count.
 function Get-SyncPlan {
   param(
     [Parameter(Mandatory = $true)]
@@ -434,8 +432,7 @@ function Get-ManifestObjectFieldOrEmpty {
 }
 
 # Test-IsAdditiveManifestDiff -- issue #53's narrow exception to "any manifest
-# difference forces structure" (rule: standards/governance-sync.md § "What a
-# sync is"; rationale: DESIGN.md at the governance-v1 tag). An added `excludedPaths` entry
+# difference forces structure" (rationale: DESIGN.md at the governance-v1 tag). An added `excludedPaths` entry
 # counts as additive only when it is not a `!`-prefixed negation, since a
 # negation un-excludes a path and so is a subtraction in effect.
 # $ChildTrackedFiles must be the child's tracked file list (git ls-files
@@ -637,9 +634,8 @@ function Test-IsContentLiteral {
 
 # Get-PlanPathClassification -- classifies one plan path content or
 # structure: the prune rule, the first-delivery (arrivesAsStructure) rule,
-# and the classes-match rule are standards/ownership-map.md § "Change
-# classes"; the final-default (classesDefault) rule is
-# standards/governance-sync.md § "What a sync is".
+# and the classes-match rule, then the final-default
+# (classesDefault) rule, are in the function below.
 function Get-PlanPathClassification {
   param(
     [Parameter(Mandatory = $true)] $Manifest,
@@ -700,8 +696,8 @@ function Get-PlanPathClassification {
 }
 
 # Get-SyncClassification -- classifies every path in a Get-SyncPlan result as
-# content or structure and returns the run-level verdict. Full rule set:
-# standards/governance-sync.md § "What a sync is"; rationale: DESIGN.md at
+# content or structure and returns the run-level verdict. Content or structure
+# is the line AGENTS.md "Parent and children" draws; rationale: DESIGN.md at
 # the governance-v1 tag.
 #
 # A structure RunClass withholds every plan path regardless of its own

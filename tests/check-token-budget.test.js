@@ -1,7 +1,7 @@
 // tests/check-token-budget.test.js
 // Vitest tests for the token-budget gate: scripts/check-token-budget-core.js on temp files, the
-// wrapper's base and guard handling on temp git repos, plus a check that new-tree.json and its
-// placeholders agree.
+// wrapper's base and guard handling on temp git repos, and the counting rule: the markdown in the
+// manifest's shared paths.
 'use strict';
 
 const fs = require('fs');
@@ -11,7 +11,7 @@ const { execFileSync } = require('child_process');
 const core = require('../scripts/check-token-budget-core');
 const { main } = require('../scripts/check-token-budget');
 
-const { parseSkill, countInputs, guardedChanges, guardFailures, isNotCounted } = core;
+const { parseSkill, countInputs, guardedChanges, guardFailures, isNotCounted, isSharedPath } = core;
 const CAPS = { total: 25000, reviewer: 10000 };
 const run = (files, readFile, extra) => core.run(files, readFile, CAPS, extra);
 
@@ -154,42 +154,6 @@ describe('reviewer budget', () => {
     expect(text(a)).toContain('reviewer reviewing-prs: 135 tokens');
     expect(text(b)).toContain('no reviewing-* or refereeing skill folder');
   });
-
-  it('adds a pending AGENTS.md budget to each reviewer and to the total', () => {
-    const files = [writePrsReviewer()];
-    const r = run(files, read, { pending: { 'AGENTS.md': 1200 } });
-    expect(text(r)).toContain('reviewer reviewing-prs: 1214 tokens');
-    expect(text(r)).toContain('1214 tokens in total');
-  });
-
-  it('adds a pending path outside the reviewer shared paths to the total only', () => {
-    const r = run([writePrsReviewer()], read, { pending: { 'other.md': 5000 } });
-    expect(text(r)).toContain('reviewer reviewing-prs: 14 tokens');
-    expect(text(r)).toContain('5014 tokens in total');
-  });
-
-  it('counts a written AGENTS.md by its words and ignores its pending budget', () => {
-    const files = [writePrsReviewer(), writeFileOfWords('AGENTS.md', 100)];
-    const r = run(files, read, { pending: { 'AGENTS.md': 1200 } });
-    // 110 words * 1.35 = 148.5 -> 149
-    expect(text(r)).toContain('reviewer reviewing-prs: 149 tokens');
-    expect(text(r)).toContain('149 tokens in total');
-  });
-
-  it('fails when a pending budget pushes a reviewer over', () => {
-    const files = [writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 6600)];
-    // 6600 * 1.35 = 8910, + 1200 = 10,110
-    const r = run(files, read, { pending: { 'AGENTS.md': 1200 } });
-    expect(r.exitCode).toBe(1);
-    expect(text(r)).toContain('FAIL, reviewer reviewing-prs is 10110 tokens');
-  });
-
-  it('fails when a pending budget pushes the total over, and lists it among the largest', () => {
-    const r = run([writePrsReviewer()], read, { pending: { 'AGENTS.md': 24990 } });
-    expect(r.exitCode).toBe(1);
-    expect(text(r)).toContain('25004 tokens in total');
-    expect(text(r)).toContain('AGENTS.md: 24990 tokens (pending)');
-  });
 });
 
 describe('caps', () => {
@@ -305,19 +269,17 @@ describe('reading lists and the reviewer library', () => {
     expect(r.exitCode).toBe(0);
   });
 
-  it('keeps a vendored file out of the total in both modes, and counts it in its reviewer', () => {
+  it('keeps a vendored file out of the total, and counts it in its reviewer', () => {
     writeText(SKILL, skillText([`${V}SKILL.md`]));
     const extra = withLibrary();
     const vendored = [`${V}SKILL.md`, `${V}LICENSE`];
-    const lsFiles = countInputs({ tree: null, listing: [SKILL, ...vendored], notCounted: [] });
-    const newTree = countInputs({
-      tree: { files: [SKILL, ...vendored].map((p) => ({ path: p })) },
-      listing: [],
+    const files = countInputs({
+      listing: [SKILL, ...vendored],
       notCounted: [],
+      sharedPaths: ['.claude/**', 'vendor/**'],
     });
-    expect(lsFiles.files).toEqual([SKILL]);
-    expect(newTree.files).toEqual([SKILL]);
-    const r = run(lsFiles.files, read, extra);
+    expect(files).toEqual([SKILL]);
+    const r = run(files, read, extra);
     expect(text(r)).toContain('14 tokens in total');
     expect(text(r)).toContain('1364 tokens (limit 10000; 1350 of it vendored)');
   });
@@ -331,14 +293,6 @@ describe('reading lists and the reviewer library', () => {
     expect(r.exitCode).toBe(1);
     expect(text(r)).toContain('FAIL, reviewer reviewing-prs is 12164 tokens, over 10000');
     expect(text(r)).not.toContain('in total, over');
-  });
-
-  it("counts a pending read at its pending budget, not the old file's words", () => {
-    writeText(SKILL, skillText(['README.md']));
-    writeFileOfWords('README.md', 5000);
-    const r = run([SKILL], read, { pending: { 'README.md': 500 } });
-    // skill 10 words = 14, + 500 pending, + 0 shared
-    expect(text(r)).toContain('reviewer reviewing-prs: 514 tokens');
   });
 
   it('fails a reviewer reading a path that is missing', () => {
@@ -514,9 +468,13 @@ describe('parseSkill', () => {
 });
 
 describe('what counts, and the guarded changes', () => {
-  const view = (over = {}) => ({ tree: null, listing: [], notCounted: [], ...over });
+  const view = (over = {}) => ({
+    listing: [],
+    notCounted: [],
+    sharedPaths: ['a.md', 'b.md', 'new.md'],
+    ...over,
+  });
   const state = (over = {}, caps = CAPS) => ({ caps, view: view(over) });
-  const tree = (files, pending = []) => ({ files: files.map((path) => ({ path })), pending });
 
   it('matches notCounted exactly, except a trailing slash entry, which matches as a prefix', () => {
     expect(isNotCounted('DESIGN.md', ['DESIGN.md'])).toBe(true);
@@ -526,20 +484,43 @@ describe('what counts, and the guarded changes', () => {
     expect(isNotCounted('buildlogs/x.md', ['buildlog/'])).toBe(false);
   });
 
-  it('counts a tracked .md outside notCounted and the vendored root, with no tree', () => {
-    const listing = ['a.md', 'x.js', 'buildlog/f.md', 'vendor/skills/v/SKILL.md', 'BUILDLOG.md'];
-    const inputs = countInputs(view({ listing, notCounted: ['buildlog/', 'BUILDLOG.md'] }));
-    expect(inputs.files).toEqual(['a.md']);
+  it('matches a shared path as a directory prefix or one exact file', () => {
+    const shared = ['pipeline/**', 'AGENTS.md', '.claude/skills/build/**'];
+    expect(isSharedPath('pipeline/steps/01-isolate.md', shared)).toBe(true);
+    expect(isSharedPath('pipeline/PIPELINE.md', shared)).toBe(true);
+    expect(isSharedPath('AGENTS.md', shared)).toBe(true);
+    expect(isSharedPath('AGENTS.md.bak', shared)).toBe(false);
+    expect(isSharedPath('pipelines/x.md', shared)).toBe(false);
+    expect(isSharedPath('docs/AGENTS.md', shared)).toBe(false);
+    expect(isSharedPath('.claude/skills/build/SKILL.md', shared)).toBe(true);
+    expect(isSharedPath('.claude/skills/builder/SKILL.md', shared)).toBe(false);
   });
 
-  it('counts only what the tree lists while it has one, never a file on disk alone', () => {
-    const inputs = countInputs(
-      view({
-        tree: tree(['a.md'], [{ path: 'P.md', budget: 5 }]),
-        listing: ['a.md', 'b.md', 'P.md'],
-      })
+  it('counts each .md in the shared paths, minus the vendored root and notCounted', () => {
+    const listing = [
+      'a.md',
+      'x.js',
+      'README.md',
+      'own.md',
+      'buildlog/f.md',
+      'buildlog/README.md',
+      'vendor/skills/v/SKILL.md',
+      'BUILDLOG.md',
+      'shared/notes.txt',
+      'shared/n.md',
+    ];
+    const sharedPaths = ['a.md', 'x.js', 'README.md', 'buildlog/**', 'vendor/**', 'shared/**'];
+    const files = countInputs(
+      view({ listing, sharedPaths, notCounted: ['buildlog/', 'BUILDLOG.md', 'README.md'] })
     );
-    expect(inputs).toEqual({ files: ['a.md'], pending: { 'P.md': 5 } });
+    // own.md is tracked but not shared; x.js and notes.txt are not markdown
+    expect(files).toEqual(['a.md', 'shared/n.md']);
+  });
+
+  it('never counts a file that is only on disk', () => {
+    expect(countInputs(view({ listing: ['a.md'], sharedPaths: ['a.md', 'b.md'] }))).toEqual([
+      'a.md',
+    ]);
   });
 
   it('flags a raised cap, not a lowered or equal one', () => {
@@ -560,7 +541,7 @@ describe('what counts, and the guarded changes', () => {
     expect(guardedChanges(base, state({ notCounted: [] }))).toEqual([]);
   });
 
-  it('flags a counted file that still exists but is dropped, in git ls-files mode', () => {
+  it('flags a counted file that still exists but is dropped by notCounted', () => {
     const listing = ['a.md', 'b.md'];
     const changes = guardedChanges(state({ listing }), state({ listing, notCounted: ['b.md'] }));
     expect(changes).toContain(
@@ -568,68 +549,28 @@ describe('what counts, and the guarded changes', () => {
     );
   });
 
-  it('flags a counted file dropped from the tree listing while it still exists', () => {
+  it('flags a counted file that leaves the shared paths while it still exists', () => {
     const listing = ['a.md', 'b.md'];
     const changes = guardedChanges(
-      state({ tree: tree(['a.md', 'b.md']), listing }),
-      state({ tree: tree(['a.md']), listing })
+      state({ listing, sharedPaths: ['a.md', 'b.md'] }),
+      state({ listing, sharedPaths: ['a.md'] })
     );
     expect(changes).toEqual([
       'b.md was counted at the base and still exists, but is no longer counted',
     ]);
   });
 
-  it('does not flag a file that was deleted, or one that is still counted by its words', () => {
-    const baseView = { tree: tree(['a.md', 'b.md']), listing: ['a.md', 'b.md'] };
-    expect(
-      guardedChanges(state(baseView), state({ tree: tree(['a.md']), listing: ['a.md'] }))
-    ).toEqual([]);
-    // the switch from new-tree.json to git ls-files keeps every path counted
-    expect(
-      guardedChanges(state(baseView), state({ tree: null, listing: ['a.md', 'b.md'] }))
-    ).toEqual([]);
-  });
-
-  it('does not flag a pending entry removed because its file is now counted', () => {
-    const base = state({
-      tree: tree(['a.md'], [{ path: 'AGENTS.md', budget: 1200 }]),
-      listing: ['a.md', 'AGENTS.md'],
-    });
-    const head = state({ tree: tree(['a.md', 'AGENTS.md']), listing: ['a.md', 'AGENTS.md'] });
-    expect(guardedChanges(base, head)).toEqual([]);
-  });
-
-  it('flags a pending budget lowered while its path is still pending, not once it is counted', () => {
-    const pendingTree = (budget) => tree(['a.md'], [{ path: 'P.md', budget }]);
-    const listing = ['a.md', 'P.md'];
-    expect(
-      guardedChanges(
-        state({ tree: pendingTree(1200), listing }),
-        state({ tree: pendingTree(900), listing })
-      )
-    ).toEqual(['pending budget for P.md lowered from 1200 to 900']);
-    expect(
-      guardedChanges(
-        state({ tree: pendingTree(1200), listing }),
-        state({ tree: pendingTree(1500), listing })
-      )
-    ).toEqual([]);
-    expect(
-      guardedChanges(
-        state({ tree: pendingTree(1200), listing }),
-        state({ tree: tree(['a.md', 'P.md'], [{ path: 'P.md', budget: 100 }]), listing })
-      )
-    ).toEqual([]);
+  it('does not flag a file that was deleted, or one that is still counted', () => {
+    const baseView = { listing: ['a.md', 'b.md'] };
+    expect(guardedChanges(state(baseView), state({ listing: ['a.md'] }))).toEqual([]);
+    expect(guardedChanges(state(baseView), state({ listing: ['a.md', 'b.md'] }))).toEqual([]);
   });
 
   it('passes a pure addition, with or without other files', () => {
-    const base = state({ tree: tree(['a.md']), listing: ['a.md'] });
-    const head = state({
-      tree: tree(['a.md', 'new.md'], [{ path: 'P.md', budget: 10 }]),
-      listing: ['a.md', 'new.md', 'src.js'],
-    });
+    const base = state({ listing: ['a.md'] });
+    const head = state({ listing: ['a.md', 'new.md', 'src.js'] });
     expect(guardedChanges(base, head)).toEqual([]);
-    expect(guardFailures([], ['src.js', 'new-tree.json'], {}, {})).toEqual([]);
+    expect(guardFailures([], ['src.js', 'repo-profile.json'], {}, {})).toEqual([]);
   });
 
   it('requires a guarded change to be the only change, apart from buildlog files', () => {
@@ -640,7 +581,7 @@ describe('what counts, and the guarded changes', () => {
     expect(
       guardFailures(
         changes,
-        ['repo-profile.json', 'buildlog/93.md', 'BUILDLOG.md', 'new-tree.json'],
+        ['repo-profile.json', 'buildlog/93.md', 'BUILDLOG.md'],
         profile,
         raised
       )
@@ -687,9 +628,17 @@ describe('the wrapper, on temp git repos', () => {
     shipMode: 'pr',
     budget: { total: 25000, reviewer: 10000, notCounted: ['buildlog/'] },
   };
-  const TREE = {
-    files: [{ path: 'a.md' }, { path: '.claude/skills/reviewing-prs/SKILL.md' }],
-    pending: [],
+  const MANIFEST = {
+    sharedPaths: [
+      'a.md',
+      'b.md',
+      'AGENTS.md',
+      'BUILDLOG.md',
+      'buildlog/**',
+      'other/**',
+      'standards/**',
+      '.claude/skills/**',
+    ],
   };
 
   // A repo on branch main holding the base commit, then a branch `pr` for the change.
@@ -698,7 +647,7 @@ describe('the wrapper, on temp git repos', () => {
     repos.push(root);
     git(root, 'init', '-q', '-b', 'main');
     put(root, 'repo-profile.json', over.profile ?? PROFILE);
-    if (over.tree !== null) put(root, 'new-tree.json', over.tree ?? TREE);
+    if (over.manifest !== null) put(root, 'governance-manifest.json', over.manifest ?? MANIFEST);
     put(root, 'a.md', words(over.words ?? 100));
     put(root, '.claude/skills/reviewing-prs/SKILL.md', words(10));
     for (const [rel, body] of Object.entries(over.files ?? {})) put(root, rel, body);
@@ -767,7 +716,7 @@ describe('the wrapper, on temp git repos', () => {
   });
 
   it('applies a notCounted prefix entry to the counts', () => {
-    const root = makeRepo({ tree: null });
+    const root = makeRepo();
     put(root, 'buildlog/f.md', words(5000));
     put(root, 'other/f.md', words(5000));
     commit(root);
@@ -822,7 +771,7 @@ describe('the wrapper, on temp git repos', () => {
     expect(r.out).toContain('the base origin/nothing does not resolve to a commit');
   });
 
-  it('fails, and does not read "no budget key", when the base profile or tree cannot be read', () => {
+  it('fails, and does not read "no budget key", when the base profile or manifest cannot be read', () => {
     const noProfile = makeRepo();
     git(noProfile, 'checkout', '-q', 'main');
     git(noProfile, 'rm', '-q', 'repo-profile.json');
@@ -833,14 +782,14 @@ describe('the wrapper, on temp git repos', () => {
     expect(a.exitCode).toBe(1);
     expect(a.out).toContain('cannot read repo-profile.json at main');
 
-    const brokenTree = makeRepo();
-    git(brokenTree, 'checkout', '-q', 'main');
-    put(brokenTree, 'new-tree.json', '{ not json');
-    git(brokenTree, 'commit', '-q', '-am', 'break tree');
-    git(brokenTree, 'checkout', '-q', 'pr');
-    const b = check(brokenTree);
+    const brokenManifest = makeRepo();
+    git(brokenManifest, 'checkout', '-q', 'main');
+    put(brokenManifest, 'governance-manifest.json', '{ not json');
+    git(brokenManifest, 'commit', '-q', '-am', 'break manifest');
+    git(brokenManifest, 'checkout', '-q', 'pr');
+    const b = check(brokenManifest);
     expect(b.exitCode).toBe(1);
-    expect(b.out).toContain('cannot read new-tree.json at main');
+    expect(b.out).toContain('cannot read governance-manifest.json at main');
   });
 
   it('passes a guarded change that is alone, or has only a buildlog fragment with it', () => {
@@ -891,18 +840,16 @@ describe('the wrapper, on temp git repos', () => {
   it('lets a pure addition land with its work', () => {
     const root = makeRepo();
     put(root, 'b.md', words(20));
-    put(root, 'new-tree.json', { ...TREE, files: [...TREE.files, { path: 'b.md' }] });
     put(root, 'src.js', 'x');
     commit(root);
     expect(check(root).exitCode).toBe(0);
   });
 
-  it('fails a counted file dropped from new-tree.json while it still exists, alongside other work', () => {
+  it('fails a counted file dropped from the shared paths while it still exists', () => {
     const root = makeRepo();
-    put(root, 'new-tree.json', { ...TREE, files: [TREE.files[1]] });
-    commit(root);
-    expect(check(root).exitCode).toBe(0);
-    put(root, 'src.js', 'x');
+    put(root, 'governance-manifest.json', {
+      sharedPaths: MANIFEST.sharedPaths.filter((e) => e !== 'a.md'),
+    });
     commit(root);
     const r = check(root);
     expect(r.exitCode).toBe(1);
@@ -911,13 +858,31 @@ describe('the wrapper, on temp git repos', () => {
     );
   });
 
-  it('passes a pending entry removed because its file is now counted', () => {
-    const root = makeRepo({ tree: { ...TREE, pending: [{ path: 'AGENTS.md', budget: 1200 }] } });
-    put(root, 'AGENTS.md', words(50));
-    put(root, 'new-tree.json', { ...TREE, files: [...TREE.files, { path: 'AGENTS.md' }] });
+  it('passes a file deleted from the tree and from the shared paths', () => {
+    const root = makeRepo();
+    git(root, 'rm', '-q', 'a.md');
+    put(root, 'governance-manifest.json', {
+      sharedPaths: MANIFEST.sharedPaths.filter((e) => e !== 'a.md'),
+    });
     put(root, 'src.js', 'x');
     commit(root);
     expect(check(root).exitCode).toBe(0);
+  });
+
+  it('counts a base with no manifest by the head shared paths', () => {
+    const root = makeRepo({ manifest: null });
+    put(root, 'governance-manifest.json', MANIFEST);
+    put(root, 'src.js', 'x');
+    commit(root);
+    expect(check(root).exitCode).toBe(0);
+  });
+
+  it('fails a head manifest whose sharedPaths is not an array of strings', () => {
+    const root = makeRepo();
+    put(root, 'governance-manifest.json', { sharedPaths: 'a.md' });
+    const r = check(root, []);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain('sharedPaths in governance-manifest.json on the head must be an array');
   });
 
   it('turns the guard off when the base profile has no budget key', () => {
@@ -936,7 +901,6 @@ describe('the wrapper, on temp git repos', () => {
   it('reads a base with no budget key by the old caps and the old not-counted list', () => {
     const root = makeRepo({
       profile: { shipMode: 'pr' },
-      tree: null,
       words: 20000,
       files: { 'BUILDLOG.md': words(30000) },
     });
@@ -973,73 +937,14 @@ describe('the wrapper, on temp git repos', () => {
   });
 });
 
-describe('new-tree.json', () => {
-  const root = path.join(__dirname, '..');
-  const tree = JSON.parse(fs.readFileSync(path.join(root, 'new-tree.json'), 'utf8'));
-  const profile = JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8'));
-  const budgetOf = (f) => (f.group ? tree.groups[f.group] : f.budget);
-
-  it('has every listed file on disk, and each placeholder names its budget', () => {
-    for (const f of tree.files) {
-      const body = fs.readFileSync(path.join(root, f.path), 'utf8');
-      if (body.includes('Placeholder.')) {
-        expect(body, f.path).toContain(`${budgetOf(f).toLocaleString('en-US')} tokens`);
-      }
-    }
-  });
-
-  it('has every group member naming a declared group', () => {
-    for (const f of tree.files) {
-      if (f.group) expect(Object.keys(tree.groups), f.path).toContain(f.group);
-    }
-  });
-
-  it('has listed budgets that sum to the total cap or less, counting a group once', () => {
-    const own = tree.files.filter((f) => !f.group).reduce((sum, f) => sum + f.budget, 0);
-    const shared = Object.values(tree.groups).reduce((sum, b) => sum + b, 0);
-    expect(own + shared).toBeLessThanOrEqual(profile.budget.total);
-  });
-
-  const ROOT_FILES = {
-    'AGENTS.md': 1200,
-    'CLAUDE.md': 20,
-    'README.md': 500,
-    'definition-of-done.md': 1200,
-    'owner-declines.md': 250,
-    'WHAT-IT-CHECKS.md': 600,
-  };
-
-  it('holds each root file to its budget, counted the way the gate counts', () => {
-    for (const [file, budget] of Object.entries(ROOT_FILES)) {
-      const entry = tree.files.find((f) => f.path === file);
-      expect(entry?.budget, file).toBe(budget);
-      const body = fs.readFileSync(path.join(root, file), 'utf8');
-      // The gate's own count: a lone listed file plus one empty reviewer skill, which adds nothing.
-      const r = core.run(
-        [file, '.claude/skills/reviewing-x/SKILL.md'],
-        (f) => (f === file ? body : ''),
-        CAPS
-      );
-      expect(r.total, file).toBeLessThanOrEqual(budget);
-    }
-  });
-
-  it('lists the six root files once each, with no staging or pending entries left', () => {
-    expect(tree.pending).toBeUndefined();
-    const listed = tree.files.map((f) => f.path);
-    for (const file of Object.keys(ROOT_FILES)) {
-      expect(
-        listed.filter((p) => p === file),
-        file
-      ).toHaveLength(1);
-    }
-    expect(listed.filter((p) => p.startsWith('_shared/'))).toEqual([]);
-    for (const f of tree.files) expect(f.staging, f.path).toBeUndefined();
-  });
+describe('the shipped profile', () => {
+  const profile = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '..', 'repo-profile.json'), 'utf8')
+  );
 
   it('keeps the caps and the not-counted list in the profile, as the live check reads them', () => {
     // Shape only: an owner-approved cap or not-counted change ships in a guarded PR that may touch
-    // nothing but the profile, the tree and buildlog files, so the exact values cannot be pinned here.
+    // nothing but the profile and buildlog files, so the exact values cannot be pinned here.
     expect(typeof profile.budget.total).toBe('number');
     expect(typeof profile.budget.reviewer).toBe('number');
     expect(Array.isArray(profile.budget.notCounted)).toBe(true);
