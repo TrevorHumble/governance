@@ -16,9 +16,8 @@ const REQUIRED_ROLES = [
   'researcher',
 ];
 const SEAT_FIELDS = ['provider', 'model', 'effort'];
-// The one award that lets the implementer and the code reviewer share a model.
-const CHEAPER_SEATS = 'cheaper-seats';
-const KNOWN_AWARDS = [CHEAPER_SEATS];
+// The one award: it moves the seats up for hard work. No award lets a guarded pair share a model.
+const KNOWN_AWARDS = ['hard'];
 
 // Family words Claude Code's spawn call accepts as aliases. A fifth family needs a new alias from
 // Claude Code first, then a new word here.
@@ -34,9 +33,9 @@ const PROVIDERS = {
   },
 };
 
-// Pairs of roles that must run on different models, unless the award in `sharesUnder` applies.
+// Pairs of roles that must run on different models, on the base seats and under every award.
 const INDEPENDENT_PAIRS = [
-  { a: 'implementer', b: 'code-reviewer', sharesUnder: CHEAPER_SEATS },
+  { a: 'implementer', b: 'code-reviewer' },
   { a: 'issue-writer', b: 'issue-reviewer' },
   { a: 'referee', b: 'implementer' },
   { a: 'referee', b: 'code-reviewer' },
@@ -159,9 +158,9 @@ function independenceProblems(roles, awards) {
   for (const [name, entries] of Object.entries(awards)) {
     if (!KNOWN_AWARDS.includes(name) || !isObject(entries)) continue;
     const seats = effectiveSeats(roles, entries);
-    for (const { a, b, sharesUnder } of INDEPENDENT_PAIRS) {
+    for (const { a, b } of INDEPENDENT_PAIRS) {
       const touched = Object.hasOwn(entries, a) || Object.hasOwn(entries, b);
-      if (!touched || sharesUnder === name) continue;
+      if (!touched) continue;
       if (sameModel(seats, a, b)) {
         problems.push(
           `under award "${name}", "${a}" and "${b}" share the model ${seats[a].model}; they must differ`

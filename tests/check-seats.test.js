@@ -19,17 +19,17 @@ const seat = (model, effort = 'medium', extra = {}) => ({
   ...extra,
 });
 
-// Every role on a legal model: fable reviews issues and referees, opus reviews code, sonnet builds.
+// Every role on a legal model: opus reviews issues and code, fable referees, sonnet builds.
 function valid() {
   return {
     roles: {
-      orchestrator: seat('claude-opus-5-5', 'medium', { agent: 'orchestrator', skills: [] }),
+      orchestrator: seat('claude-sonnet-5-5', 'medium', { agent: 'orchestrator', skills: [] }),
       'issue-writer': seat('claude-sonnet-5-5', 'medium', { agent: 'issue-writer', skills: [] }),
-      'issue-reviewer': seat('claude-fable-5-1', 'medium', {
+      'issue-reviewer': seat('claude-opus-5-5', 'medium', {
         agent: 'reviewer',
         skills: ['reviewing-issues'],
       }),
-      implementer: seat('claude-sonnet-5-5', 'high', { agent: 'implementer', skills: [] }),
+      implementer: seat('claude-sonnet-5-5', 'medium', { agent: 'implementer', skills: [] }),
       'code-reviewer': seat('claude-opus-5-5', 'medium', {
         agent: 'reviewer',
         skills: ['reviewing-prs', 'reviewing-docs'],
@@ -37,7 +37,15 @@ function valid() {
       referee: seat('claude-fable-5-1', 'medium', { agent: 'reviewer', skills: ['refereeing'] }),
       researcher: seat('claude-sonnet-5-5', 'medium', { agent: 'researcher', skills: [] }),
     },
-    awards: { 'cheaper-seats': { 'code-reviewer': seat('claude-sonnet-5-5') } },
+    awards: {
+      hard: {
+        orchestrator: seat('claude-opus-5-5', 'high'),
+        implementer: seat('claude-opus-5-5', 'high'),
+        'issue-reviewer': seat('claude-fable-5-1'),
+        'code-reviewer': seat('claude-fable-5-1'),
+        referee: seat('claude-sonnet-5-5', 'high'),
+      },
+    },
   };
 }
 const withChange = (edit) => {
@@ -166,18 +174,25 @@ describe('provider, model, and effort', () => {
 });
 
 describe('independence', () => {
-  it('fails the implementer and code reviewer on one model outside the award', () => {
+  it('fails the implementer and code reviewer on one model', () => {
     const p = problems((s) => (s.roles['code-reviewer'].model = 'claude-sonnet-5-5'));
     expect(p).toEqual([
       '"implementer" and "code-reviewer" share the model claude-sonnet-5-5; they must differ',
     ]);
   });
 
-  it('lets the cheaper-seats award collapse the implementer and code reviewer', () => {
-    const s = valid();
-    expect(s.roles['code-reviewer'].model).not.toBe(s.roles.implementer.model);
-    expect(s.awards['cheaper-seats']['code-reviewer'].model).toBe(s.roles.implementer.model);
-    expect(validateSeats(s)).toEqual([]);
+  it('fails the implementer and code reviewer on one model under the hard award', () => {
+    const p = problems((s) => (s.awards.hard['code-reviewer'].model = 'claude-opus-5-5'));
+    expect(p).toEqual([
+      'under award "hard", "implementer" and "code-reviewer" share the model claude-opus-5-5; they must differ',
+    ]);
+  });
+
+  it('fails the issue writer and issue reviewer on one model under the hard award', () => {
+    const p = problems((s) => (s.awards.hard['issue-reviewer'].model = 'claude-sonnet-5-5'));
+    expect(p).toEqual([
+      'under award "hard", "issue-writer" and "issue-reviewer" share the model claude-sonnet-5-5; they must differ',
+    ]);
   });
 
   it('fails the issue writer and issue reviewer on one model', () => {
@@ -195,17 +210,15 @@ describe('independence', () => {
   });
 
   it('fails the referee sharing a model with the code reviewer under the award', () => {
-    const p = problems(
-      (s) => (s.awards['cheaper-seats']['code-reviewer'].model = 'claude-fable-5-1')
-    );
+    const p = problems((s) => (s.awards.hard.referee.model = 'claude-fable-5-1'));
     expect(p).toEqual([
-      'under award "cheaper-seats", "referee" and "code-reviewer" share the model claude-fable-5-1; they must differ',
+      'under award "hard", "referee" and "code-reviewer" share the model claude-fable-5-1; they must differ',
     ]);
   });
 
   it('fails the referee sharing a model with the implementer under an award that moves the implementer', () => {
-    const p = problems((s) => (s.awards['cheaper-seats'].implementer = seat('claude-fable-5-1')));
-    expect(has(p, 'under award "cheaper-seats", "referee" and "implementer"')).toBe(true);
+    const p = problems((s) => (s.awards.hard.implementer = seat('claude-sonnet-5-5', 'high')));
+    expect(has(p, 'under award "hard", "referee" and "implementer"')).toBe(true);
   });
 
   it('does not repeat a base-role failure under every award', () => {
@@ -216,35 +229,35 @@ describe('independence', () => {
 
 describe('awards', () => {
   it('fails an award naming an unknown role', () => {
-    const p = problems((s) => (s.awards['cheaper-seats'].implementor = seat('claude-haiku-5-5')));
-    expect(p).toEqual(['award "cheaper-seats" names unknown role "implementor"']);
+    const p = problems((s) => (s.awards.hard.implementor = seat('claude-haiku-5-5')));
+    expect(p).toEqual(['award "hard" names unknown role "implementor"']);
   });
 
   it('fails an unknown award name', () => {
-    const p = problems((s) => (s.awards['cheaper-seat'] = {}));
-    expect(has(p, 'award "cheaper-seat" is not a known award')).toBe(true);
+    const p = problems((s) => (s.awards['hards'] = {}));
+    expect(has(p, 'award "hards" is not a known award')).toBe(true);
   });
 
   it('fails an award entry that carries agent or skills', () => {
     const p = problems((s) => {
-      s.awards['cheaper-seats']['code-reviewer'].agent = 'reviewer';
-      s.awards['cheaper-seats']['code-reviewer'].skills = [];
+      s.awards.hard['code-reviewer'].agent = 'reviewer';
+      s.awards.hard['code-reviewer'].skills = [];
     });
     expect(has(p, 'carries "agent"; an award inherits agent and skills')).toBe(true);
     expect(has(p, 'carries "skills"; an award inherits agent and skills')).toBe(true);
   });
 
   it('fails any other key on an award entry', () => {
-    const p = problems((s) => (s.awards['cheaper-seats']['code-reviewer'].note = 'x'));
+    const p = problems((s) => (s.awards.hard['code-reviewer'].note = 'x'));
     expect(has(p, 'carries "note"; an award entry holds only provider, model, effort')).toBe(true);
   });
 
   it('holds award entries to the provider, model, and effort rules', () => {
-    const entry = (s) => s.awards['cheaper-seats']['code-reviewer'];
+    const entry = (s) => s.awards.hard['code-reviewer'];
     expect(
       has(
         problems((s) => (entry(s).provider = 'x')),
-        'award "cheaper-seats" role'
+        'award "hard" role'
       )
     ).toBe(true);
     expect(
@@ -262,11 +275,9 @@ describe('awards', () => {
   });
 
   it('fails an award entry that is not an object', () => {
-    const p = problems((s) => (s.awards['cheaper-seats']['code-reviewer'] = 'sonnet'));
-    expect(p).toEqual(['award "cheaper-seats" role "code-reviewer" must be an object']);
-    expect(problems((s) => (s.awards['cheaper-seats'] = null))).toEqual([
-      'award "cheaper-seats" must be an object',
-    ]);
+    const p = problems((s) => (s.awards.hard['issue-reviewer'] = 'sonnet'));
+    expect(p).toEqual(['award "hard" role "issue-reviewer" must be an object']);
+    expect(problems((s) => (s.awards.hard = null))).toEqual(['award "hard" must be an object']);
   });
 });
 
@@ -335,17 +346,17 @@ describe('seats-only detection', () => {
         before: 'claude-sonnet-5-5',
         after: 'claude-sonnet-5-6',
       },
-      { seat: 'implementer', field: 'effort', before: 'high', after: 'max' },
+      { seat: 'implementer', field: 'effort', before: 'medium', after: 'max' },
     ]);
   });
 
   it('is seats-only for a provider change and an award seat change, named by award and role', () => {
     const r = classify((s) => {
       s.roles.researcher.provider = 'anthropic2';
-      s.awards['cheaper-seats']['code-reviewer'].effort = 'high';
+      s.awards.hard['code-reviewer'].effort = 'high';
     });
     expect(r.seatsOnly).toBe(true);
-    expect(r.changes.map((c) => c.seat)).toEqual(['researcher', 'cheaper-seats / code-reviewer']);
+    expect(r.changes.map((c) => c.seat)).toEqual(['researcher', 'hard / code-reviewer']);
   });
 
   it('allows buildlog files and BUILDLOG.md beside seats.json', () => {
@@ -399,11 +410,9 @@ describe('seats-only detection', () => {
   it('is not seats-only when a role or an award is added or removed', () => {
     expect(classify((s) => delete s.roles.referee).seatsOnly).toBe(false);
     expect(classify((s) => (s.roles.extra = seat('claude-haiku-5-5'))).seatsOnly).toBe(false);
-    expect(classify((s) => delete s.awards['cheaper-seats']).seatsOnly).toBe(false);
+    expect(classify((s) => delete s.awards.hard).seatsOnly).toBe(false);
     expect(classify((s) => (s.awards.other = {})).seatsOnly).toBe(false);
-    expect(classify((s) => delete s.awards['cheaper-seats']['code-reviewer']).seatsOnly).toBe(
-      false
-    );
+    expect(classify((s) => delete s.awards.hard['code-reviewer']).seatsOnly).toBe(false);
   });
 
   it('is not seats-only when a seat field is added or removed, or changes type', () => {
@@ -649,22 +658,27 @@ describe('the shipped seats.json', () => {
     expect(validateSeats(shipped)).toEqual([]);
   });
 
-  it('seats each role as the owner set on 2026-10-18', () => {
+  it('seats each role as the owner set on 2026-10-22', () => {
     const table = Object.fromEntries(
       Object.entries(shipped.roles).map(([r, s]) => [r, [s.provider, s.model, s.effort]])
     );
     expect(table).toEqual({
-      orchestrator: ['anthropic', 'claude-opus-5-5', 'medium'],
+      orchestrator: ['anthropic', 'claude-sonnet-5-5', 'medium'],
       'issue-writer': ['anthropic', 'claude-sonnet-5-5', 'medium'],
-      'issue-reviewer': ['anthropic', 'claude-fable-5-1', 'medium'],
-      implementer: ['anthropic', 'claude-sonnet-5-5', 'high'],
+      'issue-reviewer': ['anthropic', 'claude-opus-5-5', 'medium'],
+      implementer: ['anthropic', 'claude-sonnet-5-5', 'medium'],
       'code-reviewer': ['anthropic', 'claude-opus-5-5', 'medium'],
       referee: ['anthropic', 'claude-fable-5-1', 'medium'],
       researcher: ['anthropic', 'claude-sonnet-5-5', 'medium'],
     });
+    const entry = (model, effort) => ({ provider: 'anthropic', model, effort });
     expect(shipped.awards).toEqual({
-      'cheaper-seats': {
-        'code-reviewer': { provider: 'anthropic', model: 'claude-sonnet-5-5', effort: 'medium' },
+      hard: {
+        orchestrator: entry('claude-opus-5-5', 'high'),
+        implementer: entry('claude-opus-5-5', 'high'),
+        'issue-reviewer': entry('claude-fable-5-1', 'medium'),
+        'code-reviewer': entry('claude-fable-5-1', 'medium'),
+        referee: entry('claude-sonnet-5-5', 'high'),
       },
     });
   });

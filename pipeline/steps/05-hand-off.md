@@ -11,11 +11,22 @@ Title: ...
 Story: As ..., I want ..., so that ...
 Done when:
 1. ...
+Hard: yes or no, and why
 Token change: a number, or "none". Cut proposed: none, what and why, or a request to raise the cap.
 Ok to file?
 ```
 
 Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it.
+
+## Is it hard?
+
+Hard is narrow. The `issue-writer` seat judges it when it drafts the message, you check it before you send, and the owner's reply settles it. It is hard when any of these is true:
+
+- It is novel and deep: hard math or algorithms, with no prior art to reuse.
+- It is something we can't get back: a loss outside git, such as user data, someone else's work, money, or something public. Deleting what git holds is not that.
+- The owner says so.
+
+On yes, ask the owner to switch the session to the `hard` award's orchestrator model and effort in `seats.json`, with `/model`. Trouble mid-run is the orchestrator's call: `_claude/agents/orchestrator.md`.
 
 ## The token change
 

@@ -6,7 +6,7 @@ Run these twelve steps in order. Each line says what the step is for and what it
 2. **Sync** (`pipeline/steps/02-sync.md`). Pull the parent governance's updates, which land on a later run. Hands on: the rules in the tree.
 3. **Research** (`pipeline/steps/03-research.md`). Look at what this repo already has first, and the web last. Hands on: what you found and where.
 4. **Pre-review** (`pipeline/steps/04-pre-review.md`). A repo with a pre-review surface settles it with the owner first. Others skip to step 5. Hands on: the owner's settled answer, or nothing.
-5. **Hand-off** (`pipeline/steps/05-hand-off.md`). One short message to the owner: title, story, criteria, token change, any proposed cut. Hands on: the owner's yes.
+5. **Hand-off** (`pipeline/steps/05-hand-off.md`). One short message to the owner: title, story, criteria, whether it is hard, token change, any proposed cut. Hands on: the owner's yes.
 6. **Issue** (`pipeline/steps/06-issue.md`). File what the owner approved. This step may call the architecture specialist first. Hands on: an issue number.
 7. **Issue review** (`pipeline/steps/07-issue-review.md`). A fresh reviewer reads the issue. Hands on: a passing issue.
 8. **Implement** (`pipeline/steps/08-implement.md`). The implementer builds what the issue asks. You do not. Hands on: the change.

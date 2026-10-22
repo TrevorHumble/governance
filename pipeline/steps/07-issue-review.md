@@ -10,8 +10,10 @@ On a PASS, clear the label:
 gh issue edit <N> --remove-label needs-issue-review
 ```
 
-If the passing round's reply ended in an `AWARD cheaper-seats` line (a re-check repeats it), also run:
+If the passing round's reply ended in an `AWARD hard` line (a re-check repeats it), also run:
 
 ```
-gh issue edit <N> --add-label cheaper-seats
+gh issue edit <N> --add-label hard
 ```
+
+This moves up only the agents you start from now on. The session's own seat stays.

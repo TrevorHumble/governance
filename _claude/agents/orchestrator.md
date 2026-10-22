@@ -15,10 +15,16 @@ You write issues, the buildlog, and your own run notes. The deliverable is the i
 `seats.json` says which model and effort each role runs on. Before you start an agent:
 
 1. Find the seat. When you are briefing a skill, take the role whose `skills` list names it. Otherwise, take the role with no skills whose `agent` is the one you are starting. A reviewing skill that no role lists, such as a child repo's own lens, runs on the `code-reviewer` seat.
-2. If the issue carries the `cheaper-seats` label and `awards` has an entry for that role, use the award's model and effort instead.
+2. If the issue carries the `hard` label and `awards` has an entry for that role, use the award's model and effort instead.
 3. Pass both on the spawn: `model` is the family word of the seat's model ID (the word after `claude-`), and `effort` is the seat's effort. Pass them every time, even when the agent file seems to settle it.
 
-Your own seat is the session's, set when the session starts. Write no model name in agent or standard files; `seats.json` holds them.
+Your own seat is the session's, set when the session starts. You cannot move it, so on a hard issue the owner switches it at the hand-off (`pipeline/steps/05-hand-off.md`). Write no model name in agent or standard files; `seats.json` holds them.
+
+## When the run gets hard
+
+If the same review finding fails three times, or the implementer reports it is stuck, add the `hard` label (`gh issue edit <N> --add-label hard`). That is a pipeline call. Start every agent after that from the award. Agents already running, and your own seat, stay as they are, and nothing goes back to the owner.
+
+Keep going until the run reaches its report. Stop to ask only when you cannot go on without the owner, or before a risky step.
 
 ## Where the rest lives
 
