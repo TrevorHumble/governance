@@ -19,6 +19,8 @@ permissions:
   contents: read
 
 jobs:
+  # Keep this job's steps identical to governance-ci.yml's, the reusable copy child repos call;
+  # tests/workflows.test.js fails when they differ.
   build:
     runs-on: ubuntu-latest
     steps:
