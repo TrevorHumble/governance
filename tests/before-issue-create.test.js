@@ -133,7 +133,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the reason text', () => {
     expect(res.reason).toBe(
       `before-issue-create: ${noteText()
         .replace('{why}', 'its body is inline')
-        .replace('{label}', LABEL)
+        .replaceAll('{label}', LABEL)
         .replace('{line}', LINE)}`
     );
   });
