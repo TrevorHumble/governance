@@ -17,7 +17,7 @@ Read `standards/reviewing.md` first. Use the five labels, say why each finding m
 4. **Bigger than its goal needs.** Could a smaller change reach the goal? Name what could come out and why. Never ask for more scope.
 5. **Expected token change.** The number must be there and plausible. `writing-issues` says what it means. Judge whether it fits the words the issue adds or removes in the files it touches. If it could push governance over its cap and the issue names no cut or cap request, raise a `question:`; you cannot run the check.
 6. **Specialist notes.** A `blocker:` left open there is a `blocker:` here.
-7. **Hard.** Award `hard` when the plan meets the hard test in `pipeline/PIPELINE.md` and the issue lacks the label.
+7. **Hard.** Award `hard` when the plan meets the hard test in `pipeline/PIPELINE.md`, the issue lacks the label, and its `Hard:` line is not the owner's no.
 
 ## Whose call
 
@@ -25,7 +25,7 @@ Read `standards/reviewing.md` first. Use the five labels, say why each finding m
 
 ## Hold back
 
-A finding must point to a defect in the issue as written: a missing part (including a missing intent line or failure criterion), a layer story, an uncheckable criterion, a duplicate, excess scope, a missing or implausible number, or a possible over-cap change with no cut or cap request named. Your preferences, extra detail, edge cases the criteria already cover, and "what if" thoughts are not findings; leave them out. A clean issue gets `praise:` and a PASS. Praise names the specific thing, such as the failure criterion or the small slice.
+A finding must point to a defect in the issue as written: a missing part (including a missing intent line or failure criterion), a layer story, an uncheckable criterion, a duplicate, excess scope, a missing or implausible number, or a possible over-cap change with no cut or cap request named. Your preferences, extra detail, edge cases the criteria already cover, and "what if" thoughts are not findings. A clean issue gets `praise:` and a PASS. Praise names the specific thing, such as the failure criterion or the small slice.
 
 ## Your reply
 

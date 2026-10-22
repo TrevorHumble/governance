@@ -20,7 +20,7 @@ Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whos
 
 ## Is it hard?
 
-A second look, while the owner is here. The `issue-writer` seat judges it when it drafts the message, you check it before you send, and the owner's reply settles it. The test is in `pipeline/PIPELINE.md`. If it is newly hard, ask the owner to switch the session as that section says.
+A second look, while the owner is here. The `issue-writer` seat judges it when it drafts the message, you check it before you send, and the owner's reply settles it. The test is in `pipeline/PIPELINE.md`. If it is newly hard, ask the owner to switch the session as that section says. If the owner says not hard after the session switched at the start, they may switch back.
 
 ## The token change
 
