@@ -16,11 +16,11 @@ const REAL_SEATS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'seats.
 // A fixed seats file, so the cases do not move when the shipped seats change.
 const SEATS = {
   roles: {
-    orchestrator: { model: 'claude-sonnet-5-5', effort: 'medium' },
-    implementer: { model: 'claude-sonnet-5-5', effort: 'medium' },
-    'code-reviewer': { model: 'claude-opus-5-5', effort: 'medium' },
-    referee: { model: 'claude-fable-5-1', effort: 'medium' },
-    researcher: { model: 'claude-sonnet-5-5', effort: 'medium' },
+    orchestrator: { agent: 'orchestrator', model: 'claude-sonnet-5-5', effort: 'medium' },
+    implementer: { agent: 'implementer', model: 'claude-sonnet-5-5', effort: 'medium' },
+    'code-reviewer': { agent: 'reviewer', model: 'claude-opus-5-5', effort: 'medium' },
+    referee: { agent: 'reviewer', model: 'claude-fable-5-1', effort: 'medium' },
+    researcher: { agent: 'researcher', model: 'claude-sonnet-5-5', effort: 'medium' },
   },
   awards: {
     hard: {
@@ -58,10 +58,18 @@ function run(input, { env = true, project = root, script = SCRIPT } = {}) {
   return out === '' ? null : JSON.parse(out).hookSpecificOutput;
 }
 
-const spawn = (description, model, effort, extra = {}) => ({
+const spawn = (description, model, effort, extra = {}, toolExtra = {}) => ({
   hook_event_name: 'PreToolUse',
   tool_name: 'Agent',
-  tool_input: { description, model, effort, subagent_type: 'general-purpose', prompt: 'Go.' },
+  tool_input: {
+    description,
+    model,
+    effort,
+    subagent_type: 'general-purpose',
+    prompt: 'Go.',
+    run_in_background: false,
+    ...toolExtra,
+  },
   cwd: root,
   ...extra,
 });
@@ -165,13 +173,82 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: the role tag', () => {
   it('denies an unknown role, and says which', () => {
     const res = run(spawn('[reviewer] review', 'opus', 'medium'));
     expect(res.permissionDecision).toBe('deny');
-    expect(res.permissionDecisionReason).toContain("'reviewer' is not a role.");
+    expect(res.permissionDecisionReason).toContain("'reviewer' is not a seat.");
+    expect(res.permissionDecisionReason).toContain('Roles: orchestrator, implementer');
   });
 
   it('denies a hard tag for a role with no hard award', () => {
     const res = run(spawn('[referee hard] decide', 'fable', 'medium'));
     expect(res.permissionDecision).toBe('deny');
-    expect(res.permissionDecisionReason).toContain('referee has no hard award.');
+    expect(res.permissionDecisionReason).toContain("'referee hard' is not a seat.");
+  });
+});
+
+maybeDescribe('_claude/hooks/spawn-check.ps1: reviewers spawn in the foreground', () => {
+  const noFlag = (description, model, effort) => {
+    const input = spawn(description, model, effort);
+    delete input.tool_input.run_in_background;
+    return input;
+  };
+
+  it('denies a reviewer role without run_in_background, and says several still run in parallel', () => {
+    const res = run(noFlag('[code-reviewer] review', 'opus', 'medium'));
+    expect(res.permissionDecision).toBe('deny');
+    expect(res.permissionDecisionReason).toContain('run_in_background false');
+    expect(res.permissionDecisionReason).toContain('still run in parallel');
+  });
+
+  it.each([true, 'false', 0, null])('denies a reviewer when run_in_background is %j', (value) => {
+    const input = spawn('[referee] decide', 'fable', 'medium', {}, { run_in_background: value });
+    expect(run(input).permissionDecision).toBe('deny');
+  });
+
+  it('denies a hard-tagged reviewer in the background too', () => {
+    const input = spawn(
+      '[code-reviewer hard] review',
+      'fable',
+      'medium',
+      {},
+      { run_in_background: true }
+    );
+    expect(run(input).permissionDecision).toBe('deny');
+  });
+
+  it('allows a reviewer when run_in_background is exactly false', () => {
+    expect(run(spawn('[referee] decide', 'fable', 'medium'))).toBeNull();
+  });
+
+  it('leaves a role that is not a reviewer free to run in the background', () => {
+    expect(run(noFlag('[implementer] build', 'sonnet', 'medium'))).toBeNull();
+    const bg = spawn('[implementer] build', 'sonnet', 'medium', {}, { run_in_background: true });
+    expect(run(bg)).toBeNull();
+  });
+
+  it('reads the reviewer roles from seats.json, not from a list in the hook', () => {
+    const own = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-own-'));
+    try {
+      fs.writeFileSync(
+        path.join(own, 'seats.json'),
+        JSON.stringify({
+          roles: {
+            auditor: { agent: 'reviewer', model: 'claude-opus-5-5', effort: 'medium' },
+            referee: { agent: 'referee', model: 'claude-opus-5-5', effort: 'medium' },
+          },
+        })
+      );
+      const bg = (d) => spawn(d, 'opus', 'medium', {}, { run_in_background: true });
+      expect(run(bg('[auditor] check'), { project: own, env: true }).permissionDecision).toBe(
+        'deny'
+      );
+      expect(run(bg('[referee] check'), { project: own, env: true })).toBeNull();
+    } finally {
+      fs.rmSync(own, { recursive: true, force: true });
+    }
+  });
+
+  it('checks the seat after the foreground rule', () => {
+    const res = run(spawn('[referee] decide', 'opus', 'medium'));
+    expect(res.permissionDecisionReason).toContain('The referee seat is model fable');
   });
 });
 
@@ -217,11 +294,21 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: project root and failure modes', (
     ).toBe('deny');
   });
 
-  it('allows and prints nothing on unreadable input', () => {
-    expect(run('not json at all')).toBeNull();
+  it('allows, printing nothing, on empty input, null, and input with no tool_input', () => {
     expect(run('')).toBeNull();
+    expect(run('  \n')).toBeNull();
     expect(run('null')).toBeNull();
     expect(run({ hook_event_name: 'PreToolUse' })).toBeNull();
+  });
+
+  it('denies, failing closed, when the input is not empty but cannot be parsed', () => {
+    for (const bad of ['not json at all', '{"tool_input": {', '<xml/>']) {
+      const res = run(bad);
+      expect(res.permissionDecision).toBe('deny');
+      expect(res.permissionDecisionReason).toBe(
+        'spawn-check: The spawn input was unreadable. Try again.'
+      );
+    }
   });
 
   it('allows when seats.json cannot be read', () => {
@@ -233,16 +320,26 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: project root and failure modes', (
     }
   });
 
-  it('still denies, with a short reason, when notes.md cannot be read', () => {
+  it('still denies, with one generic line, when notes.md cannot be read', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-lone-'));
     try {
       const lone = path.join(dir, 'spawn-check.ps1');
       fs.copyFileSync(SCRIPT, lone);
+      fs.copyFileSync(path.join(HOOKS, 'hook-core.ps1'), path.join(dir, 'hook-core.ps1'));
       const res = run(spawn('[implementer] build', 'opus', 'medium'), { script: lone });
       expect(res.permissionDecision).toBe('deny');
-      expect(res.permissionDecisionReason).toContain(
-        'The implementer seat is model sonnet, effort medium.'
-      );
+      expect(res.permissionDecisionReason).toBe('spawn-check: denied; see _claude/hooks/notes.md.');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('allows when hook-core.ps1 cannot be loaded', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-nocore-'));
+    try {
+      const lone = path.join(dir, 'spawn-check.ps1');
+      fs.copyFileSync(SCRIPT, lone);
+      expect(run(spawn('[implementer] build', 'opus', 'medium'), { script: lone })).toBeNull();
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

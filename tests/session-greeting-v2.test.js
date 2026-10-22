@@ -188,6 +188,64 @@ maybeDescribe('_claude/hooks/session-greeting.ps1: settings that override the se
   });
 });
 
+maybeDescribe('_claude/hooks/session-greeting.ps1: a leftover hard marker', () => {
+  afterEach(() => fs.rmSync(path.join(root, '.run_state'), { recursive: true, force: true }));
+
+  it('mentions .run_state/hard when it exists at the project root', () => {
+    fs.mkdirSync(path.join(root, '.run_state'));
+    fs.writeFileSync(path.join(root, '.run_state', 'hard'), '');
+    expect(run(start('sonnet'))).toBe(`${notes().hello} ${notes().marker}`);
+  });
+
+  it('says nothing about it when there is no marker', () => {
+    expect(run(start('sonnet'))).not.toContain('.run_state');
+  });
+});
+
+maybeDescribe('_claude/hooks/session-greeting.ps1: an odd seats.json', () => {
+  const withSeats = (seats, fn) => {
+    const own = fs.mkdtempSync(path.join(os.tmpdir(), 'greeting-v2-odd-'));
+    try {
+      fs.writeFileSync(
+        path.join(own, 'seats.json'),
+        typeof seats === 'string' ? seats : JSON.stringify(seats)
+      );
+      return fn(own);
+    } finally {
+      fs.rmSync(own, { recursive: true, force: true });
+    }
+  };
+
+  it('prints the hello line when awards has no hard entry', () => {
+    const seats = { roles: SEATS.roles, awards: {} };
+    expect(withSeats(seats, (own) => run(start('sonnet'), { project: own }))).toBe(notes().hello);
+    expect(
+      withSeats({ roles: SEATS.roles, awards: null }, (own) =>
+        run(start('sonnet'), { project: own })
+      )
+    ).toBe(notes().hello);
+  });
+
+  it('still checks the model against the orchestrator seat when there is no hard award', () => {
+    const seats = { roles: SEATS.roles };
+    const out = withSeats(seats, (own) => run(start('claude-fable-5-1'), { project: own }));
+    expect(out).toContain('the orchestrator seat is sonnet.');
+  });
+
+  it('prints the hello line when roles has no orchestrator, or the file is not an object', () => {
+    for (const seats of [{ roles: {} }, '[]', '"text"', '{ not json']) {
+      expect(withSeats(seats, (own) => run(start('sonnet'), { project: own }))).toBe(notes().hello);
+    }
+  });
+
+  it('keeps other warnings when the seat checks cannot run', () => {
+    const out = withSeats('{ not json', (own) =>
+      run(start('sonnet'), { project: own, env: { CLAUDE_CODE_EFFORT_LEVEL: 'low' } })
+    );
+    expect(out).toContain('CLAUDE_CODE_EFFORT_LEVEL is set');
+  });
+});
+
 maybeDescribe('_claude/hooks/session-greeting.ps1: failure modes', () => {
   it('prints nothing on unreadable input', () => {
     expect(run('not json at all')).toBeNull();

@@ -3,12 +3,21 @@
 # a create is judged as one, mentions included.
 # Not covered: a loop that runs one create several times, a cd earlier in the same command, gh api
 # graphql, curl or other HTTP clients, gh aliases, and non-Bash tools (such as a GitHub connector's
-# issue tool) that this hook never sees. Any exception inside the hook allows the call.
+# issue tool) that this hook never sees. Also not covered: a command longer than 10000 characters
+# or naming gh more than 12 times is denied unread (a cap on the work the hook does), and a
+# --body-file that is not a regular file (a pipe, a device) is denied unopened, so a legitimate use
+# of either has to be split or rewritten. Any exception inside the hook allows the call.
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
 $FIRST_LINE = 'Owner-approved: yes'
 $MAX_READ = 1MB
+# Caps on the work done, so a pathological command cannot stall the hook past its timeout.
+$MAX_TEXT = 10000
+$MAX_GH = 12
+$FALLBACK = 'denied; see _claude/hooks/notes.md.'
+$coreLoaded = $false
+try { . (Join-Path $PSScriptRoot 'hook-core.ps1'); $coreLoaded = $true } catch { }
 
 # Windows resolves GH and Gh.exe, so the program name ignores case; verbs and flags do not.
 # The lookbehind keeps a word like "high" from reading as gh.
@@ -74,17 +83,25 @@ function Test-IssuesApiPost([string[]]$words) {
   return $hasFields
 }
 
-# The reason text lives in notes.md (counted there). If that file cannot be read, the deny still stands.
+# The reason text lives in notes.md (counted there). If that file cannot be read, one generic line
+# still denies.
 function Get-Reason($why) {
-  try {
-    $text = [System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'notes.md'))
-    $m = [regex]::Match($text, '(?ms)^## before-issue-create[ \t]*\r?\n(.*?)(?=^## |\z)')
-    if ($m.Success) {
-      $note = $m.Groups[1].Value.Trim() -replace '\s*\r?\n\s*', ' '
-      return $note.Replace('{why}', $why).Replace('{label}', $LABEL).Replace('{line}', $FIRST_LINE)
-    }
-  } catch { }
-  return "This command names issue creation, so it is judged as a filing: $why. File with gh issue create --label $LABEL --body-file <file>, whose first line is '$FIRST_LINE'."
+  $note = if ($coreLoaded) { Get-Note 'before-issue-create' } else { $null }
+  if (-not $note) { return $FALLBACK }
+  return Fill $note @{ why = $why; label = $LABEL; line = $FIRST_LINE }
+}
+
+# A regular file, after following a link. A pipe or a device is not, and opening one can block.
+function Test-RegularFile([string]$path) {
+  $item = Get-Item -LiteralPath $path -Force -ErrorAction Stop
+  if ($item.LinkType) {
+    $target = $item.ResolveLinkTarget($true)
+    if ($null -eq $target) { return $false }
+    $item = Get-Item -LiteralPath $target.FullName -Force -ErrorAction Stop
+  }
+  if ($item.PSIsContainer) { return $false }
+  if ($item.PSObject.Properties['UnixMode']) { return $item.UnixMode.StartsWith('-') }
+  return -not ($item.Attributes -band [System.IO.FileAttributes]::Device)
 }
 
 function Write-Deny($why) {
@@ -99,9 +116,12 @@ try {
   $payload = $reader.ReadToEnd() | ConvertFrom-Json
   $text = $payload.tool_input.command
   if ($text -isnot [string]) { exit 0 }
+  if ($text.Length -gt $MAX_TEXT) { Write-Deny "its text is longer than $MAX_TEXT characters, too long to check"; exit 0 }
 
   $creates = @([regex]::Matches($text, $CREATE))
-  $apiPosts = @([regex]::Matches($text, $API) | Where-Object { Test-IssuesApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
+  $apiMatches = @([regex]::Matches($text, $API))
+  if ($creates.Count + $apiMatches.Count -gt $MAX_GH) { Write-Deny "its text names gh more than $MAX_GH times, too many to check"; exit 0 }
+  $apiPosts = @($apiMatches | Where-Object { Test-IssuesApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
   if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'its text names issue creation more than once (one create per call; a title or other text that names the command counts too; file with a neutral title, then write the real title to a file with the Write tool and run gh issue edit <N> --title "$(cat <file>)")'; exit 0 }
   if ($apiPosts.Count -eq 1) { Write-Deny 'it creates the issue through gh api'; exit 0 }
@@ -114,6 +134,8 @@ try {
   $path = $facts.File -replace '^~(?=[/\\]|$)', $HOME
   if (-not [System.IO.Path]::IsPathRooted($path) -and $payload.cwd -is [string]) { $path = Join-Path $payload.cwd $path }
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { Write-Deny "the body file '$($facts.File)' is missing or is a directory"; exit 0 }
+
+  if (-not (Test-RegularFile $path)) { Write-Deny "the body file '$($facts.File)' is not a regular file"; exit 0 }
 
   # A pathological file must not stall the hook, so read no more than $MAX_READ.
   $stream = [System.IO.File]::OpenRead($path)

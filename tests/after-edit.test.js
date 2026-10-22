@@ -106,6 +106,19 @@ maybeDescribe('_claude/hooks/after-edit.ps1', () => {
     expect(run(edit(path.join(root, 'src', 'api.js')), { env: false })).toContain('src/api.js');
   });
 
+  it('matches a file in a worktree under the root against the worktree, taken as cwd', () => {
+    const wt = path.join(root, 'worktrees', 'issue-99');
+    fs.mkdirSync(path.join(wt, 'src'), { recursive: true });
+    const hit = run(edit(path.join(wt, 'src', 'api.js'), { cwd: wt }));
+    expect(JSON.parse(hit).hookSpecificOutput.additionalContext).toBe(
+      noteFor('after-edit').replace('{path}', 'src/api.js')
+    );
+    expect(run(edit(path.join(wt, 'src', 'other.js'), { cwd: wt }))).toBe('');
+    // Seen from the root, the same file is under worktrees/, which no entry names.
+    expect(run(edit(path.join(wt, 'src', 'api.js')))).toBe('');
+    fs.rmSync(path.join(root, 'worktrees'), { recursive: true, force: true });
+  });
+
   it('never blocks', () => {
     const out = JSON.parse(run(edit(path.join(root, 'src', 'api.js'))));
     expect(out.decision).toBeUndefined();
@@ -119,11 +132,13 @@ maybeDescribe('_claude/hooks/after-edit.ps1', () => {
     expect(run(edit(path.join(root, 'src', 'api.js')))).toBe('');
   });
 
-  it('prints nothing when notes.md cannot be read', () => {
+  it('prints nothing when notes.md or hook-core.ps1 cannot be read', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'after-edit-lone-'));
     try {
       const lone = path.join(dir, 'after-edit.ps1');
       fs.copyFileSync(SCRIPT, lone);
+      expect(run(edit(path.join(root, 'src', 'api.js')), { script: lone })).toBe('');
+      fs.copyFileSync(path.join(HOOKS, 'hook-core.ps1'), path.join(dir, 'hook-core.ps1'));
       expect(run(edit(path.join(root, 'src', 'api.js')), { script: lone })).toBe('');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });

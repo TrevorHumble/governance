@@ -40,21 +40,21 @@ const maybeDescribe = launcherMissing
   : describe;
 
 maybeDescribe('_claude/hooks/goal-check.ps1', () => {
-  it('allows the question and puts the notes.md text in additionalContext', () => {
+  it('puts the notes.md text in additionalContext and nothing else, so the normal permission flow runs', () => {
     expect(JSON.parse(run(ask))).toEqual({
       hookSpecificOutput: {
         hookEventName: 'PreToolUse',
-        permissionDecision: 'allow',
         additionalContext: noteFor('goal-check'),
       },
     });
   });
 
-  it('points to standards/deciding.md and never denies or blocks', () => {
+  it('says the owner answer stands and points to standards/deciding.md, and never denies or blocks', () => {
+    expect(noteFor('goal-check')).toContain("owner's answer stands");
     const out = JSON.parse(run(ask));
     expect(out.hookSpecificOutput.additionalContext).toContain('standards/deciding.md');
     expect(out.decision).toBeUndefined();
-    expect(out.hookSpecificOutput.permissionDecision).not.toBe('deny');
+    expect(out.hookSpecificOutput.permissionDecision).toBeUndefined();
   });
 
   it('prints nothing on unreadable, empty, or null input', () => {

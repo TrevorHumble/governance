@@ -8,7 +8,8 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const SCRIPT = path.join(__dirname, '..', '_claude', 'hooks', 'before-issue-create.ps1');
+const HOOKS = path.join(__dirname, '..', '_claude', 'hooks');
+const SCRIPT = path.join(HOOKS, 'before-issue-create.ps1');
 const LABEL = 'needs-issue-review';
 const LINE = 'Owner-approved: yes';
 
@@ -137,23 +138,40 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the reason text', () => {
     );
   });
 
-  it('still denies, with a short reason, when notes.md cannot be read', () => {
+  it('still denies, with one generic line, when notes.md or hook-core.ps1 cannot be read', () => {
     const lone = fs.mkdtempSync(path.join(os.tmpdir(), 'before-issue-create-lone-'));
     try {
       const copy = path.join(lone, 'before-issue-create.ps1');
       fs.copyFileSync(SCRIPT, copy);
-      const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', copy], {
-        input: JSON.stringify({ tool_input: { command: 'gh issue create --title T' }, cwd: dir }),
-        encoding: 'utf8',
+      const input = JSON.stringify({
+        tool_input: { command: 'gh issue create --title T' },
+        cwd: dir,
       });
-      expect(r.status).toBe(0);
-      const out = JSON.parse(r.stdout).hookSpecificOutput;
-      expect(out.permissionDecision).toBe('deny');
-      expect(out.permissionDecisionReason).toContain('This command names issue creation');
-      expect(out.permissionDecisionReason).toContain(`--label ${LABEL}`);
+      const reasonOf = () => {
+        const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', copy], {
+          input,
+          encoding: 'utf8',
+        });
+        expect(r.status).toBe(0);
+        const out = JSON.parse(r.stdout).hookSpecificOutput;
+        expect(out.permissionDecision).toBe('deny');
+        return out.permissionDecisionReason;
+      };
+      const generic = 'before-issue-create: denied; see _claude/hooks/notes.md.';
+      expect(reasonOf()).toBe(generic);
+      fs.copyFileSync(path.join(HOOKS, 'hook-core.ps1'), path.join(lone, 'hook-core.ps1'));
+      expect(reasonOf()).toBe(generic);
     } finally {
       fs.rmSync(lone, { recursive: true, force: true });
     }
+  });
+
+  it('does not fill a placeholder twice: a reason holding {label} stays as written', () => {
+    // The body-file name lands in the reason through $why; a name that reads like a placeholder
+    // must not be filled in a second time.
+    const res = run(create(`--label ${LABEL} --body-file {line}.md`));
+    expect(res.reason).toContain("the body file '{line}.md' is missing");
+    expect(res.reason).not.toContain("'Owner-approved: yes'.md");
   });
 });
 
@@ -475,5 +493,84 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: program name', () => {
         'gh ISSUE create --title T',
       ])
     ).toEqual(['deny', 'deny', 'allow']);
+  });
+});
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: caps on the work it does', () => {
+  it('denies a command longer than the text cap, unread', () => {
+    const res = run(`echo ${'a'.repeat(10001)}`);
+    expect(res.decision).toBe('deny');
+    expect(res.reason).toContain('longer than 10000 characters');
+  });
+
+  it('allows a long command that is under the cap and does not name gh', () => {
+    expect(run(`echo ${'a '.repeat(4000)}`).decision).toBe('allow');
+  });
+
+  it('denies a command that names gh more than 12 times, even when no call is a create', () => {
+    const res = run('gh api x '.repeat(13));
+    expect(res.decision).toBe('deny');
+    expect(res.reason).toContain('names gh more than 12 times');
+    expect(run('gh api x ; '.repeat(12)).decision).toBe('allow');
+  });
+
+  it('finishes well inside the 10 s timeout on a 6 KB adversarial command', () => {
+    // Twelve gh api words (the most the cap lets through), then 6 KB of words with no separator,
+    // so each gh api scans to the end of the text.
+    const command = 'gh api x '.repeat(12) + 'a '.repeat(2900);
+    expect(command.length).toBeGreaterThan(5900);
+    const started = Date.now();
+    expect(run(command).decision).toBe('allow');
+    expect(Date.now() - started).toBeLessThan(6000);
+    const started2 = Date.now();
+    expect(run('gh api x '.repeat(700)).decision).toBe('deny');
+    expect(Date.now() - started2).toBeLessThan(6000);
+  });
+});
+
+maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file must be a regular file', () => {
+  const withFile = (f) => create(`--label ${LABEL} --body-file ${f}`);
+
+  it('allows a regular file and a link to one', () => {
+    fs.symlinkSync(path.join(dir, 'ok.md'), path.join(dir, 'link.md'));
+    try {
+      expect(run(withFile('link.md')).decision).toBe('allow');
+    } finally {
+      fs.rmSync(path.join(dir, 'link.md'), { force: true });
+    }
+  });
+
+  it.skipIf(process.platform !== 'linux')('denies a pipe without opening it', () => {
+    const fifo = path.join(dir, 'pipe.md');
+    const made = spawnSync('mkfifo', [fifo]);
+    expect(made.status).toBe(0);
+    try {
+      const started = Date.now();
+      const res = run(withFile(fifo));
+      expect(res.decision).toBe('deny');
+      expect(res.reason).toContain('is not a regular file');
+      expect(Date.now() - started).toBeLessThan(6000);
+    } finally {
+      fs.rmSync(fifo, { force: true });
+    }
+  });
+
+  it.skipIf(process.platform !== 'linux')('denies a device and a link to one', () => {
+    expect(run(withFile('/dev/null')).reason).toContain('is not a regular file');
+    fs.symlinkSync('/dev/null', path.join(dir, 'null-link.md'));
+    try {
+      expect(run(withFile('null-link.md')).decision).toBe('deny');
+    } finally {
+      fs.rmSync(path.join(dir, 'null-link.md'), { force: true });
+    }
+  });
+
+  it.skipIf(process.platform !== 'linux')('denies a link that points nowhere', () => {
+    fs.symlinkSync(path.join(dir, 'gone.md'), path.join(dir, 'dangling.md'));
+    try {
+      expect(run(withFile('dangling.md')).decision).toBe('deny');
+    } finally {
+      fs.rmSync(path.join(dir, 'dangling.md'), { force: true });
+    }
   });
 });
