@@ -18,6 +18,6 @@ A change is finished when every clause holds, not when it merges. The PR reviewe
 
 8. **Regressions you caused.** If the change breaks something that worked, fixing it is part of the change. It is not an issue for someone else.
 
-9. **Pre-review first.** A change that only the repo's declared pre-review process can judge (`preReview` in `repo-profile.json`) goes through it before it merges. Rendering correctly is not done; someone looking at it and signing off is.
+9. **Pre-review signed off.** A change step 04 sent through pre-review is not done until the owner signed off there.
 
 10. **Done means live.** If the last step is a manual one by the owner or on GitHub, such as a repo setting, a required check or a flag, the issue is not done at merge. It is done when the step is taken and the behavior is true in production. At review time, confirm the step is recorded and the issue cannot close ahead of it.

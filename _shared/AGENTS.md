@@ -11,7 +11,9 @@ How to work in this repo. `CLAUDE.md` imports this file, and any tool that reads
 - Goals, checked before you ask anything: `NORTH-STAR.md`.
 - The twelve steps of a build: `pipeline/PIPELINE.md`.
 - Standards: `standards/`.
-- Which model and effort each role runs on: `seats.json`. No other file names a model.
+- Which model and effort each role runs on: `seats.json`.
+- When a change is done: `definition-of-done.md`.
+- What the owner has already declined: `owner-declines.md`. Check it before a note goes to the owner; a match is dropped.
 
 ## Rules
 
@@ -19,8 +21,8 @@ How to work in this repo. `CLAUDE.md` imports this file, and any tool that reads
 - CI and hooks own the boring checks, and prose never repeats them. `WHAT-IT-CHECKS.md` says what each one catches and misses.
 - The buildlog (`BUILDLOG.md`, fed by `buildlog/`) is the only history. Keep no other log or diary.
 - Skills live in `.claude/skills/`. Move them to `.agents/skills/` when that becomes the standard.
-- Cutting, moving or removing a rule, touching other files to make room, or raising a cap needs the owner's yes. A change over a budget makes room first.
-- `dataClass` in `repo-profile.json` is `public` unless the repo says otherwise. Personal data never goes to an outside service.
+- Cutting, moving or removing a rule, touching other files to make room, or raising a cap needs the owner's yes.
+- `dataClass` in `repo-profile.json`; absent means `public`. Personal data never goes to an outside service.
 
 ## Labels
 
@@ -31,8 +33,8 @@ How to work in this repo. `CLAUDE.md` imports this file, and any tool that reads
 
 ## Parent and children
 
-This repo owns the shared files. A child fills only the slots left open, the fields of its own `repo-profile.json`, and never edits a shared file in place. A fix to a shared rule is made here.
+This repo owns the shared files. A child fills only its own `repo-profile.json` and never edits a shared file in place. A fix to a shared rule is made here.
 
-- A sync of content merges itself once the child's CI check is required on its default branch.
-- A change of structure is never merged for you. It becomes a standing issue for a person.
+- A sync of content merges itself on green CI, once the child's CI check is required on its default branch.
+- A change of structure is never merged for you. It becomes a standing issue for a person. The sync tool decides which.
 - A child may keep a file different on purpose by listing it in `acknowledgedDivergentPaths`.
