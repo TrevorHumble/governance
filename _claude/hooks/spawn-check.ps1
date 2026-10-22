@@ -7,7 +7,7 @@
 # The project root (seats.json, .run_state) is CLAUDE_PROJECT_DIR, else the input's cwd.
 # The reason text lives in notes.md; if that file cannot be read, one generic line still denies.
 # It fails closed on a spawn it can judge, as before-issue-create does: input that is not empty but
-# cannot be parsed is denied. It allows, silently, on empty input, on input with no tool_input, when
+# cannot be parsed is denied, and so is any call when hook-core.ps1 cannot be loaded. It allows, silently, on empty input, on input with no tool_input, when
 # seats.json cannot be read, and on any other exception.
 # Not covered: only the Agent tool is seen. A model started another way (claude -p through Bash, a
 # remote session, a connector) is never checked, and the role tag is the agent's own word.
@@ -23,8 +23,18 @@ function Write-Deny([string[]]$keys, [hashtable]$values = @{}) {
   Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
 }
 
+$coreLoaded = $false
+try { . (Join-Path $PSScriptRoot 'hook-core.ps1'); $coreLoaded = $true } catch { }
+
 try {
-  . (Join-Path $PSScriptRoot 'hook-core.ps1')
+  if (-not $coreLoaded) {
+    # Fail closed like before-issue-create: no core means no seat check, so deny any real call.
+    if ([Console]::In.ReadToEnd().Trim() -eq '') { exit 0 }
+    $out = [ordered]@{ hookSpecificOutput = [ordered]@{
+        hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = "spawn-check: $FALLBACK" } }
+    Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
+    exit 0
+  }
   $raw = Read-Stdin
   if ($raw.Trim() -eq '') { exit 0 }
   try { $payload = $raw | ConvertFrom-Json } catch { Write-Deny @('unreadable'); exit 0 }

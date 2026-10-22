@@ -334,12 +334,14 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: project root and failure modes', (
     }
   });
 
-  it('allows when hook-core.ps1 cannot be loaded', () => {
+  it('denies, with one generic line, when hook-core.ps1 cannot be loaded', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-nocore-'));
     try {
       const lone = path.join(dir, 'spawn-check.ps1');
       fs.copyFileSync(SCRIPT, lone);
-      expect(run(spawn('[implementer] build', 'opus', 'medium'), { script: lone })).toBeNull();
+      const res = run(spawn('[implementer] build', 'sonnet', 'medium'), { script: lone });
+      expect(res.permissionDecision).toBe('deny');
+      expect(res.permissionDecisionReason).toBe('spawn-check: denied; see _claude/hooks/notes.md.');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
