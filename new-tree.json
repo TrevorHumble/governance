@@ -82,111 +82,111 @@
       "group": "pipeline-steps"
     },
     {
-      "path": "_claude/skills/writing-user-stories/SKILL.md",
+      "path": ".claude/skills/writing-user-stories/SKILL.md",
       "budget": 300
     },
     {
-      "path": "_claude/skills/writing-acceptance-criteria/SKILL.md",
+      "path": ".claude/skills/writing-acceptance-criteria/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/writing-issues/SKILL.md",
+      "path": ".claude/skills/writing-issues/SKILL.md",
       "budget": 400
     },
     {
-      "path": "_claude/skills/reviewing-issues/SKILL.md",
+      "path": ".claude/skills/reviewing-issues/SKILL.md",
       "budget": 600
     },
     {
-      "path": "_claude/skills/reviewing-prs/SKILL.md",
+      "path": ".claude/skills/reviewing-prs/SKILL.md",
       "budget": 700
     },
     {
-      "path": "_claude/skills/reviewing-design/SKILL.md",
+      "path": ".claude/skills/reviewing-design/SKILL.md",
       "budget": 800
     },
     {
-      "path": "_claude/skills/reviewing-design/reference/examples.md",
+      "path": ".claude/skills/reviewing-design/reference/examples.md",
       "budget": 600
     },
     {
-      "path": "_claude/skills/reviewing-skills/SKILL.md",
+      "path": ".claude/skills/reviewing-skills/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/reviewing-docs/SKILL.md",
+      "path": ".claude/skills/reviewing-docs/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/reviewing-architecture/SKILL.md",
+      "path": ".claude/skills/reviewing-architecture/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/reviewing-security/SKILL.md",
+      "path": ".claude/skills/reviewing-security/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/refereeing/SKILL.md",
+      "path": ".claude/skills/refereeing/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/build/SKILL.md",
+      "path": ".claude/skills/build/SKILL.md",
       "budget": 300
     },
     {
-      "path": "_claude/skills/implementing/SKILL.md",
+      "path": ".claude/skills/implementing/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/researching/SKILL.md",
+      "path": ".claude/skills/researching/SKILL.md",
       "budget": 400
     },
     {
-      "path": "_claude/skills/reporting-a-defect/SKILL.md",
+      "path": ".claude/skills/reporting-a-defect/SKILL.md",
       "budget": 150
     },
     {
-      "path": "_claude/skills/github-write/SKILL.md",
+      "path": ".claude/skills/github-write/SKILL.md",
       "budget": 500
     },
     {
-      "path": "_claude/skills/working-autonomously/SKILL.md",
+      "path": ".claude/skills/working-autonomously/SKILL.md",
       "budget": 300
     },
     {
-      "path": "_claude/skills/buildlog/SKILL.md",
+      "path": ".claude/skills/buildlog/SKILL.md",
       "group": "buildlog-realign-resume"
     },
     {
-      "path": "_claude/skills/realign/SKILL.md",
+      "path": ".claude/skills/realign/SKILL.md",
       "group": "buildlog-realign-resume"
     },
     {
-      "path": "_claude/skills/resume/SKILL.md",
+      "path": ".claude/skills/resume/SKILL.md",
       "group": "buildlog-realign-resume"
     },
     {
-      "path": "_claude/agents/orchestrator.md",
+      "path": ".claude/agents/orchestrator.md",
       "budget": 600
     },
     {
-      "path": "_claude/agents/reviewer.md",
+      "path": ".claude/agents/reviewer.md",
       "budget": 150
     },
     {
-      "path": "_claude/agents/implementer.md",
+      "path": ".claude/agents/implementer.md",
       "budget": 150
     },
     {
-      "path": "_claude/hooks/notes.md",
+      "path": ".claude/hooks/notes.md",
       "budget": 400
     },
     {
-      "path": "_claude/agents/issue-writer.md",
+      "path": ".claude/agents/issue-writer.md",
       "group": "issue-writer-researcher"
     },
     {
-      "path": "_claude/agents/researcher.md",
+      "path": ".claude/agents/researcher.md",
       "group": "issue-writer-researcher"
     },
     {

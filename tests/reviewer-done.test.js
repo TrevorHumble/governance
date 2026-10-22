@@ -1,5 +1,5 @@
 // tests/reviewer-done.test.js
-// Tests for _claude/hooks/reviewer-done.ps1: a PostToolUse note on Agent when a reviewer returns.
+// Tests for .claude/hooks/reviewer-done.ps1: a PostToolUse note on Agent when a reviewer returns.
 // The reviewer roles are the seats.json roles whose agent is "reviewer"; no list lives in the hook.
 'use strict';
 
@@ -9,7 +9,7 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const HOOKS = path.join(__dirname, '..', '_claude', 'hooks');
+const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'reviewer-done.ps1');
 
 const SEATS = {
@@ -67,7 +67,7 @@ const maybeDescribe = launcherMissing
   ? describe.skip.bind(describe, skipTitle('reviewer-done'))
   : describe;
 
-maybeDescribe('_claude/hooks/reviewer-done.ps1', () => {
+maybeDescribe('.claude/hooks/reviewer-done.ps1', () => {
   it.each(['issue-reviewer', 'code-reviewer', 'referee'])(
     'adds the note, naming the role, when %s returns',
     (role) => {

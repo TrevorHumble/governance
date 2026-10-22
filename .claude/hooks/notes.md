@@ -32,6 +32,7 @@ unreadable: The spawn input was unreadable. Try again.
 ## session-greeting
 
 hello: Hooks here nudge; only issue filing and agent spawns are denied. Seats: seats.json.
+githooks: Git hooks: commit-msg is {commitMsg}, pre-commit is {preCommit}.
 model: This session runs {model}; the orchestrator seat is {seats}.
 unchecked: The session's model was not reported, so not checked.
 env: {name} is set and overrides the seats.

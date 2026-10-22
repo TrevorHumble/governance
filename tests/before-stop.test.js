@@ -1,5 +1,5 @@
 // tests/before-stop.test.js
-// Tests for _claude/hooks/before-stop.ps1: a Stop note that never blocks and goes quiet when the
+// Tests for .claude/hooks/before-stop.ps1: a Stop note that never blocks and goes quiet when the
 // stop is already a continuation (stop_hook_active), so the session can end.
 'use strict';
 
@@ -9,7 +9,7 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const HOOKS = path.join(__dirname, '..', '_claude', 'hooks');
+const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'before-stop.ps1');
 
 function noteFor(hook) {
@@ -35,7 +35,7 @@ const maybeDescribe = launcherMissing
   ? describe.skip.bind(describe, skipTitle('before-stop'))
   : describe;
 
-maybeDescribe('_claude/hooks/before-stop.ps1', () => {
+maybeDescribe('.claude/hooks/before-stop.ps1', () => {
   it('adds the notes.md text as Stop additionalContext, with no decision field', () => {
     for (const input of [stop({ stop_hook_active: false }), stop({})]) {
       expect(JSON.parse(run(input))).toEqual({

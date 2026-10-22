@@ -6,7 +6,7 @@
 
 const { effectiveSeats } = require('./check-seats-core');
 
-// The same tag rule as _claude/hooks/hook-core.ps1 ($ROLE_TAG): `[<role>]` or `[<role> hard]` at
+// The same tag rule as .claude/hooks/hook-core.ps1 ($ROLE_TAG): `[<role>]` or `[<role> hard]` at
 // the start of a spawn description. A different language means a second copy, kept in step by hand.
 const ROLE_TAG = /^\s*\[([a-z][a-z0-9-]*)(?:\s+(hard))?\]/;
 

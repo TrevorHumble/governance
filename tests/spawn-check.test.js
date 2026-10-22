@@ -1,5 +1,5 @@
 // tests/spawn-check.test.js
-// Tests for _claude/hooks/spawn-check.ps1: a PreToolUse deny on Agent when the spawn's model or
+// Tests for .claude/hooks/spawn-check.ps1: a PreToolUse deny on Agent when the spawn's model or
 // effort differs from its seat in seats.json, read from the role tag that starts the description.
 'use strict';
 
@@ -9,7 +9,7 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const HOOKS = path.join(__dirname, '..', '_claude', 'hooks');
+const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'spawn-check.ps1');
 const REAL_SEATS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'seats.json'), 'utf8'));
 
@@ -78,7 +78,7 @@ const maybeDescribe = launcherMissing
   ? describe.skip.bind(describe, skipTitle('spawn-check'))
   : describe;
 
-maybeDescribe('_claude/hooks/spawn-check.ps1: a spawn that matches its seat', () => {
+maybeDescribe('.claude/hooks/spawn-check.ps1: a spawn that matches its seat', () => {
   it('prints nothing for a match, with a trailing description', () => {
     expect(run(spawn('[implementer] build #99', 'sonnet', 'medium'))).toBeNull();
     expect(run(spawn('[code-reviewer] review the PR', 'opus', 'medium'))).toBeNull();
@@ -114,7 +114,7 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: a spawn that matches its seat', ()
   });
 });
 
-maybeDescribe('_claude/hooks/spawn-check.ps1: a spawn that differs from its seat', () => {
+maybeDescribe('.claude/hooks/spawn-check.ps1: a spawn that differs from its seat', () => {
   it('denies a wrong model, and names the seat and what was passed', () => {
     const res = run(spawn('[implementer] build', 'opus', 'medium'));
     expect(res.hookEventName).toBe('PreToolUse');
@@ -154,7 +154,7 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: a spawn that differs from its seat
   });
 });
 
-maybeDescribe('_claude/hooks/spawn-check.ps1: the role tag', () => {
+maybeDescribe('.claude/hooks/spawn-check.ps1: the role tag', () => {
   it('denies a missing tag and lists the roles', () => {
     for (const d of ['build #99', '', '[] build', 'build [implementer]', '[Implementer] build']) {
       const res = run(spawn(d, 'sonnet', 'medium'));
@@ -184,7 +184,7 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: the role tag', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/spawn-check.ps1: reviewers spawn in the foreground', () => {
+maybeDescribe('.claude/hooks/spawn-check.ps1: reviewers spawn in the foreground', () => {
   const noFlag = (description, model, effort) => {
     const input = spawn(description, model, effort);
     delete input.tool_input.run_in_background;
@@ -252,7 +252,7 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: reviewers spawn in the foreground'
   });
 });
 
-maybeDescribe('_claude/hooks/spawn-check.ps1: the hard run marker', () => {
+maybeDescribe('.claude/hooks/spawn-check.ps1: the hard run marker', () => {
   beforeEach(() => fs.writeFileSync(marker(), ''));
 
   it('denies a tag without hard for a role the award covers', () => {
@@ -286,7 +286,7 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: the hard run marker', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/spawn-check.ps1: project root and failure modes', () => {
+maybeDescribe('.claude/hooks/spawn-check.ps1: project root and failure modes', () => {
   it('falls back to the input cwd when CLAUDE_PROJECT_DIR is unset', () => {
     expect(run(spawn('[implementer] build', 'sonnet', 'medium'), { env: false })).toBeNull();
     expect(
@@ -328,7 +328,7 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: project root and failure modes', (
       fs.copyFileSync(path.join(HOOKS, 'hook-core.ps1'), path.join(dir, 'hook-core.ps1'));
       const res = run(spawn('[implementer] build', 'opus', 'medium'), { script: lone });
       expect(res.permissionDecision).toBe('deny');
-      expect(res.permissionDecisionReason).toBe('spawn-check: denied; see _claude/hooks/notes.md.');
+      expect(res.permissionDecisionReason).toBe('spawn-check: denied; see .claude/hooks/notes.md.');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -341,7 +341,7 @@ maybeDescribe('_claude/hooks/spawn-check.ps1: project root and failure modes', (
       fs.copyFileSync(SCRIPT, lone);
       const res = run(spawn('[implementer] build', 'sonnet', 'medium'), { script: lone });
       expect(res.permissionDecision).toBe('deny');
-      expect(res.permissionDecisionReason).toBe('spawn-check: denied; see _claude/hooks/notes.md.');
+      expect(res.permissionDecisionReason).toBe('spawn-check: denied; see .claude/hooks/notes.md.');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

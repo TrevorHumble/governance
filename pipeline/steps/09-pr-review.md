@@ -4,7 +4,7 @@ Review, fix, re-review until it passes. That loop is normal and fair; most chang
 
 ## Who looks
 
-Seat every reviewer as `_claude/agents/orchestrator.md` says. Run each specialist once, on the working-tree diff (no PR exists until step 11):
+Seat every reviewer as `.claude/agents/orchestrator.md` says. Run each specialist once, on the working-tree diff (no PR exists until step 11):
 
 - `reviewing-design`: every diff.
 - `reviewing-security`: when the diff touches anything its description names, or any path in `criticalPaths` or any entry in `criticalDependencies` (`repo-profile.json`).

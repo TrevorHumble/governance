@@ -1,5 +1,5 @@
 // tests/goal-check.test.js
-// Tests for _claude/hooks/goal-check.ps1: allow the question, add the note from notes.md.
+// Tests for .claude/hooks/goal-check.ps1: allow the question, add the note from notes.md.
 'use strict';
 
 const { spawnSync } = require('child_process');
@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const HOOKS = path.join(__dirname, '..', '_claude', 'hooks');
+const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'goal-check.ps1');
 
 // The text under "## <hook>" in notes.md, on one line, the way the hook prints it.
@@ -39,7 +39,7 @@ const maybeDescribe = launcherMissing
   ? describe.skip.bind(describe, skipTitle('goal-check'))
   : describe;
 
-maybeDescribe('_claude/hooks/goal-check.ps1', () => {
+maybeDescribe('.claude/hooks/goal-check.ps1', () => {
   it('puts the notes.md text in additionalContext and nothing else, so the normal permission flow runs', () => {
     expect(JSON.parse(run(ask))).toEqual({
       hookSpecificOutput: {

@@ -33,8 +33,8 @@ const read = (f) => fs.readFileSync(path.join(dir, f), 'utf8');
 const text = (r) => r.lines.join('\n');
 
 // One light reviewer folder so a list that is not about reviewers still passes that check.
-const writePrsReviewer = () => writeFileOfWords('_claude/skills/reviewing-prs/SKILL.md', 10);
-const writeDocsReviewer = () => writeFileOfWords('_claude/skills/reviewing-docs/SKILL.md', 10);
+const writePrsReviewer = () => writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 10);
+const writeDocsReviewer = () => writeFileOfWords('.claude/skills/reviewing-docs/SKILL.md', 10);
 
 describe('total budget', () => {
   it('passes under budget and prints the total, rounded up once', () => {
@@ -111,9 +111,9 @@ describe('total budget', () => {
 describe('reviewer budget', () => {
   it('fails a heavy reviewer and names it, and passes the light one', () => {
     const files = [
-      writeFileOfWords('_claude/skills/reviewing-design/SKILL.md', 5000),
-      writeFileOfWords('_claude/skills/reviewing-design/reference/examples.md', 2000),
-      writeFileOfWords('_claude/skills/reviewing-prs/SKILL.md', 100),
+      writeFileOfWords('.claude/skills/reviewing-design/SKILL.md', 5000),
+      writeFileOfWords('.claude/skills/reviewing-design/reference/examples.md', 2000),
+      writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 100),
       writeFileOfWords('standards/reviewing.md', 1000),
     ];
     // design: 8000 words * 1.35 = 10,800 > 10,000; prs: 1,100 words = 1,485
@@ -126,8 +126,8 @@ describe('reviewer budget', () => {
 
   it('counts the reviewer agent file, and refereeing is a reviewer', () => {
     const files = [
-      writeFileOfWords('_claude/skills/refereeing/SKILL.md', 100),
-      writeFileOfWords('_claude/agents/reviewer.md', 100),
+      writeFileOfWords('.claude/skills/refereeing/SKILL.md', 100),
+      writeFileOfWords('.claude/agents/reviewer.md', 100),
     ];
     const r = run(files, read);
     expect(text(r)).toContain('reviewer refereeing: 270 tokens');
@@ -135,7 +135,7 @@ describe('reviewer budget', () => {
 
   it('does not treat other skills as reviewers', () => {
     const r = run(
-      [writePrsReviewer(), writeFileOfWords('_claude/skills/build/SKILL.md', 9000)],
+      [writePrsReviewer(), writeFileOfWords('.claude/skills/build/SKILL.md', 9000)],
       read
     );
     expect(r.exitCode).toBe(0);
@@ -148,11 +148,11 @@ describe('reviewer budget', () => {
     expect(text(r)).toContain('no reviewing-* or refereeing skill folder');
   });
 
-  it('reads both the _claude/ and .claude/ layouts', () => {
-    const a = run([writeFileOfWords('_claude/skills/reviewing-prs/SKILL.md', 100)], read);
-    const b = run([writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 100)], read);
+  it('reads reviewers under .claude/ and not under a folder of another name', () => {
+    const a = run([writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 100)], read);
+    const b = run([writeFileOfWords('staged/skills/reviewing-prs/SKILL.md', 100)], read);
     expect(text(a)).toContain('reviewer reviewing-prs: 135 tokens');
-    expect(text(b)).toContain('reviewer reviewing-prs: 135 tokens');
+    expect(text(b)).toContain('no reviewing-* or refereeing skill folder');
   });
 
   it('adds a pending AGENTS.md budget to each reviewer and to the total', () => {
@@ -177,7 +177,7 @@ describe('reviewer budget', () => {
   });
 
   it('fails when a pending budget pushes a reviewer over', () => {
-    const files = [writeFileOfWords('_claude/skills/reviewing-prs/SKILL.md', 6600)];
+    const files = [writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 6600)];
     // 6600 * 1.35 = 8910, + 1200 = 10,110
     const r = run(files, read, { pending: { 'AGENTS.md': 1200 } });
     expect(r.exitCode).toBe(1);
@@ -226,7 +226,7 @@ describe('failure messages', () => {
   });
 
   it('lists the ways to make room under a reviewer cap, and not the total ones', () => {
-    const r = run([writeFileOfWords('_claude/skills/reviewing-prs/SKILL.md', 8000)], read);
+    const r = run([writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 8000)], read);
     const out = text(r);
     expect(r.exitCode).toBe(1);
     expect(out).toContain(
@@ -248,7 +248,7 @@ describe('failure messages', () => {
   });
 
   it('says it per reviewer too', () => {
-    const files = [writeFileOfWords('_claude/skills/reviewing-prs/SKILL.md', 8000)];
+    const files = [writeFileOfWords('.claude/skills/reviewing-prs/SKILL.md', 8000)];
     const r = run(files, read, {
       base: { ref: 'origin/v2', total: 1, reviewers: { 'reviewing-prs': 10500 } },
     });
@@ -258,7 +258,7 @@ describe('failure messages', () => {
 
 describe('reading lists and the reviewer library', () => {
   const V = 'vendor/skills/acme/design/';
-  const SKILL = '_claude/skills/reviewing-prs/SKILL.md';
+  const SKILL = '.claude/skills/reviewing-prs/SKILL.md';
   const skillText = (reads, body = 'body') =>
     `---\nname: reviewing-prs\ndescription: d\nmetadata:\n  reads: "${reads.join(' ')}"\n---\n${body}`;
   const writeText = (rel, body) => {
@@ -688,7 +688,7 @@ describe('the wrapper, on temp git repos', () => {
     budget: { total: 25000, reviewer: 10000, notCounted: ['buildlog/'] },
   };
   const TREE = {
-    files: [{ path: 'a.md' }, { path: '_claude/skills/reviewing-prs/SKILL.md' }],
+    files: [{ path: 'a.md' }, { path: '.claude/skills/reviewing-prs/SKILL.md' }],
     pending: [],
   };
 
@@ -700,7 +700,7 @@ describe('the wrapper, on temp git repos', () => {
     put(root, 'repo-profile.json', over.profile ?? PROFILE);
     if (over.tree !== null) put(root, 'new-tree.json', over.tree ?? TREE);
     put(root, 'a.md', words(over.words ?? 100));
-    put(root, '_claude/skills/reviewing-prs/SKILL.md', words(10));
+    put(root, '.claude/skills/reviewing-prs/SKILL.md', words(10));
     for (const [rel, body] of Object.entries(over.files ?? {})) put(root, rel, body);
     git(root, 'add', '-A');
     git(root, 'commit', '-q', '-m', 'base');
@@ -1016,7 +1016,7 @@ describe('new-tree.json', () => {
       const body = fs.readFileSync(path.join(root, file), 'utf8');
       // The gate's own count: a lone listed file plus one empty reviewer skill, which adds nothing.
       const r = core.run(
-        [file, '_claude/skills/reviewing-x/SKILL.md'],
+        [file, '.claude/skills/reviewing-x/SKILL.md'],
         (f) => (f === file ? body : ''),
         CAPS
       );

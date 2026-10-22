@@ -1,6 +1,6 @@
 # 08-implement
 
-Start the `implementer` on its seat (`_claude/agents/orchestrator.md` says how) with the passing issue and the paths of any prior art step 03 found. You do not build, however small it looks.
+Start the `implementer` on its seat (`.claude/agents/orchestrator.md` says how) with the passing issue and the paths of any prior art step 03 found. You do not build, however small it looks.
 
 Its handoff has decision lines under the first line. Keep them: step 11 copies them into the PR body and step 12 into the report.
 

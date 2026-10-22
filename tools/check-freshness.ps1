@@ -1,6 +1,6 @@
 # check-freshness: read-only staleness + overlap check, shared by the owner-review
 # path (README.md) and the build-session path (standards/pipeline/PIPELINE.md step 01,
-# .claude/commands/realign.md). Rationale: DESIGN.md at the governance-v1 tag
+# .claude/skills/realign/SKILL.md). Rationale: DESIGN.md at the governance-v1 tag
 # (items 10-11); the incident history behind this failure mode
 # lives in the wedding-scavenger-hunt repo's own DESIGN.md, not duplicated here.
 #
@@ -9,7 +9,7 @@
 # merge, checkout, or reset.
 #
 # Single-homed constants and helpers: the carve-out list and MAX_DRIFT_COMMITS
-# threshold are defined ONCE, in this file, and .claude/commands/realign.md consumes them
+# threshold are defined ONCE, in this file, and .claude/skills/realign/SKILL.md consumes them
 # from here (the realign command invokes this file's own CLI rather than reimplementing
 # the list), so nothing else can quietly disagree about what counts as a hard collision.
 # Do not copy $CARVE_OUT_PATHS, $MAX_DRIFT_COMMITS, Test-CarvedOut, or

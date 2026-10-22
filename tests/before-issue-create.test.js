@@ -1,5 +1,5 @@
 // tests/before-issue-create.test.js
-// Tests for _claude/hooks/before-issue-create.ps1.
+// Tests for .claude/hooks/before-issue-create.ps1.
 'use strict';
 
 const { spawnSync } = require('child_process');
@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
-const HOOKS = path.join(__dirname, '..', '_claude', 'hooks');
+const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'before-issue-create.ps1');
 const LABEL = 'needs-issue-review';
 const LINE = 'Owner-approved: yes';
@@ -53,7 +53,7 @@ const maybeDescribe = launcherMissing
   ? describe.skip.bind(describe, skipTitle('before-issue-create'))
   : describe;
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: the one accepted form', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: the one accepted form', () => {
   it('allows the label plus a body file holding the line, with no output', () => {
     const res = run(create(`--label ${LABEL} --body-file ok.md`));
     expect(res).toEqual({ decision: 'allow' });
@@ -118,10 +118,10 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the one accepted form', ()
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: the reason text', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: the reason text', () => {
   const noteText = () => {
     const text = fs.readFileSync(
-      path.join(__dirname, '..', '_claude', 'hooks', 'notes.md'),
+      path.join(__dirname, '..', '.claude', 'hooks', 'notes.md'),
       'utf8'
     );
     const m = /^## before-issue-create[ \t]*\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(text);
@@ -157,7 +157,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the reason text', () => {
         expect(out.permissionDecision).toBe('deny');
         return out.permissionDecisionReason;
       };
-      const generic = 'before-issue-create: denied; see _claude/hooks/notes.md.';
+      const generic = 'before-issue-create: denied; see .claude/hooks/notes.md.';
       expect(reasonOf()).toBe(generic);
       fs.copyFileSync(path.join(HOOKS, 'hook-core.ps1'), path.join(lone, 'hook-core.ps1'));
       expect(reasonOf()).toBe(generic);
@@ -175,7 +175,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the reason text', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: creates that hide in the text', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: creates that hide in the text', () => {
   it('denies a create inside a quoted $( ), backticks, a chain, or a wrapper', () => {
     const bare = 'gh issue create --title T --body "x"';
     expect(
@@ -199,7 +199,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: creates that hide in the t
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: gh api', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: gh api', () => {
   const fields = `-f title=T -f labels[]=${LABEL} -f "body=${LINE}"`;
 
   it('denies a POST to the issues endpoint, by method or by fields', () => {
@@ -234,7 +234,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: gh api', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: everything else passes', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: everything else passes', () => {
   it('passes gh issue list, edit, comment, and an unrelated Bash call', () => {
     expect(
       decisions([
@@ -255,7 +255,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: everything else passes', (
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: where gh can appear', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: where gh can appear', () => {
   const exe = '"C:\\Program Files\\GitHub CLI\\gh.exe"';
 
   it('sees a create behind a path, .exe, quotes, the call operator, a prefix, or a line break', () => {
@@ -290,7 +290,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: where gh can appear', () =
 });
 
 maybeDescribe(
-  '_claude/hooks/before-issue-create.ps1: one issue per call, one call per segment',
+  '.claude/hooks/before-issue-create.ps1: one issue per call, one call per segment',
   () => {
     const good = `gh issue create --label ${LABEL} --body-file ok.md`;
 
@@ -357,7 +357,7 @@ maybeDescribe(
   }
 );
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: gh api reads its own call', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: gh api reads its own call', () => {
   it('takes the method from that call, not from a later command', () => {
     expect(
       decisions([
@@ -383,7 +383,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: gh api reads its own call'
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: the body file', () => {
   const withFile = (f) => create(`--label ${LABEL} --body-file ${f}`);
 
   it('requires the line to be the first line, with CRLF and a BOM allowed', () => {
@@ -401,7 +401,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: a call with one word after the verb', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: a call with one word after the verb', () => {
   it('still judges it: =-joined and attached flags, and a lone flag', () => {
     expect(
       decisions([
@@ -433,7 +433,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: a call with one word after
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: it fails closed on mentions', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: it fails closed on mentions', () => {
   const heredoc = (q) => `git commit -m "$(cat <<${q}\nblocks gh issue create calls\nEOF\n)"`;
 
   it('denies text that only mentions creating an issue, and points to a file or Grep', () => {
@@ -484,7 +484,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: it fails closed on mention
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: program name', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: program name', () => {
   it('matches the program name in any case, but not the verb', () => {
     expect(
       decisions([
@@ -496,7 +496,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: program name', () => {
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: caps on the work it does', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: caps on the work it does', () => {
   it('denies a command longer than the text cap, unread', () => {
     const res = run(`echo ${'a'.repeat(10001)}`);
     expect(res.decision).toBe('deny');
@@ -528,7 +528,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: caps on the work it does',
   });
 });
 
-maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file must be a regular file', () => {
+maybeDescribe('.claude/hooks/before-issue-create.ps1: the body file must be a regular file', () => {
   const withFile = (f) => create(`--label ${LABEL} --body-file ${f}`);
 
   it('allows a regular file and a link to one', () => {
@@ -576,7 +576,7 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the body file must be a re
 });
 
 maybeDescribe(
-  '_claude/hooks/before-issue-create.ps1: gh api filing (the cloud session way)',
+  '.claude/hooks/before-issue-create.ps1: gh api filing (the cloud session way)',
   () => {
     const api = (fields, head = 'gh api repos/{owner}/{repo}/issues') => `${head} ${fields}`;
     const ok = `-f title=T -F body=@ok.md -f 'labels[]=${LABEL}'`;
@@ -680,7 +680,7 @@ maybeDescribe(
 );
 
 maybeDescribe(
-  '_claude/hooks/before-issue-create.ps1: gh api endpoints and unreadable words',
+  '.claude/hooks/before-issue-create.ps1: gh api endpoints and unreadable words',
   () => {
     const good = `-f title=T -F body=@ok.md -f 'labels[]=${LABEL}'`;
 

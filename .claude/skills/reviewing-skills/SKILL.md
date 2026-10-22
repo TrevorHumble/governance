@@ -7,7 +7,7 @@ metadata:
 
 # Reviewing skills and agents
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. Then read `standards/skills.md`, which owns the size ceiling and the eval-first rule; point to it, do not restate it. New files are staged under a `_claude/` folder until cutover. That is on purpose, not a finding.
+Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. Then read `standards/skills.md`, which owns the size ceiling and the eval-first rule; point to it, do not restate it.
 
 ## What to check
 

@@ -10,14 +10,8 @@ const LARGEST_FILES_SHOWN = 5;
 const TOKENS_PER_100_WORDS = 135;
 const VENDOR_ROOT = 'vendor/skills/';
 
-const REVIEWER_FOLDER =
-  /(?:^|\/)(?:_claude|\.claude)\/skills\/((?:reviewing-[^/]+)|refereeing)\/.+/;
-const REVIEWER_SHARED_PATHS = [
-  'standards/reviewing.md',
-  '_claude/agents/reviewer.md',
-  '.claude/agents/reviewer.md',
-  'AGENTS.md',
-];
+const REVIEWER_FOLDER = /(?:^|\/)\.claude\/skills\/((?:reviewing-[^/]+)|refereeing)\/.+/;
+const REVIEWER_SHARED_PATHS = ['standards/reviewing.md', '.claude/agents/reviewer.md', 'AGENTS.md'];
 
 const TOTAL_WAYS = [
   "Ways to make room (cutting, moving, or removing a rule, touching other files, or raising a cap needs the owner's yes first):",
