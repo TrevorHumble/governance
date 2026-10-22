@@ -32,7 +32,8 @@ try { . (Join-Path $PSScriptRoot 'hook-core.ps1'); $coreLoaded = $true } catch {
 $GH = '(?<![\w.-])(?i:gh(?:\.exe)?)["'']?(?:\s|\\\r?\n)+'
 $CREATE = $GH + 'issue(?:\s|\\\r?\n)+(?:(?:-R|--repo)(?:=|\s+)(?:"[^"]*"|''[^'']*''|\S+)\s+)?(?:create|new)(?![\w-])'
 $API = $GH + 'api(?=\s)'
-$ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?(?:\?.*)?$'
+# Matched after any ?query or #fragment is cut off the word.
+$ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?$'
 
 # Flags that take a value. Reading them by name keeps a title like "drop the -b flag" from counting.
 $VALUE_FLAGS = @('--body', '-b', '--body-file', '-F', '--label', '-l', '--title', '-t', '--assignee', '-a',
@@ -81,39 +82,56 @@ function Get-CreateFacts([string[]]$words) {
 $API_VALUE_FLAGS = @('-H', '--header', '-q', '--jq', '-t', '--template', '--hostname', '--cache',
   '-p', '--preview', '-X', '--method')
 
-# The label, body and --input of one gh api call. -f and --raw-field send text; -F and --field send
-# a typed value, where body=@<file> reads the file. A field the hook reads is only one of those four.
-function Get-ApiFacts([string[]]$words) {
-  $facts = @{ Inline = $false; Labels = @(); File = $null; Input = $false; Bodies = 0 }
+# Splits the words of one gh api call into its positional words (the endpoint), its field words
+# (-f, -F, --field, --raw-field, each with the raw text after the flag), and whether it has --input.
+function Read-ApiCall([string[]]$words) {
+  $call = @{ Positionals = @(); Fields = @(); Input = $false }
   for ($i = 0; $i -lt $words.Count; $i++) {
     $w = $words[$i]
-    if ($w -ceq '--') { break }
+    if ($w -ceq '--') { if ($i + 1 -lt $words.Count) { $call.Positionals += $words[($i + 1)..($words.Count - 1)] }; break }
     $name = $null; $val = $null
     if ($w.StartsWith('--')) { $name, $val = $w -split '=', 2 }
     elseif ($w -cmatch '^-[A-Za-z]') {
       $name = $w.Substring(0, 2)
       if ($w.Length -gt 2) { $val = $w.Substring(2); if ($val.StartsWith('=')) { $val = $val.Substring(1) } }
-    } else { continue }
-    if ($name -ceq '--input') { $facts.Input = $true; continue }
+    } else { $call.Positionals += $w; continue }
+    if ($name -ceq '--input') { $call.Input = $true; if ($null -eq $val) { $i++ }; continue }
     if ($API_VALUE_FLAGS -ccontains $name) { if ($null -eq $val) { $i++ }; continue }
     if ($name -cnotin '-f', '-F', '--field', '--raw-field') { continue }
     if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
-    $typed = $name -ceq '-F' -or $name -ceq '--field'
-    $eq = $val.IndexOf('=')
-    if ($eq -lt 0) { continue }
-    $key = $val.Substring(0, $eq); $value = $val.Substring($eq + 1)
+    $call.Fields += , @{ Typed = ($name -ceq '-F' -or $name -ceq '--field'); Text = $val }
+  }
+  return $call
+}
+
+# A word the hook cannot read as written: it holds a variable, a command substitution or backticks,
+# or starts a $'...' string (the quotes are already stripped, so it shows as a leading $).
+function Test-Unreadable([string]$word) { return $word -match '[$`]' }
+
+# The label, body and --input of one gh api call to the issues endpoint. -f and --raw-field send
+# text; -F and --field send a typed value, where body=@<file> reads the file. Anything it cannot
+# read (a field with no =, a variable, a second body of any spelling) is flagged, never guessed.
+function Get-ApiFacts([string[]]$words) {
+  $call = Read-ApiCall $words
+  $facts = @{ Inline = $false; Labels = @(); File = $null; Input = $call.Input; Bodies = 0; Unreadable = $false }
+  foreach ($p in $call.Positionals) { if (Test-Unreadable $p) { $facts.Unreadable = $true } }
+  foreach ($f in $call.Fields) {
+    $eq = $f.Text.IndexOf('=')
+    if ($eq -lt 0 -or (Test-Unreadable $f.Text)) { $facts.Unreadable = $true; continue }
+    $key = $f.Text.Substring(0, $eq); $value = $f.Text.Substring($eq + 1)
     if ($key -ceq 'labels[]') { $facts.Labels += $value }
     elseif ($key -ceq 'body') {
       $facts.Bodies++
-      if ($typed -and $value.StartsWith('@')) { $facts.File = $value.Substring(1) } else { $facts.Inline = $true }
+      if ($f.Typed -and $value.StartsWith('@')) { $facts.File = $value.Substring(1) } else { $facts.Inline = $true }
     }
+    elseif ($key -match '^(?i:body)(?:\[.*\])?$') { $facts.Bodies++; $facts.Inline = $true }
   }
   return $facts
 }
 
 function Test-IssuesApiPost([string[]]$words) {
   # Fields with no explicit method also POST.
-  if (-not ($words | Where-Object { $_ -match $ISSUES_ENDPOINT })) { return $false }
+  if (-not ($words | Where-Object { ($_ -replace '[?#].*$', '') -match $ISSUES_ENDPOINT })) { return $false }
   $method = $null
   $hasFields = $false
   for ($i = 0; $i -lt $words.Count; $i++) {
@@ -163,12 +181,27 @@ try {
   $creates = @([regex]::Matches($text, $CREATE))
   $apiMatches = @([regex]::Matches($text, $API))
   if ($creates.Count + $apiMatches.Count -gt $MAX_GH) { Write-Deny "its text names gh more than $MAX_GH times, too many to check"; exit 0 }
-  $apiPosts = @($apiMatches | Where-Object { Test-IssuesApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
+  # The words of each gh api call, read once.
+  $apiCalls = @($apiMatches | ForEach-Object { , (Get-SegmentWords $text ($_.Index + $_.Length)) })
+  # An endpoint built from a variable cannot be told from the issues endpoint, so a call that has one
+  # and also sends fields is denied.
+  foreach ($words in $apiCalls) {
+    $call = Read-ApiCall $words
+    if ($call.Fields.Count -gt 0 -or $call.Input) {
+      if (@($call.Positionals | Where-Object { Test-Unreadable $_ }).Count -gt 0) {
+        Write-Deny 'its gh api endpoint is built from a variable or command substitution and it sends fields, so it cannot be told from the issues endpoint'
+        exit 0
+      }
+    }
+  }
+  $apiPosts = @(); $apiPostWords = $null
+  foreach ($words in $apiCalls) { if (Test-IssuesApiPost $words) { $apiPosts += 1; $apiPostWords = $words } }
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
   if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'its text names issue creation more than once (one create per call; a title or other text that names the command counts too; file with a neutral title, then write the real title to a file with the Write tool and run gh issue edit <N> --title "$(cat <file>)")'; exit 0 }
 
   if ($apiPosts.Count -eq 1) {
-    $facts = Get-ApiFacts (Get-SegmentWords $text ($apiPosts[0].Index + $apiPosts[0].Length))
+    $facts = Get-ApiFacts $apiPostWords
+    if ($facts.Unreadable) { Write-Deny 'a gh api field or word cannot be read as written (a field with no =, a variable, a command substitution, or $-quoting)'; exit 0 }
     if ($facts.Input) { Write-Deny 'its body comes from --input, which cannot be read here'; exit 0 }
     if ($facts.Bodies -gt 1) { Write-Deny 'it gives more than one body field'; exit 0 }
   } else {
