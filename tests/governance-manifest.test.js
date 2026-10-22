@@ -94,26 +94,6 @@ function isExcluded(file, excludedPaths) {
   return excluded;
 }
 
-/**
- * Returns the lines of the named level-2 (`## `) section in `text`. Throws,
- * naming the heading, rather than returning empty text.
- */
-function extractSection(text, heading) {
-  const lines = text.split('\n');
-  const start = lines.findIndex((l) => l.trim() === `## ${heading}`);
-  if (start === -1) {
-    throw new Error(`extractSection: no "## ${heading}" heading found`);
-  }
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i++) {
-    if (/^##\s/.test(lines[i])) {
-      end = i;
-      break;
-    }
-  }
-  return lines.slice(start + 1, end).join('\n');
-}
-
 describe('governance-manifest.json', () => {
   it('parses as JSON', () => {
     const raw = fs.readFileSync(MANIFEST_PATH, 'utf8');
@@ -259,19 +239,6 @@ describe('retired / sharedPaths disjointness (AC 3)', () => {
     const fixtureRetired = [{ path: 'tools/old-script.ps1', sha256: 'a'.repeat(64) }];
     const overlapping = fixtureRetired.filter((e) => isShared(e.path, fixtureShared));
     expect(overlapping).toEqual(fixtureRetired);
-  });
-});
-
-// extractSection throws on a missing heading rather than returning empty text.
-describe('extractSection throws when a heading is missing', () => {
-  it('throws, naming the heading, when the section is absent', () => {
-    const fixture = ['## Some Other Heading', '', 'body text', ''].join('\n');
-    expect(() => extractSection(fixture, 'Missing Heading')).toThrow(/Missing Heading/);
-  });
-
-  it('returns the section body when the heading is present', () => {
-    const fixture = ['## Present Heading', '', 'body text', '', '## Next', ''].join('\n');
-    expect(extractSection(fixture, 'Present Heading')).toContain('body text');
   });
 });
 
@@ -446,5 +413,14 @@ describe(".githooks/ files are all mode 100755 in this repo's index (AC8)", () =
     const entries = parseLsFilesStage(raw);
     expect(entries).toEqual([{ mode: '100755', path: '.githooks/pre-commit' }]);
     expect(nonExecutableEntries(entries)).toEqual([]);
+  });
+});
+
+describe('repoProfileFields names every repo-profile.json key', () => {
+  it('lists each top-level key of repo-profile.json', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const profile = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'repo-profile.json'), 'utf8'));
+    const named = manifest.repoProfileFields.map((f) => f.name);
+    for (const key of Object.keys(profile)) expect(named, key).toContain(key);
   });
 });

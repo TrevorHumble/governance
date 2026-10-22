@@ -515,7 +515,6 @@ try {
     # computed against the branch being synced instead, per the same-tree
     # invariant, so this preview and a real run can legitimately disagree.
     $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $ChildRoot -Manifest $parentManifest
-    foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
     foreach ($p in $plan.Adds) { Write-Output "add: $p" }
     foreach ($p in $plan.Updates) { Write-Output "update: $p" }
     foreach ($p in $plan.Prunes) { Write-Output "prune: $p" }
@@ -555,7 +554,6 @@ try {
   # clean while the branch being synced holds diverged content, and a plan
   # computed against the wrong tree would silently revert that divergence.
   $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $syncWorktreeDir -Manifest $parentManifest
-  foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
   $unacknowledgedDivergent = Get-UnacknowledgedDivergent -Plan $plan -Acknowledged $acknowledgedDivergentPaths
   foreach ($p in $unacknowledgedDivergent) { Write-Output "WARNING retained divergent: $p" }
 
@@ -773,11 +771,6 @@ try {
   # stop opening the issue.
   $bodyLines.Add("Retained divergent, unacknowledged ($DivergentDisposalInstruction):")
   foreach ($p in $unacknowledgedDivergent) { $bodyLines.Add("- $p") }
-  if ($plan.Warnings.Count -gt 0) {
-    $bodyLines.Add('')
-    $bodyLines.Add('Warnings:')
-    foreach ($w in $plan.Warnings) { $bodyLines.Add("- $w") }
-  }
   $prBodyPath = Join-Path $tempRoot ('governance-sync-prbody-' + [guid]::NewGuid().ToString('N') + '.md')
   Set-Content -LiteralPath $prBodyPath -Value ($bodyLines -join "`n") -NoNewline
 

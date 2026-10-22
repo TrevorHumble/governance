@@ -280,15 +280,12 @@ function Get-SyncPlan {
     # Absent in the child: appears in neither Prunes nor RetainedDivergent.
   }
 
-  $warnings = New-Object System.Collections.Generic.List[string]
-
   return [PSCustomObject]@{
     Adds              = @($adds)
     Updates           = @($updates)
     IdenticalCount    = $identicalCount
     Prunes            = @($prunes)
     RetainedDivergent = @($retainedDivergent)
-    Warnings          = @($warnings)
   }
 }
 

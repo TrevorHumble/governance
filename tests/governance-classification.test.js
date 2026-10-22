@@ -34,7 +34,6 @@ function basePlan(overrides) {
       Updates: [],
       Prunes: [],
       RetainedDivergent: [],
-      Warnings: [],
       IdenticalCount: 0,
     },
     overrides || {}
