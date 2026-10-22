@@ -188,6 +188,30 @@
     {
       "path": "_claude/agents/researcher.md",
       "group": "issue-writer-researcher"
+    },
+    {
+      "path": "_shared/AGENTS.md",
+      "staging": "AGENTS.md"
+    },
+    {
+      "path": "_shared/CLAUDE.md",
+      "staging": "CLAUDE.md"
+    },
+    {
+      "path": "_shared/README.md",
+      "staging": "README.md"
+    },
+    {
+      "path": "_shared/definition-of-done.md",
+      "staging": "definition-of-done.md"
+    },
+    {
+      "path": "_shared/owner-declines.md",
+      "staging": "owner-declines.md"
+    },
+    {
+      "path": "_shared/WHAT-IT-CHECKS.md",
+      "staging": "WHAT-IT-CHECKS.md"
     }
   ],
   "pending": [
