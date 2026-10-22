@@ -3,7 +3,7 @@
 # directly (mirrors the -core.ps1 convention of tools/issue-core.ps1). Single
 # source of truth for the auto/review precedence rules, reused by
 # tools/classify-dep-pr.ps1. Policy: .claude/rules/dependencies.md and
-# the governance repo's DESIGN.md § "Hazards from the classification report: disposition" (hazard 3).
+# DESIGN.md at the governance-v1 tag (hazard 3).
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 

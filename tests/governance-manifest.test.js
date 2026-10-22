@@ -7,8 +7,7 @@
 //
 // The shared/excluded partition is single-homed in governance-manifest.json
 // itself (`sharedPaths` and `excludedPaths`), not restated here: this file
-// reads both arrays from the manifest rather than carrying its own copy
-// (see DESIGN.md's governance-manifest semantics section).
+// reads both arrays from the manifest rather than carrying its own copy.
 'use strict';
 
 const fs = require('fs');
@@ -81,8 +80,7 @@ function isShared(file, sharedPaths) {
  * `!`-prefixed entry removes it. This lets a broad entry (e.g. "buildlog/**")
  * exclude a whole directory while a later negation (e.g. "!buildlog/README.md")
  * carves out the one file that is separately a sharedPaths entry, without the
- * two arrays ever both claiming the same file (see DESIGN.md's governance-
- * manifest semantics section).
+ * two arrays ever both claiming the same file.
  */
 function isExcluded(file, excludedPaths) {
   let excluded = false;
@@ -94,231 +92,6 @@ function isExcluded(file, excludedPaths) {
     }
   }
   return excluded;
-}
-
-const DESIGN_PATH = path.join(REPO_ROOT, 'DESIGN.md');
-const OWNERSHIP_MAP_PATH = path.join(REPO_ROOT, 'standards', 'ownership-map.md');
-
-/**
- * Joins a file's lines into one blob for citation scanning, stripping a
- * leading comment marker (#, //, *) from each line so a citation wrapped
- * across a comment continuation reassembles as one title, then collapses
- * whitespace runs to one space.
- */
-function dewrapText(fileText) {
-  const stripped = fileText
-    .split('\n')
-    .map((line) => line.replace(/^\s*(#|\/\/|\*)+\s?/, ''))
-    .join(' ');
-  return stripped.replace(/\s+/g, ' ');
-}
-
-/** Escapes regex metacharacters in `s` so it can be embedded in a `new RegExp`. */
-function escapeRegExp(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Builds the three citation-pattern regexes (double-quote, single-quote,
- * §-omitted) for one doc filename. Single owner of that shape; see
- * DESIGN.md's governance-manifest semantics section.
- */
-function docSectionCitationPatterns(fileName) {
-  const esc = escapeRegExp(fileName);
-  return [
-    new RegExp('`?' + esc + '`?\\s*§\\s*"([^"]+)"', 'g'),
-    new RegExp('`?' + esc + "`?\\s*§\\s*'([^']+)'", 'g'),
-    new RegExp('`?' + esc + '`?\\s+"([^"]+)"', 'g'),
-  ];
-}
-
-/**
- * Extracts every DESIGN.md section citation from a file's dewrapped text, as
- * `{ title, index }` pairs: `index` is the match's start offset in the
- * dewrapped text, which the citation-prefix guard (below) needs to look at
- * what immediately precedes the citation. "DESIGN.md" must be immediately
- * adjacent to the § or opening quote -- mere co-occurrence with a quoted
- * title later in the same sentence is not a citation. See DESIGN.md's
- * governance-manifest semantics section for the worked example this
- * adjacency rule exists to handle.
- */
-function extractDesignCitations(text) {
-  const citations = [];
-  for (const re of docSectionCitationPatterns('DESIGN.md')) {
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      citations.push({ title: m[1].trim(), index: m.index });
-    }
-  }
-  return citations;
-}
-
-/**
- * True when `text` immediately before a citation match at `index` ends with
- * "governance repo's " (the prefix every sharedPaths-file citation must
- * carry, per AC 3, so the pointer stays true wherever the file lands: a
- * child reader is told explicitly that the cited section lives in the
- * governance repo's own DESIGN.md, not implicitly whatever DESIGN.md the
- * child itself happens to carry).
- */
-function hasGovernanceRepoPrefix(text, index) {
-  return text.slice(0, index).endsWith("governance repo's ");
-}
-
-/** True when `headings` contains a heading exactly matching `title`. */
-function headingExists(headings, title) {
-  return headings.includes(title);
-}
-
-/**
- * Returns the lines of the named level-2 (`## `) section in `text`. Throws,
- * naming the heading, rather than returning empty text; see DESIGN.md's
- * governance-manifest semantics section.
- */
-function extractSection(text, heading) {
-  const lines = text.split('\n');
-  const start = lines.findIndex((l) => l.trim() === `## ${heading}`);
-  if (start === -1) {
-    throw new Error(`extractSection: no "## ${heading}" heading found`);
-  }
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i++) {
-    if (/^##\s/.test(lines[i])) {
-      end = i;
-      break;
-    }
-  }
-  return lines.slice(start + 1, end).join('\n');
-}
-
-/** Strips an optional leading "- " list marker from a line, trimming the result: single owner for the four parsers below. */
-function stripListMarker(line) {
-  return line.replace(/^\s*-\s+/, '').trim();
-}
-
-/**
- * Parses the ownership map's "Split-ownership directories" section for its
- * four directory bullets. Single owner of that list; see DESIGN.md's
- * governance-manifest semantics section.
- */
-function extractSplitOwnershipDirs(mapText) {
-  const section = extractSection(mapText, 'Split-ownership directories');
-  const dirs = [];
-  for (const rawLine of section.split('\n')) {
-    if (!/^\s*-\s+`/.test(rawLine)) continue; // skip prose paragraphs, e.g. the .githooks/ aside
-    const line = stripListMarker(rawLine);
-    const m = line.match(/^`([^`]+\/)`/);
-    if (m) dirs.push(m[1]);
-  }
-  return dirs;
-}
-
-/**
- * Parses the ownership map's "Parent-owned paths inside split-ownership
- * directories" section: one backticked path per line, with an optional
- * leading "- " stripped first so the section can render as a real Markdown
- * list instead of one run-on paragraph.
- */
-function extractSplitOwnershipPaths(mapText) {
-  const section = extractSection(mapText, 'Parent-owned paths inside split-ownership directories');
-  const paths = [];
-  for (const rawLine of section.split('\n')) {
-    const line = stripListMarker(rawLine);
-    const m = line.match(/^`([^`]+)`$/);
-    if (m) paths.push(m[1]);
-  }
-  return paths;
-}
-
-/**
- * Parses the ownership map's "Standard shelves" section for the four shelf
- * roots: every backticked, "/"-suffixed token anywhere in the section,
- * de-duplicated. See DESIGN.md's governance-manifest semantics section.
- */
-function extractShelfRoots(mapText) {
-  const section = extractSection(mapText, 'Standard shelves');
-  const withoutListMarkers = section
-    .split('\n')
-    .map((l) => stripListMarker(l))
-    .join('\n');
-  const roots = [];
-  const re = /`([^`]+)`/g;
-  let m;
-  while ((m = re.exec(withoutListMarkers)) !== null) {
-    if (m[1].endsWith('/') && !roots.includes(m[1])) roots.push(m[1]);
-  }
-  return roots;
-}
-
-/**
- * Parses DESIGN.md's "repo-profile.json schema" section for one
- * `{name, type}` pair per bullet: the backticked field name at the start of
- * the bullet and the parenthetical type immediately following it, matching
- * `- \`fieldName\` (type). ...`. A parenthetical later in the same bullet's
- * prose is not captured -- only the one immediately after the field name.
- */
-function extractRepoProfileFields(designText) {
-  const section = extractSection(designText, 'repo-profile.json schema');
-  const fields = [];
-  for (const rawLine of section.split('\n')) {
-    const line = stripListMarker(rawLine);
-    const m = line.match(/^`([^`]+)`\s+\(([^)]+)\)/);
-    if (m) fields.push({ name: m[1], type: m[2] });
-  }
-  return fields;
-}
-
-/** Joins a `{name, type}` pair into one comparable key. */
-function fieldKey(field) {
-  return `${field.name}::${field.type}`;
-}
-
-/**
- * Extracts every `CLAUDE.md` section title cited by name in `text` (already
- * dewrapped), in either of the two shapes a sharedPaths file uses to name a
- * `CLAUDE.md` section (issue #11 AC5, the same derived-citation guard the
- * `DESIGN.md` scanner above already runs):
- *
- * 1. The adjacent form, `CLAUDE.md` immediately next to a quoted or
- *    §-marked title -- the same adjacency `extractDesignCitations` requires.
- * 2. A bare backticked `` `## Heading` `` naming a CLAUDE.md section within
- *    150 characters of a "CLAUDE.md" mention, in either order. See
- *    DESIGN.md's governance-manifest semantics section for why both orders
- *    must be caught.
- */
-function extractClaudeMdSectionCitations(text) {
-  const titles = [];
-  for (const re of docSectionCitationPatterns('CLAUDE.md')) {
-    let m;
-    while ((m = re.exec(text)) !== null) titles.push(m[1].trim());
-  }
-  const mentionRe = /CLAUDE\.md/g;
-  let mm;
-  while ((mm = mentionRe.exec(text)) !== null) {
-    const windowStart = Math.max(0, mm.index - 150);
-    const windowEnd = Math.min(text.length, mm.index + 150);
-    const window = text.slice(windowStart, windowEnd);
-    const headingRe = /`##\s+([^`]+)`/g;
-    let hm;
-    while ((hm = headingRe.exec(window)) !== null) titles.push(hm[1].trim());
-  }
-  return titles;
-}
-
-/**
- * Parses the ownership map's "The CLAUDE.md leash" section for the
- * carve-out list: one backticked `` `## Heading` `` per line, leading "- "
- * stripped first, matching the split-ownership parser's convention.
- */
-function extractClaudeMdCarveOutList(mapText) {
-  const section = extractSection(mapText, 'The CLAUDE.md leash');
-  const titles = [];
-  for (const rawLine of section.split('\n')) {
-    const line = stripListMarker(rawLine);
-    const m = line.match(/^`##\s+([^`]+)`$/);
-    if (m) titles.push(m[1].trim());
-  }
-  return titles;
 }
 
 describe('governance-manifest.json', () => {
@@ -370,7 +143,7 @@ describe('governance-manifest.json', () => {
   // neither (would silently drop the file from sync) and never both (would
   // hide a misclassification, as buildlog/README.md's overlap with the old
   // blanket "buildlog/**" exclusion did before this manifest gained
-  // excludedPaths -- see DESIGN.md's governance-manifest semantics section).
+  // excludedPaths).
   it('every tracked file matches exactly one of sharedPaths or excludedPaths', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     const tracked = listTrackedFiles();
@@ -412,67 +185,6 @@ describe('governance-manifest.json', () => {
   it('a hypothetical buildlog fragment other than README.md is excluded', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     expect(isExcluded('buildlog/99-phantom-fragment.md', manifest.excludedPaths)).toBe(true);
-  });
-});
-
-// Mechanizes the citation-coverage promise DESIGN.md § "governance-manifest.json
-// semantics" states.
-// Hand inventories of this set rot; this scan is the owner.
-describe('DESIGN.md section citations from sharedPaths files', () => {
-  it('every DESIGN.md section cited by a sharedPaths file matches a real DESIGN.md heading', () => {
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const designText = fs.readFileSync(DESIGN_PATH, 'utf8');
-    const headings = [...designText.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
-
-    const tracked = listTrackedFiles();
-    const citingFiles = tracked.filter((f) => isShared(f, manifest.sharedPaths));
-    expect(citingFiles.length).toBeGreaterThan(0);
-
-    const dangling = [];
-    let totalCitations = 0;
-    for (const file of citingFiles) {
-      const text = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-      const citations = extractDesignCitations(dewrapText(text));
-      totalCitations += citations.length;
-      for (const c of citations) {
-        const found = headingExists(headings, c.title);
-        if (!found) dangling.push(`${file}: "${c.title}"`);
-      }
-    }
-    expect(totalCitations).toBeGreaterThan(0);
-    expect(dangling).toEqual([]);
-  });
-
-  // Mutation-coverage: a citation naming a heading DESIGN.md does not have must be
-  // caught, proving the scan doesn't just vacuously pass. Exercises the extraction
-  // + lookup directly rather than mutating a real file on disk.
-  it('rejects a citation naming a DESIGN.md heading that does not exist', () => {
-    const designText = fs.readFileSync(DESIGN_PATH, 'utf8');
-    const headings = [...designText.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
-    const bogusLine = 'See `DESIGN.md` § "This Section Does Not Exist In DESIGN.md".';
-    const citations = extractDesignCitations(dewrapText(bogusLine));
-    expect(citations.map((c) => c.title)).toEqual(['This Section Does Not Exist In DESIGN.md']);
-    expect(headingExists(headings, citations[0].title)).toBe(false);
-  });
-
-  // Proves the adjacency requirement: a line that mentions DESIGN.md and, later
-  // in the same sentence, quotes a section title belonging to a DIFFERENT file
-  // (standards/adversarial-review-protocol.md's own "Advisory-lens lifecycle"
-  // heading) must not be extracted as a DESIGN.md citation.
-  it('does not extract a same-file cross-reference that merely co-occurs with the word DESIGN.md', () => {
-    const line =
-      'This promotion to gating is an owner decision, recorded in `DESIGN.md`, per § "Advisory-lens lifecycle" below: the owner approved it.';
-    expect(extractDesignCitations(dewrapText(line))).toEqual([]);
-  });
-
-  // Proves multi-line reassembly: a citation wrapped across a comment
-  // continuation line, the actual shape used throughout this repo's .ps1
-  // header comments, still extracts as one title.
-  it('reassembles a citation title wrapped across a comment continuation line', () => {
-    const wrapped = '# Rationale: DESIGN.md § "Lean review process\n# rationale".';
-    expect(extractDesignCitations(dewrapText(wrapped)).map((c) => c.title)).toEqual([
-      'Lean review process rationale',
-    ]);
   });
 });
 
@@ -530,69 +242,8 @@ describe('retired / sharedPaths disjointness (AC 3)', () => {
   });
 });
 
-// Mechanizes AC 3's citation-prefix guard: every DESIGN.md citation the
-// scanner matches inside a sharedPaths file must carry the "governance
-// repo's " prefix immediately before it, so the pointer stays true wherever
-// the file lands (see the citation rewrites this issue ships alongside this
-// guard). A future unprefixed citation fails this suite before it can reach
-// a child.
-describe('citation prefix guard (AC 3)', () => {
-  it("every DESIGN.md citation in a sharedPaths file carries the governance repo's prefix, in the live tree", () => {
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const tracked = listTrackedFiles();
-    const citingFiles = tracked.filter((f) => isShared(f, manifest.sharedPaths));
-    const unprefixed = [];
-    let total = 0;
-    for (const file of citingFiles) {
-      const text = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
-      const dewrapped = dewrapText(text);
-      const citations = extractDesignCitations(dewrapped);
-      total += citations.length;
-      for (const c of citations) {
-        if (!hasGovernanceRepoPrefix(dewrapped, c.index)) {
-          unprefixed.push(`${file}: "${c.title}"`);
-        }
-      }
-    }
-    expect(total).toBeGreaterThan(0);
-    expect(unprefixed).toEqual([]);
-  });
-
-  // The exercised failing case: an inline fixture line with no prefix.
-  it('rejects an unprefixed citation line', () => {
-    const line = 'See `DESIGN.md` § "Some Section" for more.';
-    const dewrapped = dewrapText(line);
-    const citations = extractDesignCitations(dewrapped);
-    expect(citations).toHaveLength(1);
-    expect(hasGovernanceRepoPrefix(dewrapped, citations[0].index)).toBe(false);
-  });
-
-  it('accepts a properly prefixed citation line', () => {
-    const line = 'See the governance repo\'s `DESIGN.md` § "Some Section" for more.';
-    const dewrapped = dewrapText(line);
-    const citations = extractDesignCitations(dewrapped);
-    expect(citations).toHaveLength(1);
-    expect(hasGovernanceRepoPrefix(dewrapped, citations[0].index)).toBe(true);
-  });
-});
-
-// extractSection throwing on a missing heading is what every AC5 parser
-// below relies on instead of hand-writing its own non-empty guard.
-describe('extractSection throws when a heading is missing', () => {
-  it('throws, naming the heading, when the section is absent', () => {
-    const fixture = ['## Some Other Heading', '', 'body text', ''].join('\n');
-    expect(() => extractSection(fixture, 'Missing Heading')).toThrow(/Missing Heading/);
-  });
-
-  it('returns the section body when the heading is present', () => {
-    const fixture = ['## Present Heading', '', 'body text', '', '## Next', ''].join('\n');
-    expect(extractSection(fixture, 'Present Heading')).toContain('body text');
-  });
-});
-
-// The seven derived checks issue #11's AC5 requires, each reading a source
-// of truth (the ownership map, DESIGN.md, or the manifest itself) rather
-// than carrying a second hand-written copy to compare against.
+// Derived checks that read the manifest itself rather than carrying a second
+// hand-written copy to compare against.
 
 // AC5 bullet 1.
 describe('shelf roots never a ** entry in sharedPaths (AC5)', () => {
@@ -614,89 +265,6 @@ describe('shelf roots never a ** entry in sharedPaths (AC5)', () => {
     const fixtureShared = ['standards/**', 'tools/**'];
     const fixtureShelfRoots = ['docs/', 'tools/', 'scripts/', 'skills/'];
     expect(starPrefixesNamingShelfRoots(fixtureShared, fixtureShelfRoots)).toEqual(['tools']);
-  });
-});
-
-// AC5 bullet 2.
-describe("ownership map's split-ownership section matches sharedPaths, both directions (AC5)", () => {
-  // Derived from the map itself, the same way the CLAUDE.md carve-out list
-  // is parsed rather than hand-copied below.
-  const SPLIT_OWNERSHIP_DIRS = extractSplitOwnershipDirs(
-    fs.readFileSync(OWNERSHIP_MAP_PATH, 'utf8')
-  );
-
-  /** Map-listed paths with no matching sharedPaths entry. */
-  function unresolvedMapPaths(mapPaths, sharedPaths) {
-    return mapPaths.filter((p) => !isShared(p, sharedPaths));
-  }
-
-  /** sharedPaths entries under a split-ownership directory the map does not list. */
-  function sharedEntriesMissingFromMap(sharedPaths, mapPaths) {
-    return sharedPaths.filter(
-      (e) => SPLIT_OWNERSHIP_DIRS.some((d) => e.startsWith(d)) && !mapPaths.includes(e)
-    );
-  }
-
-  it('every path the ownership map lists resolves under a sharedPaths entry, in the live tree', () => {
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const mapPaths = extractSplitOwnershipPaths(fs.readFileSync(OWNERSHIP_MAP_PATH, 'utf8'));
-    expect(unresolvedMapPaths(mapPaths, manifest.sharedPaths)).toEqual([]);
-  });
-
-  it('every sharedPaths entry under a split-ownership directory appears in the map, in the live tree', () => {
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const mapPaths = extractSplitOwnershipPaths(fs.readFileSync(OWNERSHIP_MAP_PATH, 'utf8'));
-    expect(sharedEntriesMissingFromMap(manifest.sharedPaths, mapPaths)).toEqual([]);
-  });
-
-  // Mutation-coverage: a map path absent from sharedPaths must be caught.
-  it('rejects a fixture map path absent from sharedPaths', () => {
-    expect(
-      unresolvedMapPaths(['.claude/commands/phantom.md'], ['.claude/commands/build.md'])
-    ).toEqual(['.claude/commands/phantom.md']);
-  });
-
-  // Mutation-coverage: a sharedPaths entry under a split-ownership
-  // directory missing from the map must be caught.
-  it('rejects a fixture sharedPaths entry under a split-ownership directory missing from the map', () => {
-    expect(
-      sharedEntriesMissingFromMap(['.claude/hooks/phantom.ps1'], ['.claude/hooks/goal-gate.ps1'])
-    ).toEqual(['.claude/hooks/phantom.ps1']);
-  });
-
-  // Mutation-coverage on the parser itself: stripping the optional leading
-  // "- " must actually happen, not just be documented.
-  it('extractSplitOwnershipPaths strips an optional leading "- "', () => {
-    const fixture = [
-      '## Parent-owned paths inside split-ownership directories',
-      '',
-      '- `.claude/commands/build.md`',
-      '`.claude/rules/dependencies.md`',
-      '',
-      '## Standard shelves',
-      '',
-    ].join('\n');
-    expect(extractSplitOwnershipPaths(fixture)).toEqual([
-      '.claude/commands/build.md',
-      '.claude/rules/dependencies.md',
-    ]);
-  });
-
-  // Mutation-coverage on the parser itself: only the first backticked token
-  // on a bullet line is a directory, not a path named later in that same
-  // bullet's prose (e.g. `.claude/rules/dependencies.md` inside the
-  // `.claude/rules/` bullet).
-  it('extractSplitOwnershipDirs reads only the bullet-leading directory from each line', () => {
-    const fixture = [
-      '## Split-ownership directories',
-      '',
-      '- `.claude/commands/`: the parent owns some files.',
-      '- `.claude/rules/`: the parent owns one file, `.claude/rules/dependencies.md`.',
-      '',
-      '## Parent-owned paths inside split-ownership directories',
-      '',
-    ].join('\n');
-    expect(extractSplitOwnershipDirs(fixture)).toEqual(['.claude/commands/', '.claude/rules/']);
   });
 });
 
@@ -760,174 +328,9 @@ describe('arrivesAsStructure paths resolve under sharedPaths (AC5)', () => {
   });
 });
 
-// AC5 bullet 5.
-describe('ownership map shelf roots equal manifest shelfRoots, both directions (AC5)', () => {
-  /** Roots present in one set but not the other, order-insensitively; empty when the sets match. */
-  function mismatchedShelfRoots(mapRoots, manifestRoots) {
-    const a = new Set(mapRoots);
-    const b = new Set(manifestRoots);
-    const diff = [];
-    for (const r of mapRoots) if (!b.has(r)) diff.push(r);
-    for (const r of manifestRoots) if (!a.has(r)) diff.push(r);
-    return diff;
-  }
-
-  it('the four shelf roots the map names equal shelfRoots, in the live tree', () => {
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const mapRoots = extractShelfRoots(fs.readFileSync(OWNERSHIP_MAP_PATH, 'utf8'));
-    expect(mismatchedShelfRoots(mapRoots, manifest.shelfRoots)).toEqual([]);
-  });
-
-  // Mutation-coverage: a set comparison, not a subset check, is required --
-  // a fixture map set missing a manifest-declared root must be caught, and
-  // named.
-  it('rejects mismatched shelf-root sets', () => {
-    const mapRoots = ['docs/', 'tools/', 'scripts/'];
-    const manifestRoots = ['docs/', 'tools/', 'scripts/', 'skills/'];
-    expect(mismatchedShelfRoots(mapRoots, manifestRoots)).toEqual(['skills/']);
-  });
-
-  // Mutation-coverage on the parser itself: reads the whole section, not
-  // one line, and excludes the profile slot. See DESIGN.md's
-  // governance-manifest semantics section for why.
-  it('extractShelfRoots reads the whole section regardless of line wrapping, and excludes the profile slot', () => {
-    const fixture = [
-      '## Standard shelves',
-      '',
-      'Four roots, same path in every child, even when empty: `docs/` (pre-review doc), `tools/`',
-      '(pre-review implementation scripts), `scripts/` (deploy/build machinery), `skills/` (product',
-      'skills).',
-      '',
-      'The profile, `repo-profile.json` sits at the repo root as a named slot, not a shelf directory.',
-      '',
-      '## The reference rule',
-      '',
-    ].join('\n');
-    expect(extractShelfRoots(fixture)).toEqual(['docs/', 'tools/', 'scripts/', 'skills/']);
-  });
-
-  // Mutation-coverage: a section naming only three roots must be caught,
-  // proving the parser doesn't just hardcode a length-four answer.
-  it('rejects a fixture Standard shelves section naming only three roots', () => {
-    const fixture = [
-      '## Standard shelves',
-      '',
-      '`docs/` `tools/` `scripts/`',
-      '',
-      '## The reference rule',
-      '',
-    ].join('\n');
-    expect(extractShelfRoots(fixture)).toHaveLength(3);
-  });
-
-  // Mutation-coverage: a root mentioned twice in the section's prose must
-  // not be double-counted; see DESIGN.md's governance-manifest semantics
-  // section.
-  it('extractShelfRoots de-duplicates a root mentioned twice in the section', () => {
-    const fixture = [
-      '## Standard shelves',
-      '',
-      'Four roots: `docs/`, `tools/`, `scripts/`, `skills/`.',
-      '',
-      'A shelf root the parent has no files under at all, such as `skills/`, needs no entry in',
-      'either list.',
-      '',
-      '## The reference rule',
-      '',
-    ].join('\n');
-    expect(extractShelfRoots(fixture)).toEqual(['docs/', 'tools/', 'scripts/', 'skills/']);
-  });
-});
-
-// AC5 bullet 6.
-describe('repoProfileFields equals the parsed DESIGN.md schema section, both directions (AC5)', () => {
-  it('repoProfileFields matches the DESIGN.md schema section, both directions, in the live tree', () => {
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const parsed = extractRepoProfileFields(fs.readFileSync(DESIGN_PATH, 'utf8'));
-    expect(manifest.repoProfileFields.map(fieldKey).sort()).toEqual(parsed.map(fieldKey).sort());
-  });
-
-  // Mutation-coverage: a fixture schema section naming a field the manifest
-  // does not declare must produce a mismatched pair set.
-  it('rejects a fixture schema section naming a field absent from repoProfileFields', () => {
-    const fixture = [
-      '## repo-profile.json schema',
-      '',
-      '- `preReview` (string). Allowed: the literal "none".',
-      '- `phantomField` (string). Allowed: anything.',
-      '',
-      '## Next section',
-      '',
-    ].join('\n');
-    const parsed = extractRepoProfileFields(fixture);
-    const manifestFields = [{ name: 'preReview', type: 'string' }];
-    expect(parsed.map(fieldKey).sort()).not.toEqual(manifestFields.map(fieldKey).sort());
-  });
-
-  // Mutation-coverage on the parser itself: the type captured must be the
-  // parenthetical immediately after the field name, not a later one in the
-  // bullet's prose.
-  it('extractRepoProfileFields captures only the parenthetical immediately after the field name', () => {
-    const fixture = [
-      '## repo-profile.json schema',
-      '',
-      '- `ghPath` (string). Allowed: "gh" (on PATH) or an absolute path.',
-      '',
-      '## Next section',
-      '',
-    ].join('\n');
-    expect(extractRepoProfileFields(fixture)).toEqual([{ name: 'ghPath', type: 'string' }]);
-  });
-});
-
-// AC5 bullet 7.
-describe('CLAUDE.md section citations from sharedPaths files appear in the ownership map carve-out list (AC5)', () => {
-  it('every CLAUDE.md section title cited by a sharedPaths file appears in the carve-out list, in the live tree', () => {
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const carveOut = extractClaudeMdCarveOutList(fs.readFileSync(OWNERSHIP_MAP_PATH, 'utf8'));
-
-    const tracked = listTrackedFiles();
-    const citingFiles = tracked.filter((f) => isShared(f, manifest.sharedPaths));
-    const dangling = [];
-    let total = 0;
-    for (const file of citingFiles) {
-      const text = dewrapText(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'));
-      const titles = extractClaudeMdSectionCitations(text);
-      total += titles.length;
-      for (const t of titles) {
-        if (!carveOut.includes(t)) dangling.push(`${file}: "${t}"`);
-      }
-    }
-    expect(total).toBeGreaterThan(0);
-    expect(dangling).toEqual([]);
-  });
-
-  // Mutation-coverage: the adjacent-quote shape citing a section absent
-  // from the carve-out list must be caught.
-  it('rejects an adjacent-form citation naming a section absent from the carve-out list', () => {
-    const line = 'See `CLAUDE.md` § "Some Section Not In The Carve-Out List".';
-    const titles = extractClaudeMdSectionCitations(dewrapText(line));
-    const carveOut = extractClaudeMdCarveOutList(fs.readFileSync(OWNERSHIP_MAP_PATH, 'utf8'));
-    expect(titles).toEqual(['Some Section Not In The Carve-Out List']);
-    expect(carveOut).not.toContain(titles[0]);
-  });
-
-  // Mutation-coverage: the bare-heading-before-filename shape (superseded
-  // 2026-08-23, issue #15: standards/governance-sync.md used to use this
-  // shape to cite CLAUDE.md's now-deleted "## Governance overrides" carve-out;
-  // that citation is gone, but the parser must still accept the shape in case
-  // a future sharedPaths file writes one the same way) must also be extracted.
-  it('extracts the bare-heading-before-filename citation shape', () => {
-    const line =
-      "a line under `## Some Bare Heading` in the child's own `CLAUDE.md`, naming the rule.";
-    expect(extractClaudeMdSectionCitations(dewrapText(line))).toEqual(['Some Bare Heading']);
-  });
-});
-
-// AC4: every classes value is exactly "content" or "structure" (see
-// DESIGN.md's governance-manifest semantics section), and classesDefault is
-// exactly "structure" in the live manifest, the safe-side value per the
-// classesDefault rule in standards/governance-sync.md § "What a sync is".
+// AC4: every classes value is exactly "content" or "structure", and
+// classesDefault is exactly "structure" in the live manifest, the safe-side
+// value per the classesDefault rule in standards/governance-sync.md § "What a sync is".
 describe('classes values and classesDefault hold only their allowed literals (AC4)', () => {
   /** `classes` entries whose value is not "content" or "structure", as "key: value" strings. */
   function invalidClassesValues(classes) {
@@ -1010,5 +413,14 @@ describe(".githooks/ files are all mode 100755 in this repo's index (AC8)", () =
     const entries = parseLsFilesStage(raw);
     expect(entries).toEqual([{ mode: '100755', path: '.githooks/pre-commit' }]);
     expect(nonExecutableEntries(entries)).toEqual([]);
+  });
+});
+
+describe('repoProfileFields names every repo-profile.json key', () => {
+  it('lists each top-level key of repo-profile.json', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const profile = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'repo-profile.json'), 'utf8'));
+    const named = manifest.repoProfileFields.map((f) => f.name);
+    for (const key of Object.keys(profile)) expect(named, key).toContain(key);
   });
 });

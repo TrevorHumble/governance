@@ -12,7 +12,7 @@
     "check:seats": "node scripts/check-seats.js",
     "check:evidence": "node scripts/check-review-evidence.js",
     "check:served": "node scripts/check-served-models.js",
-    "check:design": "node scripts/check-design-records.js _shared/DESIGN.md",
+    "check:design": "node scripts/check-design-records.js DESIGN.md",
     "lint": "eslint . --max-warnings=0",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

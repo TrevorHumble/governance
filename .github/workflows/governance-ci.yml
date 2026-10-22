@@ -47,7 +47,6 @@ jobs:
         run: npm run check:design
       # Runs only on pull_request/merge_group: a direct push to main or v2 has no
       # pull request, so no merge-base diff of added lines exists to judge.
-      # See DESIGN.md "CI gate for added em dashes".
       - name: Em-dash gate
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         run: npm run check:emdash

@@ -256,9 +256,9 @@ describe('main', () => {
   });
 });
 
-describe('the staged design file', () => {
+describe('the design file', () => {
   it('passes, with four records, none over 100 words', () => {
-    const p = path.join(__dirname, '..', '_shared', 'DESIGN.md');
+    const p = path.join(__dirname, '..', 'DESIGN.md');
     const r = main({ argv: [p] });
     expect(out(r)).not.toContain('note');
     expect(r.exitCode).toBe(0);

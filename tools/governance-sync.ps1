@@ -7,8 +7,8 @@
 # tools/governance-sync-core.ps1.
 #
 # Exit-code contract, the same-tree invariant, and the one-profile-parsed-once
-# rule this wrapper implements: the governance repo's DESIGN.md § "Governance
-# sync". Merge-on-green mechanics, the CI-guard gate, the superseded-PR
+# rule this wrapper implements: DESIGN.md at the governance-v1 tag.
+# Merge-on-green mechanics, the CI-guard gate, the superseded-PR
 # sweep, and the retained-divergent issue: standards/governance-sync.md.
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||. Native
@@ -240,8 +240,7 @@ function Get-CiGateStatus {
   # tools/apply-branch-protection.ps1 is this read site's twin, reading that
   # same field back with the identical .required_status_checks.checks path,
   # and the --input PUT above it is what writes the field. No shared home
-  # exists for the two reads (recorded gap, the governance repo's DESIGN.md §
-  # "Merge-on-green sync (issue #15)"): a GitHub field rename must fix both
+  # exists for the two reads (a recorded gap): a GitHub field rename must fix both
   # call sites by hand.
   $checksOut = & $Gh api "repos/{owner}/{repo}/branches/$DefaultBranch/protection" --jq '.required_status_checks.checks | map(.context)' 2>$null
   if ($LASTEXITCODE -ne 0) {
@@ -303,15 +302,14 @@ function Invoke-SupersededSyncSweep {
 # repo-relative and forward-slashed already (git's own form), NUL-split so a
 # path holding a newline, a carriage return, or a trailing space is read back
 # exactly as git recorded it, never re-split or rejoined by whitespace (the
-# byte guarantee this actually gives: the governance repo's DESIGN.md §
-# "NUL-safe git output: one home"). Feeds issue #53's additive-manifest
+# byte guarantee this actually gives: DESIGN.md at the governance-v1 tag).
+# Feeds issue #53's additive-manifest
 # exception (Test-IsAdditiveManifestDiff in tools/governance-sync-core.ps1):
 # $null on any git failure, so that exception fails closed to structure
 # rather than risk a collision check against an incomplete list.
 #
 # Calls Invoke-GitCaptureRaw (tools/governance-sync-core.ps1, dot-sourced
-# above; the shared home, see the governance repo's DESIGN.md § "NUL-safe
-# git output: one home"). Invoke-GitCaptureRaw itself does not catch, so
+# above; the shared home). Invoke-GitCaptureRaw itself does not catch, so
 # this function's own try/catch is what turns a genuine PowerShell error
 # into this function's own $null contract.
 function Get-ChildTrackedFiles {
@@ -325,9 +323,7 @@ function Get-ChildTrackedFiles {
     }
     $z = $capture.Output
     # Cuts at the last NUL rather than splitting on NUL and filtering blanks:
-    # see DESIGN.md's "additive-manifest exception (issue #53)" section, "Why
-    # Get-ChildTrackedFiles cuts at the last NUL instead of splitting and
-    # filtering blanks" for why the naive approach loses on Linux.
+    # the naive approach loses on Linux (DESIGN.md at the governance-v1 tag).
     $lastNul = $z.LastIndexOf([char]0)
     if ($lastNul -lt 0) {
       # The leading comma: see Get-UnacknowledgedDivergent's comment in
@@ -364,8 +360,7 @@ function Get-Classification {
   # Same tree this call classifies against, so the additive exception's
   # collision test (issue #53) reads the same tree the run itself applies to,
   # the dry-run preview and the real run alike (each already calls this
-  # function with its own tree; see the same-tree invariant, the governance repo's DESIGN.md §
-  # "Governance sync").
+  # function with its own tree; the same-tree invariant).
   $childTrackedFiles = Get-ChildTrackedFiles -ChildTreeRoot $ChildTreeRoot
   return Get-SyncClassification -ParentManifest $ParentManifest -ChildManifest $childManifest -Plan $Plan `
     -ParentRoot $ParentRoot -ChildTrackedFiles $childTrackedFiles
@@ -520,7 +515,6 @@ try {
     # computed against the branch being synced instead, per the same-tree
     # invariant, so this preview and a real run can legitimately disagree.
     $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $ChildRoot -Manifest $parentManifest
-    foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
     foreach ($p in $plan.Adds) { Write-Output "add: $p" }
     foreach ($p in $plan.Updates) { Write-Output "update: $p" }
     foreach ($p in $plan.Prunes) { Write-Output "prune: $p" }
@@ -560,7 +554,6 @@ try {
   # clean while the branch being synced holds diverged content, and a plan
   # computed against the wrong tree would silently revert that divergence.
   $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $syncWorktreeDir -Manifest $parentManifest
-  foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
   $unacknowledgedDivergent = Get-UnacknowledgedDivergent -Plan $plan -Acknowledged $acknowledgedDivergentPaths
   foreach ($p in $unacknowledgedDivergent) { Write-Output "WARNING retained divergent: $p" }
 
@@ -696,9 +689,8 @@ try {
   #
   # The .githooks/ slice is staged separately, with --chmod=+x, and it is
   # built from the WHOLE .githooks/ set now present in the sync worktree,
-  # not just this run's Adds/Updates: rationale, tradeoff, and its one
-  # remaining limitation are in the governance repo's DESIGN.md §
-  # "Governance sync" ("The .githooks/ executable-bit repair").
+  # not just this run's Adds/Updates. Rationale, tradeoff, and its one
+  # remaining limitation: DESIGN.md at the governance-v1 tag.
   $stageAddUpdate = @($plan.Adds) + @($plan.Updates)
   $otherAddUpdate = @($stageAddUpdate | Where-Object { -not (Test-MatchesManifestEntry -Path $_ -Entry '.githooks/**') })
   # Resolved once and reused as both the hook-directory base and the
@@ -779,11 +771,6 @@ try {
   # stop opening the issue.
   $bodyLines.Add("Retained divergent, unacknowledged ($DivergentDisposalInstruction):")
   foreach ($p in $unacknowledgedDivergent) { $bodyLines.Add("- $p") }
-  if ($plan.Warnings.Count -gt 0) {
-    $bodyLines.Add('')
-    $bodyLines.Add('Warnings:')
-    foreach ($w in $plan.Warnings) { $bodyLines.Add("- $w") }
-  }
   $prBodyPath = Join-Path $tempRoot ('governance-sync-prbody-' + [guid]::NewGuid().ToString('N') + '.md')
   Set-Content -LiteralPath $prBodyPath -Value ($bodyLines -join "`n") -NoNewline
 

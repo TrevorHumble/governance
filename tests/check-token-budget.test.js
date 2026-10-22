@@ -977,10 +977,7 @@ describe('new-tree.json', () => {
   const root = path.join(__dirname, '..');
   const tree = JSON.parse(fs.readFileSync(path.join(root, 'new-tree.json'), 'utf8'));
   const profile = JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8'));
-  // A staged file declares no budget; it is held to the pending entry it names.
-  const pendingBudget = (path) => tree.pending.find((p) => p.path === path)?.budget;
-  const budgetOf = (f) =>
-    f.group ? tree.groups[f.group] : f.staging ? pendingBudget(f.staging) : f.budget;
+  const budgetOf = (f) => (f.group ? tree.groups[f.group] : f.budget);
 
   it('has every listed file on disk, and each placeholder names its budget', () => {
     for (const f of tree.files) {
@@ -997,47 +994,47 @@ describe('new-tree.json', () => {
     }
   });
 
-  it('has listed and pending budgets that sum to the total cap or less, counting a group once', () => {
-    const own = tree.files
-      .filter((f) => !f.group && !f.staging)
-      .reduce((sum, f) => sum + f.budget, 0);
+  it('has listed budgets that sum to the total cap or less, counting a group once', () => {
+    const own = tree.files.filter((f) => !f.group).reduce((sum, f) => sum + f.budget, 0);
     const shared = Object.values(tree.groups).reduce((sum, b) => sum + b, 0);
-    const pending = tree.pending.reduce((sum, p) => sum + p.budget, 0);
-    expect(own + shared + pending).toBeLessThanOrEqual(profile.budget.total);
+    expect(own + shared).toBeLessThanOrEqual(profile.budget.total);
   });
 
-  it('holds each staged file to the pending budget it names, counted the way the gate counts', () => {
-    const staged = tree.files.filter((f) => f.staging);
-    expect(staged.length).toBeGreaterThan(0);
-    for (const f of staged) {
-      expect(f.budget, f.path).toBeUndefined();
-      expect(f.group, f.path).toBeUndefined();
-      expect(
-        tree.pending.map((p) => p.path),
-        f.path
-      ).toContain(f.staging);
-      const body = fs.readFileSync(path.join(root, f.path), 'utf8');
+  const ROOT_FILES = {
+    'AGENTS.md': 1200,
+    'CLAUDE.md': 20,
+    'README.md': 500,
+    'definition-of-done.md': 1200,
+    'owner-declines.md': 250,
+    'WHAT-IT-CHECKS.md': 600,
+  };
+
+  it('holds each root file to its budget, counted the way the gate counts', () => {
+    for (const [file, budget] of Object.entries(ROOT_FILES)) {
+      const entry = tree.files.find((f) => f.path === file);
+      expect(entry?.budget, file).toBe(budget);
+      const body = fs.readFileSync(path.join(root, file), 'utf8');
       // The gate's own count: a lone listed file plus one empty reviewer skill, which adds nothing.
       const r = core.run(
-        [f.path, '_claude/skills/reviewing-x/SKILL.md'],
-        (file) => (file === f.path ? body : ''),
+        [file, '_claude/skills/reviewing-x/SKILL.md'],
+        (f) => (f === file ? body : ''),
         CAPS
       );
-      expect(r.total, f.path).toBeLessThanOrEqual(pendingBudget(f.staging));
+      expect(r.total, file).toBeLessThanOrEqual(budget);
     }
   });
 
-  it('records the six shared-path files as pending and lists none of them as a file', () => {
-    expect(tree.pending).toEqual([
-      { path: 'AGENTS.md', budget: 1200 },
-      { path: 'CLAUDE.md', budget: 20 },
-      { path: 'README.md', budget: 500 },
-      { path: 'definition-of-done.md', budget: 1200 },
-      { path: 'owner-declines.md', budget: 250 },
-      { path: 'WHAT-IT-CHECKS.md', budget: 600 },
-    ]);
+  it('lists the six root files once each, with no staging or pending entries left', () => {
+    expect(tree.pending).toBeUndefined();
     const listed = tree.files.map((f) => f.path);
-    for (const p of tree.pending) expect(listed).not.toContain(p.path);
+    for (const file of Object.keys(ROOT_FILES)) {
+      expect(
+        listed.filter((p) => p === file),
+        file
+      ).toHaveLength(1);
+    }
+    expect(listed.filter((p) => p.startsWith('_shared/'))).toEqual([]);
+    for (const f of tree.files) expect(f.staging, f.path).toBeUndefined();
   });
 
   it('keeps the caps and the not-counted list in the profile, as the live check reads them', () => {

@@ -16,8 +16,8 @@ const { readHead } = require('./check-token-budget');
 const REPO_ROOT = path.join(__dirname, '..');
 
 // The design file is outside the budget count, so countInputs never lists it, but it is prose the
-// owner reads and gets the same scan. The swap (#101) repoints this to DESIGN.md.
-const DESIGN_FILE = '_shared/DESIGN.md';
+// owner reads and gets the same scan.
+const DESIGN_FILE = 'DESIGN.md';
 
 function scanSet(root) {
   const { view } = readHead(root);

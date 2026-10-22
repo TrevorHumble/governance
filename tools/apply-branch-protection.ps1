@@ -3,8 +3,7 @@
 # WHAT: PUTs GitHub branch protection onto the target branch requiring a pull
 # request, the repo's declared status checks, and required_status_checks.strict
 # fixed at $false (not a parameter). Owner's dates and rationale: see the
-# `strict = $false` line below, and the governance repo's DESIGN.md §
-# "Branch-protection strictness".
+# `strict = $false` line below.
 #
 # Required checks are a parameter, not a hardcoded list: pass -RequiredChecks, or
 # let it default to repo-profile.json's ciCheckNames field. A required context
@@ -13,8 +12,7 @@
 # guessed from workflow YAML.
 #
 # required_approving_review_count stays 0 by default (a solo-maintainer repo
-# cannot approve their own PR). Rationale: the governance repo's DESIGN.md §
-# "Lean review process rationale".
+# cannot approve their own PR).
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 param(
@@ -103,8 +101,7 @@ if ($RequiredChecks) {
 $payload = [ordered]@{
   required_status_checks = [ordered]@{
     # strict=false: the owner turned up-to-date-before-merge off on 2026-07-17,
-    # reconfirmed 2026-08-19; re-running this tool must not re-enable it. See
-    # the governance repo's DESIGN.md § "Branch-protection strictness".
+    # reconfirmed 2026-08-19; re-running this tool must not re-enable it.
     strict = $false
     checks = @($requiredChecksList | ForEach-Object { [ordered]@{ context = $_; app_id = -1 } })
   }

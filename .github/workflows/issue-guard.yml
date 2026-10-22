@@ -3,7 +3,7 @@ name: Issue creation guard
 # Makes an issue opened outside the sanctioned flow conspicuous rather than
 # silently accepted, and flags without blocking: no close, no lock, nothing a
 # maintainer has to undo. The label lifecycle it enforces is stated in
-# CLAUDE.md, "Issue lifecycle marker".
+# WHAT-IT-CHECKS.md.
 
 on:
   issues:
