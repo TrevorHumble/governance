@@ -2,7 +2,7 @@
 name: reviewing-issues
 description: Use when reviewing a filed issue before work starts, or re-checking its fixes, to say whether it is ready to build.
 metadata:
-  reads: 'standards/reviewing.md _claude/skills/writing-user-stories/SKILL.md _claude/skills/writing-acceptance-criteria/SKILL.md _claude/skills/writing-issues/SKILL.md pipeline/steps/05-hand-off.md'
+  reads: 'standards/reviewing.md _claude/skills/writing-user-stories/SKILL.md _claude/skills/writing-acceptance-criteria/SKILL.md _claude/skills/writing-issues/SKILL.md pipeline/PIPELINE.md'
 ---
 
 # Reviewing an issue
@@ -17,7 +17,7 @@ Read `standards/reviewing.md` first. Use the five labels, say why each finding m
 4. **Bigger than its goal needs.** Could a smaller change reach the goal? Name what could come out and why. Never ask for more scope.
 5. **Expected token change.** The number must be there and plausible. `writing-issues` says what it means. Judge whether it fits the words the issue adds or removes in the files it touches. If it could push governance over its cap and the issue names no cut or cap request, raise a `question:`; you cannot run the check.
 6. **Specialist notes.** A `blocker:` left open there is a `blocker:` here.
-7. **Hard.** Award `hard` when the plan meets the hard test in `pipeline/steps/05-hand-off.md` and the issue lacks the label.
+7. **Hard.** Award `hard` when the plan meets the hard test in `pipeline/PIPELINE.md` and the issue lacks the label.
 
 ## Whose call
 

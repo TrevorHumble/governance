@@ -20,13 +20,7 @@ Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whos
 
 ## Is it hard?
 
-Hard is narrow. The `issue-writer` seat judges it when it drafts the message, you check it before you send, and the owner's reply settles it. It is hard when any of these is true:
-
-- It is novel and deep: hard math or algorithms, with no prior art to reuse.
-- It is something we can't get back: a loss outside git, such as user data, someone else's work, money, or something public. Deleting what git holds is not that.
-- The owner says so.
-
-On yes, ask the owner to switch the session to the `hard` award's orchestrator model and effort in `seats.json`, with `/model`. Trouble mid-run is the orchestrator's call: `_claude/agents/orchestrator.md`.
+A second look, while the owner is here. The `issue-writer` seat judges it when it drafts the message, you check it before you send, and the owner's reply settles it. The test is in `pipeline/PIPELINE.md`. If it is newly hard, ask the owner to switch the session as that section says.
 
 ## The token change
 

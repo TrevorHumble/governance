@@ -1,5 +1,13 @@
 # PIPELINE
 
+## Before step 1: is it hard?
+
+Judge the goal first. It is hard if it is novel and deep (hard math or algorithms, no prior art to reuse), or something we can't get back (a loss outside git: user data, someone else's work, money, something public). Deleting what git holds is not that. It is also hard if the owner says so. Trouble mid-run is the orchestrator's call: `_claude/agents/orchestrator.md`.
+
+If it is hard, your first message asks the owner to switch the session to the `hard` award's orchestrator model and effort in `seats.json`, with `/model`.
+
+## The steps
+
 Run these twelve steps in order. Each line says what the step is for and what it hands on. The step file says how. Read a step's file when you reach it, not before.
 
 1. **Isolate** (`pipeline/steps/01-isolate.md`). Work in your own worktree, cut from the current default branch, never the shared checkout. Hands on: a clean, current tree.
