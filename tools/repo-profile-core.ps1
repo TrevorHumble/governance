@@ -2,8 +2,7 @@
 # this file; do not run it directly (mirrors the -core.ps1 convention of
 # tools/issue-core.ps1 and tools/classify-dep-pr-core.ps1).
 #
-# Why this file exists instead of four private copies: the governance repo's DESIGN.md
-# § "repo-profile.json schema" (the "tools/repo-profile-core.ps1" paragraph).
+# Why this file exists instead of four private copies: DESIGN.md at the governance-v1 tag.
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 

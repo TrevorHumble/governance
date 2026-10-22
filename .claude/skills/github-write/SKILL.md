@@ -26,7 +26,7 @@ The remote is whatever `git remote -v` reports for this checkout. `gh` commands 
 
 Every issue file `data/wip-issues/<N>-slug.md` has a matching GitHub issue, and **the GitHub issue owns the
 status** (open/closed/labels). The file is the detail; the board is the state. The pipeline keeps them
-equal, see `CLAUDE.md` § "Repo conventions". The sync rule:
+equal, see `AGENTS.md`. The sync rule:
 
 - **On issue creation** → the owner hand-off message defined in `standards/issue-standards.md` §
   "Owner hand-off" is sent and approved **before** `gh issue create` runs, except for an issue an

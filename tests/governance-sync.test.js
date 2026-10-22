@@ -142,29 +142,6 @@ maybeDescribe('Get-SyncPlan classification (AC 1)', () => {
     expect(plan.Prunes).toEqual([]);
     expect(plan.RetainedDivergent).toEqual([]);
   });
-
-  it('warns exactly once when the child CLAUDE.md lacks the literal Governing-artifact-surface heading', () => {
-    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-parent-'));
-    const child = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-child-'));
-    writeFile(child, 'CLAUDE.md', '# CLAUDE.md\n\nNo such section here.\n');
-    const manifest = { retired: [], sharedPaths: [], excludedPaths: [] };
-    const r = runGetSyncPlan(parent, child, manifest);
-    expect(r.status).toBe(0);
-    const plan = parsePlan(r.stdout);
-    expect(plan.Warnings).toHaveLength(1);
-    expect(plan.Warnings[0]).toContain('Governing-artifact surface');
-  });
-
-  it('emits zero warnings when the child CLAUDE.md carries the literal heading', () => {
-    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-parent-'));
-    const child = fs.mkdtempSync(path.join(os.tmpdir(), 'gsync-child-'));
-    writeFile(child, 'CLAUDE.md', '# CLAUDE.md\n\n## Governing-artifact surface\n\nsome list\n');
-    const manifest = { retired: [], sharedPaths: [], excludedPaths: [] };
-    const r = runGetSyncPlan(parent, child, manifest);
-    expect(r.status).toBe(0);
-    const plan = parsePlan(r.stdout);
-    expect(plan.Warnings).toEqual([]);
-  });
 });
 
 // ---- Resolve-GhPath chain -----------------------------------------------

@@ -79,7 +79,6 @@
     "pipeline/**",
     "_claude/**",
     "NORTH-STAR.md",
-    "_shared/**",
     "seats.json",
     "vendor/**",
     "reviewer-library.json"

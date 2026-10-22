@@ -134,13 +134,13 @@ describe('main on a scratch repo', () => {
     expect(r.exitCode).toBe(0);
   });
 
-  it('scans the staged design file, which the budget count leaves out', () => {
+  it('scans the design file, which the budget count leaves out', () => {
     const r = main({
-      root: makeRepo({ 'standards/s.md': 'ok', '_shared/DESIGN.md': `${P1}\n${FILL}` }),
+      root: makeRepo({ 'standards/s.md': 'ok', 'DESIGN.md': `${P1}\n${FILL}` }),
     });
     expect(r.exitCode).toBe(1);
-    expect(r.lines).toContain(`_shared/DESIGN.md:1: banned word "${P1}"`);
-    expect(r.lines).toContain(`_shared/DESIGN.md:2: banned word "${FILL}"`);
+    expect(r.lines).toContain(`DESIGN.md:1: banned word "${P1}"`);
+    expect(r.lines).toContain(`DESIGN.md:2: banned word "${FILL}"`);
   });
 
   it('passes a phrase in a pending path', () => {

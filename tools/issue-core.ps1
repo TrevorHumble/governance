@@ -49,8 +49,7 @@ function Test-StagedHasCode {
   # No -WorkingDirectory: runs against the invoking tree.
   # $ErrorActionPreference = 'Stop', function-scoped, makes a genuine
   # PowerShell error propagate rather than read back as "no code staged",
-  # which is what keeps this fail-closed: the governance repo's DESIGN.md §
-  # "NUL-safe git output: one home".
+  # which is what keeps this fail-closed.
   $ErrorActionPreference = 'Stop'
   $outFile = $null
   $errFile = $null
