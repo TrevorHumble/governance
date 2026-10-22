@@ -531,5 +531,5 @@
       "type": "array of strings"
     }
   ],
-  "shelfRoots": ["tools/", "scripts/", "skills/"]
+  "shelfRoots": ["tools/", "scripts/"]
 }

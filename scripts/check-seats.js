@@ -39,7 +39,7 @@ function readRefs(root) {
   const sharedMarkdown = tracked
     .filter((f) => f.endsWith('.md') && isSharedPath(f, manifest.sharedPaths))
     .map((f) => ({ path: f, text: fs.readFileSync(path.join(root, f), 'utf8') }));
-  return { tracked, lenses: profile.lenses ?? [], sharedMarkdown };
+  return { tracked, lenses: profile.lenses, sharedMarkdown };
 }
 
 function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.env } = {}) {

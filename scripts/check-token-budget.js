@@ -114,19 +114,25 @@ function sharedPathsOf(manifest, where) {
   return manifest.sharedPaths;
 }
 
+function retiredOf(manifest) {
+  return (Array.isArray(manifest.retired) ? manifest.retired : [])
+    .map((e) => e && e.path)
+    .filter((p) => typeof p === 'string');
+}
+
 function readHead(root) {
   const profile = JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8'));
   const budget = profile.budget || {};
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'governance-manifest.json'), 'utf8'));
   return {
     profile,
     caps: { total: budget.total, reviewer: budget.reviewer },
     view: {
       listing: gitLines(root, ['ls-files']),
       notCounted: notCountedOf(budget, 'repo-profile.json'),
-      sharedPaths: sharedPathsOf(
-        JSON.parse(fs.readFileSync(path.join(root, 'governance-manifest.json'), 'utf8')),
-        'on the head'
-      ),
+      sharedPaths: sharedPathsOf(manifest, 'on the head'),
+      retired: retiredOf(manifest),
+      exemptRetired: profile.governanceHome !== 'self',
     },
   };
 }

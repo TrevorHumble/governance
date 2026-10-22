@@ -560,6 +560,26 @@ describe('what counts, and the guarded changes', () => {
     ]);
   });
 
+  it('does not flag a counted file that leaves the count because the head retires it', () => {
+    const listing = ['a.md', 'b.md'];
+    const base = state({ listing, sharedPaths: ['a.md', 'b.md'] });
+    const head = state({
+      listing,
+      sharedPaths: ['a.md'],
+      retired: ['b.md'],
+      exemptRetired: true,
+    });
+    expect(guardedChanges(base, head)).toEqual([]);
+    // the parent (governanceHome self) gets no exemption
+    const parent = state({ listing, sharedPaths: ['a.md'], retired: ['b.md'] });
+    expect(guardedChanges(base, parent)).toHaveLength(1);
+    // only the retired file is excused
+    const other = state({ listing, sharedPaths: [], retired: ['b.md'], exemptRetired: true });
+    expect(guardedChanges(base, other)).toEqual([
+      'a.md was counted at the base and still exists, but is no longer counted',
+    ]);
+  });
+
   it('does not flag a file that was deleted, or one that is still counted', () => {
     const baseView = { listing: ['a.md', 'b.md'] };
     expect(guardedChanges(state(baseView), state({ listing: ['a.md'] }))).toEqual([]);
@@ -856,6 +876,34 @@ describe('the wrapper, on temp git repos', () => {
     expect(r.out).toContain(
       'a.md was counted at the base and still exists, but is no longer counted'
     );
+  });
+
+  it('fails a still-present retired file in the parent (governanceHome self)', () => {
+    const root = makeRepo();
+    put(root, 'repo-profile.json', { ...PROFILE, governanceHome: 'self' });
+    git(root, 'add', '-A');
+    git(root, 'commit', '-q', '-m', 'self');
+    git(root, 'checkout', '-q', '-b', 'pr2');
+    put(root, 'governance-manifest.json', {
+      sharedPaths: MANIFEST.sharedPaths.filter((e) => e !== 'a.md'),
+      retired: [{ path: 'a.md', sha256: 'a'.repeat(64) }],
+    });
+    put(root, 'src.js', 'x');
+    commit(root);
+    const r = check(root, ['--base', 'pr']);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain('a.md was counted at the base and still exists');
+  });
+
+  it('passes a still-present file that the head manifest retires, in a child', () => {
+    const root = makeRepo();
+    put(root, 'governance-manifest.json', {
+      sharedPaths: MANIFEST.sharedPaths.filter((e) => e !== 'a.md'),
+      retired: [{ path: 'a.md', sha256: 'a'.repeat(64) }],
+    });
+    put(root, 'src.js', 'x');
+    commit(root);
+    expect(check(root).exitCode).toBe(0);
   });
 
   it('passes a file deleted from the tree and from the shared paths', () => {

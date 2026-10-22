@@ -144,7 +144,8 @@ function listUntrackedFiles() {
 }
 
 function main() {
-  const base = process.env.EMDASH_BASE || `origin/${readDefaultBranch()}`;
+  const baseBranch = process.env.GITHUB_BASE_REF || readDefaultBranch();
+  const base = process.env.EMDASH_BASE || `origin/${baseBranch}`;
 
   let hasHead;
   try {

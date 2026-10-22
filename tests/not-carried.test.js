@@ -165,7 +165,12 @@ describe('no kept tool, hook or workflow cites a deleted file', () => {
     for (const file of files) {
       const text = readFile(file);
       for (const deleted of deletedPaths) {
-        if (text.includes(deleted)) hits.push(`${file} cites ${deleted}`);
+        // Not inside a longer path: `.claude/agents/x.md` is not a citation of `agents/x.md`.
+        const cited = new RegExp(
+          `(^|[^/.\\w-])${deleted.replace(/[.+?^${}()|[\]\\]/g, '\\$&')}`,
+          'm'
+        );
+        if (cited.test(text)) hits.push(`${file} cites ${deleted}`);
       }
     }
     return hits;
@@ -182,6 +187,8 @@ describe('no kept tool, hook or workflow cites a deleted file', () => {
       'tools/a.ps1': '# see standards/ownership-map.md "The redirect rule"',
       'tools/b.ps1': '# nothing to see',
       '.githooks/pre-commit': 'echo "tools/file-claim-core.ps1 and new-tree.json"',
+      'tools/c.ps1':
+        'read .claude/agents/orchestrator.md and ./tools/x.ps1 and tools/agents/orchestrator.md',
     };
     expect(citations(Object.keys(text), (f) => text[f])).toEqual([
       'tools/a.ps1 cites standards/ownership-map.md',

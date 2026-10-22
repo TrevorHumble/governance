@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const core = require('../scripts/check-seats-core');
+const { isSharedPath } = require('../scripts/check-token-budget-core');
 const { main } = require('../scripts/check-seats');
 
 const { validateSeats, referenceProblems, modelIdProblems, classifyPr, run, REQUIRED_ROLES } = core;
@@ -393,6 +394,14 @@ describe('agents, skills and lenses name real files', () => {
   it('fails a lens with no folder in .claude/skills/', () => {
     const list = referenceProblems(valid(), TRACKED, ['reviewing-prs', 'ui-lens']);
     expect(list).toEqual(['repo-profile.json lens "ui-lens" is not a folder in .claude/skills/']);
+  });
+
+  it('fails a lenses value that is present but not an array of strings', () => {
+    for (const bad of ['ui-lens', null, {}, [1], ['ok', 2]]) {
+      expect(referenceProblems(valid(), TRACKED, bad)).toEqual([
+        'repo-profile.json lenses must be an array of strings',
+      ]);
+    }
   });
 
   it('never throws on a malformed file; the shape rules report it', () => {
@@ -799,6 +808,14 @@ describe('the CLI on temp git repos', () => {
     expect(r.lines.join('\n')).toContain('lens "ui-lens"');
   });
 
+  it('fails a profile whose lenses is not an array', () => {
+    write('repo-profile.json', { lenses: 'ui-lens' });
+    commit('bad lenses');
+    const r = main({ root: dir, argv: [], env: {} });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines.join('\n')).toContain('lenses must be an array of strings');
+  });
+
   it('fails, not crashes, on a missing manifest or profile', () => {
     fs.rmSync(path.join(dir, 'governance-manifest.json'));
     const r = main({ root: dir, argv: [], env: {} });
@@ -851,12 +868,18 @@ describe('the shipped seats.json', () => {
 
   it('names real files and carries no model ID in shared markdown', () => {
     const root = path.join(__dirname, '..');
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(root, 'governance-manifest.json'), 'utf8')
+    );
     const r = core.run(shipped, undefined, {
       tracked: execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
         .split('\n')
         .filter(Boolean),
       lenses: JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8')).lenses,
-      sharedMarkdown: [],
+      sharedMarkdown: execFileSync('git', ['ls-files', '*.md'], { cwd: root, encoding: 'utf8' })
+        .split('\n')
+        .filter((f) => f && isSharedPath(f, manifest.sharedPaths))
+        .map((f) => ({ path: f, text: fs.readFileSync(path.join(root, f), 'utf8') })),
     });
     expect(r.lines).toEqual(['check-seats: ok, 7 roles and 1 award(s) hold every rule']);
   });

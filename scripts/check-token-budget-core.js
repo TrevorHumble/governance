@@ -121,8 +121,12 @@ function guardedChanges(base, head) {
   }
   const headCounted = new Set(countInputs(head.view));
   const headExists = new Set(head.view.listing);
+  // In a child, retiring a file is the sanctioned way out of the count, so the head manifest's
+  // `retired` list excuses a divergent copy that still exists. The parent (governanceHome
+  // "self") gets no such excuse: a retired path there must be deleted.
+  const retired = new Set(head.view.exemptRetired ? head.view.retired || [] : []);
   for (const file of [...new Set(countInputs(base.view))].sort()) {
-    if (headExists.has(file) && !headCounted.has(file)) {
+    if (headExists.has(file) && !headCounted.has(file) && !retired.has(file)) {
       changes.push(`${file} was counted at the base and still exists, but is no longer counted`);
     }
   }

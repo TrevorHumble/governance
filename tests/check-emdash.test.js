@@ -332,6 +332,21 @@ maybeDescribe('check-emdash.js CLI (real git)', () => {
     expect(r.stdout).toContain(escapeHint);
   });
 
+  it('diffs against GITHUB_BASE_REF when set, so a PR into v2 diffs against v2', () => {
+    const { dir, baseSha } = makeCliRepo();
+    git(dir, ['update-ref', 'refs/remotes/origin/v2', baseSha]);
+    writeFile(dir, 'src/app.js', `const s = 'wait${String.fromCharCode(0x2014)} really';\n`);
+    git(dir, ['add', '-A']);
+    git(dir, ['commit', '-q', '-m', 'add a line']);
+
+    const hit = runCli(dir, { EMDASH_BASE: '', GITHUB_BASE_REF: 'v2' });
+    expect(hit.status).toBe(1);
+    expect(hit.stdout).toContain('src/app.js:1');
+    const miss = runCli(dir, { EMDASH_BASE: '', GITHUB_BASE_REF: 'no-such-branch' });
+    expect(miss.status).not.toBe(0);
+    expect(miss.stderr).toContain('origin/no-such-branch');
+  });
+
   it('an unresolvable EMDASH_BASE yields non-zero exit with the git error on stderr and nothing treated as clean', () => {
     const { dir } = makeCliRepo();
 

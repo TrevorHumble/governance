@@ -205,7 +205,11 @@ function referenceProblems(seats, tracked, lenses = []) {
       }
     }
   }
-  for (const lens of Array.isArray(lenses) ? lenses : []) {
+  if (!Array.isArray(lenses) || !lenses.every((l) => typeof l === 'string')) {
+    problems.push('repo-profile.json lenses must be an array of strings');
+    return problems;
+  }
+  for (const lens of lenses) {
     if (!skillFolders.has(lens)) {
       problems.push(`repo-profile.json lens "${lens}" is not a folder in .claude/skills/`);
     }
