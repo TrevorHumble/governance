@@ -310,6 +310,36 @@ maybeDescribe('.githooks/pre-commit', () => {
     expect(out).toContain('tools/ownership-core.ps1');
   });
 
+  // ownership-core.ps1 dot-sources governance-sync-core.ps1, so the hook
+  // depends on that second file through the first. Losing it must still
+  // block; the message names only the outer helper, so the inner file's
+  // name is not asserted.
+  it('blocks when the ownership scan fails to complete: governance-sync-core.ps1 missing', () => {
+    const dir = makeFixture({
+      manifest: 'real',
+      profile: NON_SELF_PROFILE,
+      omitTools: ['governance-sync-core.ps1'],
+    });
+    const res = tryCommit(dir, { 'notes.txt': 'anything\n' }, 'feat/whatever');
+    expect(res.status).not.toBe(0);
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+    expect(out).toContain('ownership scan did not complete');
+  });
+
+  it('blocks when the ownership scan fails to complete: governance-sync-core.ps1 unloadable', () => {
+    const dir = makeFixture({
+      manifest: 'real',
+      profile: NON_SELF_PROFILE,
+      brokenTools: ['governance-sync-core.ps1'],
+    });
+    const res = tryCommit(dir, { 'notes.txt': 'anything\n' }, 'feat/whatever');
+    expect(res.status).not.toBe(0);
+    const out = `${res.stdout}${res.stderr}`;
+    expect(out).toContain('BLOCKED');
+    expect(out).toContain('ownership scan did not complete');
+  });
+
   // governance-manifest.json parses but carries no sharedPaths array:
   // blocked. The wall must not be looser than Resolve-SharedSet about the
   // same corruption, where a manifest truncated to "{}" (e.g. by a careless
