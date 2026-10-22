@@ -55,12 +55,20 @@ is unchanged and is exactly what this exception is bounded to protect.
 
 ## Adoption fields
 
-A child turns the sync on by declaring two fields in its own `repo-profile.json`:
+A child turns the sync on by declaring two required fields and one optional field in its own `repo-profile.json`:
 
 - `governanceHome` (string): `self` for the governance home, or the URL or filesystem path of
   the governance home repo for a child. Absent means unconfigured: the tool does nothing.
 - `syncIssue` (positive integer): the child's own standing GitHub issue number for governance
   syncs. Required whenever `governanceHome` is not `self`.
+- `governanceRef` (string, optional): a tag or branch of the governance home to pull, not a commit
+  hash. Absent means the home's default branch. Present, it must be 1 to 200 characters of
+  letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit, with no `..` or `//`
+  and no trailing `/`, `.` or `.lock`; otherwise the sync exits 1 before any network access. A ref
+  the home does not have fails the clone and the sync exits 2. A pin should name a tag or a
+  protected branch, since any branch in the home is accepted and its content merges itself on
+  green. The pinned ref must carry a `tools/governance-sync.ps1` that reads `governanceRef`; a ref
+  older than that drops the pin after one sync.
 
 A child whose default branch is not `main` must also declare `defaultBranch` in its own
 `repo-profile.json` (the profile reader's fallback is `main`): the sync tool cuts its worktree
