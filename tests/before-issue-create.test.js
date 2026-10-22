@@ -117,6 +117,46 @@ maybeDescribe('_claude/hooks/before-issue-create.ps1: the one accepted form', ()
   });
 });
 
+maybeDescribe('_claude/hooks/before-issue-create.ps1: the reason text', () => {
+  const noteText = () => {
+    const text = fs.readFileSync(
+      path.join(__dirname, '..', '_claude', 'hooks', 'notes.md'),
+      'utf8'
+    );
+    const m = /^## before-issue-create[ \t]*\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(text);
+    return m[1].trim().replace(/\s*\r?\n\s*/g, ' ');
+  };
+
+  it('is the notes.md text, with the reason, label, and first line filled in', () => {
+    const res = run(create(`--label ${LABEL} --body "${LINE}"`));
+    expect(res.reason).toBe(
+      `before-issue-create: ${noteText()
+        .replace('{why}', 'its body is inline')
+        .replace('{label}', LABEL)
+        .replace('{line}', LINE)}`
+    );
+  });
+
+  it('still denies, with a short reason, when notes.md cannot be read', () => {
+    const lone = fs.mkdtempSync(path.join(os.tmpdir(), 'before-issue-create-lone-'));
+    try {
+      const copy = path.join(lone, 'before-issue-create.ps1');
+      fs.copyFileSync(SCRIPT, copy);
+      const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', copy], {
+        input: JSON.stringify({ tool_input: { command: 'gh issue create --title T' }, cwd: dir }),
+        encoding: 'utf8',
+      });
+      expect(r.status).toBe(0);
+      const out = JSON.parse(r.stdout).hookSpecificOutput;
+      expect(out.permissionDecision).toBe('deny');
+      expect(out.permissionDecisionReason).toContain('This command names issue creation');
+      expect(out.permissionDecisionReason).toContain(`--label ${LABEL}`);
+    } finally {
+      fs.rmSync(lone, { recursive: true, force: true });
+    }
+  });
+});
+
 maybeDescribe('_claude/hooks/before-issue-create.ps1: creates that hide in the text', () => {
   it('denies a create inside a quoted $( ), backticks, a chain, or a wrapper', () => {
     const bare = 'gh issue create --title T --body "x"';

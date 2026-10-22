@@ -178,6 +178,10 @@
       "budget": 150
     },
     {
+      "path": "_claude/hooks/notes.md",
+      "budget": 400
+    },
+    {
       "path": "_claude/agents/issue-writer.md",
       "group": "issue-writer-researcher"
     },

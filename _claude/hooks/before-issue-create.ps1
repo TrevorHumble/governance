@@ -74,13 +74,23 @@ function Test-IssuesApiPost([string[]]$words) {
   return $hasFields
 }
 
+# The reason text lives in notes.md (counted there). If that file cannot be read, the deny still stands.
+function Get-Reason($why) {
+  try {
+    $text = [System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'notes.md'))
+    $m = [regex]::Match($text, '(?ms)^## before-issue-create[ \t]*\r?\n(.*?)(?=^## |\z)')
+    if ($m.Success) {
+      $note = $m.Groups[1].Value.Trim() -replace '\s*\r?\n\s*', ' '
+      return $note.Replace('{why}', $why).Replace('{label}', $LABEL).Replace('{line}', $FIRST_LINE)
+    }
+  } catch { }
+  return "This command names issue creation, so it is judged as a filing: $why. File with gh issue create --label $LABEL --body-file <file>, whose first line is '$FIRST_LINE'."
+}
+
 function Write-Deny($why) {
-  $reason = "before-issue-create: This command names issue creation, so it is judged as a filing: $why. File an issue one way: " +
-    "gh issue create --label $LABEL --body-file <file>, where the file's first line is '$FIRST_LINE'. " +
-    "The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. " +
-    "Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search."
   $out = [ordered]@{ hookSpecificOutput = [ordered]@{
-      hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = $reason } }
+      hookEventName = 'PreToolUse'; permissionDecision = 'deny'
+      permissionDecisionReason = "before-issue-create: $(Get-Reason $why)" } }
   Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
 }
 
