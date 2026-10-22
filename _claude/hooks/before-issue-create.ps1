@@ -1,12 +1,20 @@
 # before-issue-create: a reminder, not a guarantee: an agent can type the Owner-approved line.
 # It fails closed: text cannot be reliably told from a command, so any command text that reads like
 # a create is judged as one, mentions included.
+# Covered, and judged the same way: gh issue create, and a gh api POST to repos/<o>/<r>/issues (the
+# only way to file in a cloud session, where gh issue create is refused). Either passes only with
+# the needs-issue-review label (for gh api: -f/-F/--field/--raw-field 'labels[]=...') and a body from
+# a regular file whose first line is Owner-approved: yes (for gh api: -F or --field body=@<file>).
+# An inline body, a missing label, a second create in the same command, a body from stdin or
+# --input, and anything it cannot parse are denied.
 # Not covered: a loop that runs one create several times, a cd earlier in the same command, gh api
 # graphql, curl or other HTTP clients, gh aliases, and non-Bash tools (such as a GitHub connector's
 # issue tool) that this hook never sees. Also not covered: a command longer than 10000 characters
 # or naming gh more than 12 times is denied unread (a cap on the work the hook does), and a
 # --body-file that is not a regular file (a pipe, a device) is denied unopened, so a legitimate use
-# of either has to be split or rewritten. Any exception inside the hook allows the call.
+# of either has to be split or rewritten. For gh api, only the fields -f/-F/--field/--raw-field set
+# are read; a body or label sent another way (a nested JSON field, a --template, a here-document to
+# --input) is denied or unseen. Any exception inside the hook allows the call.
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
@@ -69,6 +77,40 @@ function Get-CreateFacts([string[]]$words) {
   return $facts
 }
 
+# Flags of gh api that take a value, so a word after one is not read as a field flag.
+$API_VALUE_FLAGS = @('-H', '--header', '-q', '--jq', '-t', '--template', '--hostname', '--cache',
+  '-p', '--preview', '-X', '--method')
+
+# The label, body and --input of one gh api call. -f and --raw-field send text; -F and --field send
+# a typed value, where body=@<file> reads the file. A field the hook reads is only one of those four.
+function Get-ApiFacts([string[]]$words) {
+  $facts = @{ Inline = $false; Labels = @(); File = $null; Input = $false; Bodies = 0 }
+  for ($i = 0; $i -lt $words.Count; $i++) {
+    $w = $words[$i]
+    if ($w -ceq '--') { break }
+    $name = $null; $val = $null
+    if ($w.StartsWith('--')) { $name, $val = $w -split '=', 2 }
+    elseif ($w -cmatch '^-[A-Za-z]') {
+      $name = $w.Substring(0, 2)
+      if ($w.Length -gt 2) { $val = $w.Substring(2); if ($val.StartsWith('=')) { $val = $val.Substring(1) } }
+    } else { continue }
+    if ($name -ceq '--input') { $facts.Input = $true; continue }
+    if ($API_VALUE_FLAGS -ccontains $name) { if ($null -eq $val) { $i++ }; continue }
+    if ($name -cnotin '-f', '-F', '--field', '--raw-field') { continue }
+    if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
+    $typed = $name -ceq '-F' -or $name -ceq '--field'
+    $eq = $val.IndexOf('=')
+    if ($eq -lt 0) { continue }
+    $key = $val.Substring(0, $eq); $value = $val.Substring($eq + 1)
+    if ($key -ceq 'labels[]') { $facts.Labels += $value }
+    elseif ($key -ceq 'body') {
+      $facts.Bodies++
+      if ($typed -and $value.StartsWith('@')) { $facts.File = $value.Substring(1) } else { $facts.Inline = $true }
+    }
+  }
+  return $facts
+}
+
 function Test-IssuesApiPost([string[]]$words) {
   # Fields with no explicit method also POST.
   if (-not ($words | Where-Object { $_ -match $ISSUES_ENDPOINT })) { return $false }
@@ -124,9 +166,14 @@ try {
   $apiPosts = @($apiMatches | Where-Object { Test-IssuesApiPost (Get-SegmentWords $text ($_.Index + $_.Length)) })
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
   if ($creates.Count + $apiPosts.Count -gt 1) { Write-Deny 'its text names issue creation more than once (one create per call; a title or other text that names the command counts too; file with a neutral title, then write the real title to a file with the Write tool and run gh issue edit <N> --title "$(cat <file>)")'; exit 0 }
-  if ($apiPosts.Count -eq 1) { Write-Deny 'it creates the issue through gh api'; exit 0 }
 
-  $facts = Get-CreateFacts (Get-SegmentWords $text ($creates[0].Index + $creates[0].Length))
+  if ($apiPosts.Count -eq 1) {
+    $facts = Get-ApiFacts (Get-SegmentWords $text ($apiPosts[0].Index + $apiPosts[0].Length))
+    if ($facts.Input) { Write-Deny 'its body comes from --input, which cannot be read here'; exit 0 }
+    if ($facts.Bodies -gt 1) { Write-Deny 'it gives more than one body field'; exit 0 }
+  } else {
+    $facts = Get-CreateFacts (Get-SegmentWords $text ($creates[0].Index + $creates[0].Length))
+  }
   if ($facts.Inline) { Write-Deny 'its body is inline'; exit 0 }
   if ($facts.Labels -cnotcontains $LABEL) { Write-Deny "it has no $LABEL label"; exit 0 }
   if (-not $facts.File -or $facts.File -eq '-') { Write-Deny 'its body does not come from a file (stdin cannot be read here)'; exit 0 }

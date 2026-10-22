@@ -2,7 +2,7 @@
 
 ## before-issue-create
 
-This command names issue creation, so it is judged as a filing: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, where the file's first line is '{line}'. The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
+This command names issue creation, so it is judged as a filing: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>, where the file's first line is '{line}'. The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
 
 ## goal-check
 
@@ -18,7 +18,7 @@ Before you stop: does your report say what changed, what you left alone, and wha
 
 ## reviewer-done
 
-The {role} has returned. Fix what its evidence proves, say why for the rest, then send the fix back to review.
+The {role} has returned. Fix what its evidence proves, say why for the rest, then re-review.
 
 ## spawn-check
 
@@ -32,8 +32,8 @@ unreadable: The spawn input was unreadable. Try again.
 ## session-greeting
 
 hello: Hooks here nudge; only issue filing and agent spawns are denied. Seats: seats.json.
-model: This session runs {model}; the orchestrator seat is {seats}. Restart on a seat's model.
+model: This session runs {model}; the orchestrator seat is {seats}.
 unchecked: The session's model was not reported, so not checked.
 env: {name} is set and overrides the seats.
 cap: maxEffortLevel {cap} is below the {role} seat's effort ({effort}).
-marker: .run_state/hard exists, so spawns need the hard tag. Delete it if stale.
+marker: .run_state/hard exists, so spawns need the hard tag.
