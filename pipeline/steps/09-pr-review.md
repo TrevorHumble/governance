@@ -7,7 +7,7 @@ Review, fix, re-review until it passes. That loop is normal and fair; most chang
 Seat every reviewer as `.claude/agents/orchestrator.md` says. Run each specialist below once; all but architecture run on the working-tree diff (no PR exists until step 11):
 
 - `reviewing-design`: every diff.
-- `reviewing-architecture`: at issue time (step 06), not on the diff, when the change adds or restructures a component. Quote in its briefing the `DESIGN.md` records the change touches, if the file is present.
+- `reviewing-architecture`: at issue time (step 06), not on the diff, when the change adds or restructures a component.
 - `reviewing-security`: when the diff touches anything its description names, or any path in `criticalPaths` or any entry in `criticalDependencies` (`repo-profile.json`).
 - `reviewing-skills`: when a skill or agent file changes.
 - `reviewing-docs`: when docs change.

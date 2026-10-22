@@ -7,7 +7,7 @@ metadata:
 
 # Reviewing architecture
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. You are handed a plan. Judge only against the components and layers your briefing's neutral summary and the repo listing show and the decisions your briefing quotes: a plan that undoes a recorded decision is a finding. If they do not show enough to judge, ask one `question:`.
+Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. You are handed a plan. Judge only against the components and layers your briefing's neutral summary and the repo listing show, and the decisions your briefing quotes: a plan that undoes a recorded decision is a finding. If they do not show enough to judge, ask one `question:`.
 
 ## What to check
 
