@@ -98,6 +98,10 @@ check:emdash"}`.
   `"self"`.
 - `syncIssue` (positive integer). The child's own standing GitHub issue number for governance
   syncs; required whenever `governanceHome` is not `"self"`. This repo does not declare it.
+- `governanceRef` (string). Optional. Allowed: a tag or branch name of the governance home, which
+  `tools/governance-sync.ps1` pulls instead of the home's default branch. Absent means the default
+  branch. A raw commit hash is not allowed, since a depth-1 clone takes a tag or branch name with
+  `--branch` but not a hash. This repo does not declare it.
 - `acknowledgedDivergentPaths` (array of strings). Allowed: any list of repo-relative paths, or
   `[]`; the retained-divergent paths (§ "Governance sync" below, "The `retired` entry schema and
   provenance-checked pruning") this child means to keep un-pruned on purpose. A path in this list

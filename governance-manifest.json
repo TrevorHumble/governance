@@ -165,6 +165,10 @@
       "type": "positive integer"
     },
     {
+      "name": "governanceRef",
+      "type": "string"
+    },
+    {
       "name": "acknowledgedDivergentPaths",
       "type": "array of strings"
     }

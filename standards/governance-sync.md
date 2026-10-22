@@ -61,6 +61,10 @@ A child turns the sync on by declaring two fields in its own `repo-profile.json`
   the governance home repo for a child. Absent means unconfigured: the tool does nothing.
 - `syncIssue` (positive integer): the child's own standing GitHub issue number for governance
   syncs. Required whenever `governanceHome` is not `self`.
+- `governanceRef` (string, optional): a tag or branch of the governance home to pull, not a commit
+  hash. Absent means the home's default branch. Present, it must be non-empty and not start with
+  `-`; otherwise the sync exits 1 before any network access. A ref the home does not have fails
+  the clone and the sync exits 2.
 
 A child whose default branch is not `main` must also declare `defaultBranch` in its own
 `repo-profile.json` (the profile reader's fallback is `main`): the sync tool cuts its worktree
