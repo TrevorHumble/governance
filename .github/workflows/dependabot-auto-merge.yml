@@ -1,0 +1,30 @@
+name: Dependabot auto-merge
+
+# A Dependabot pull request merges itself once the required check (`build`) is green, with no
+# reviewer. There is no classifier: CI is the only guard (accepted risk, #90).
+#
+# pull_request_target runs this file from the default branch, with a token that can write, so the
+# workflow checks out nothing from the pull request and runs none of its code. Until cutover (#102)
+# the default branch is not v2, so this file does nothing on v2.
+#
+# The repo needs "Allow auto-merge" and "Allow squash merging" turned on in Settings, and a required
+# check: `gh pr merge --auto` fails without them.
+on: pull_request_target
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      # Fails the job unless the pull request really is Dependabot's.
+      - id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      - name: Merge when green
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

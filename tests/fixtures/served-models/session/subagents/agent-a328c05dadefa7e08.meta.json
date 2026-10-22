@@ -1,0 +1,10 @@
+{
+  "agentType": "general-purpose",
+  "description": "#115 implement seat ratchet",
+  "spawnDepth": 1,
+  "requestShape": "background",
+  "requestNonInteractive": true,
+  "model": "sonnet",
+  "effort": "high",
+  "finished": true
+}

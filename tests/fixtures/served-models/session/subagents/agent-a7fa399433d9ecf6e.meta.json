@@ -1,0 +1,10 @@
+{
+  "agentType": "general-purpose",
+  "description": "#117 baseline evals for six skills",
+  "spawnDepth": 1,
+  "requestShape": "background",
+  "requestNonInteractive": true,
+  "model": "opus",
+  "effort": "medium",
+  "finished": true
+}

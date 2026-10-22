@@ -1,0 +1,3 @@
+{"type": "user", "message": {"role": "user", "content": "Your full briefing is the file /tmp/claude-0/-home-user-governance/f3947410-6dcf-58c0-852b-e079dd6ab47c/scratchpad/rev115/impl.txt. Read it and follow it exactly."}}
+{"type": "assistant", "message": {"role": "assistant", "model": "claude-sonnet-5-5", "content": [{"type": "text", "text": "trimmed"}]}}
+{"type": "assistant", "message": {"role": "assistant", "model": "claude-sonnet-5-5", "content": [{"type": "text", "text": "trimmed"}]}}
