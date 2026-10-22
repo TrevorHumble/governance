@@ -3,20 +3,21 @@
 // length of each record under it. No process or filesystem access here.
 'use strict';
 
+const MAX_WORDS = 150;
+const NOTE_WORDS = 100;
+
 // Everything before the first `## ` line must equal this, after the line endings, trailing
 // spaces, and outer blank lines are normalized. The file the writing model reads first carries the
 // rule, so it is in view before any record is written.
 const HEADER = [
   '# DESIGN',
   '',
-  'Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.',
+  'Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. ' +
+    `At most ${MAX_WORDS} words per record; aim for under ${NOTE_WORDS}. CI checks this: \`npm run check:design\`.`,
 ].join('\n');
 
 // The header's paragraph after the title: repeated in every failure message.
 const RULE = HEADER.split('\n\n')[1];
-
-const MAX_WORDS = 150;
-const NOTE_WORDS = 100;
 
 const DATE_LINE = /^\d{4}-\d{2}-\d{2}, #\d+/;
 const LABELS = ['Decided:', 'Why:', 'Gave up:'];
@@ -77,6 +78,7 @@ function run({ text, path }) {
   const { header, records } = parse(text);
   const out = [];
   let failed = false;
+  let before; // the nearest earlier record that has a date: {name, date}
   if (header !== HEADER) {
     failed = true;
     // The expected header holds the rule, so it is not repeated after it.
@@ -90,11 +92,22 @@ function run({ text, path }) {
     const problems = [];
     const words = wordCount(r);
     if (words > MAX_WORDS) problems.push(`has ${words} words, over the ${MAX_WORDS} limit`);
-    if (!body.some((l) => DATE_LINE.test(l))) {
+    const dateLine = body.find((l) => DATE_LINE.test(l));
+    if (dateLine === undefined) {
       problems.push('has no date and issue line (`2026-10-22, #100`)');
     }
     for (const label of LABELS) {
       if (!body.some((l) => l.startsWith(label))) problems.push(`has no \`${label}\` line`);
+    }
+    if (dateLine !== undefined) {
+      const date = dateLine.slice(0, 10);
+      // ISO dates compare as text. Equal dates keep either order.
+      if (before !== undefined && date > before.date) {
+        problems.push(
+          `is dated ${date}, later than ${before.name} (${before.date}); records go newest first`
+        );
+      }
+      before = { name, date };
     }
     if (problems.length > 0) {
       failed = true;

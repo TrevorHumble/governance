@@ -2,7 +2,7 @@
 // CI gate: no file in the new tree, vendored skill, BUILDLOG.md, or buildlog fragment holds a
 // banned phrase, and no file in the new tree holds a banned filler word. Matching lives in
 // check-banned-words-core.js; which files are the new tree is answered by the budget gate
-// (countInputs in check-token-budget-core.js); this file reads disk.
+// (countInputs in check-token-budget-core.js), plus the design file; this file reads disk.
 //
 //   node scripts/check-banned-words.js
 'use strict';
@@ -15,12 +15,16 @@ const { readHead } = require('./check-token-budget');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
+// The design file is outside the budget count, so countInputs never lists it, but it is prose the
+// owner reads and gets the same scan. The swap (#101) repoints this to DESIGN.md.
+const DESIGN_FILE = '_shared/DESIGN.md';
+
 function scanSet(root) {
   const { view } = readHead(root);
   const inTree = new Set(countInputs(view).files);
   const scan = [];
   for (const p of view.listing) {
-    if (inTree.has(p)) scan.push({ path: p, scope: 'all' });
+    if (inTree.has(p) || p === DESIGN_FILE) scan.push({ path: p, scope: 'all' });
     else if (p.startsWith(VENDOR_ROOT) || p === 'BUILDLOG.md' || p.startsWith('buildlog/')) {
       scan.push({ path: p, scope: 'phrases' });
     }

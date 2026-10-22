@@ -34,7 +34,7 @@ Gave up: Pinning to a commit hash, since a depth-1 clone takes a tag or branch n
 
 ## New files staged under `_claude/` until the swap
 
-2026-09-28, #91
+2026-10-04, #91
 
 Decided: The v2 branch holds the new tree beside the old one. New `.claude/` content is built under `_claude/` until the swap. CI counts the new tree's tokens.
 

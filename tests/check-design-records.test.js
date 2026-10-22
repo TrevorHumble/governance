@@ -6,7 +6,14 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { HEADER, RULE, run, parse } = require('../scripts/check-design-records-core');
+const {
+  HEADER,
+  RULE,
+  MAX_WORDS,
+  NOTE_WORDS,
+  run,
+  parse,
+} = require('../scripts/check-design-records-core');
 const { main } = require('../scripts/check-design-records');
 
 const FILE = 'x/DESIGN.md';
@@ -104,6 +111,34 @@ describe('run: the required lines', () => {
   });
 });
 
+describe('run: newest first', () => {
+  const dated = (date, title = 'Title') =>
+    record(title).replace('2026-10-22, #100', `${date}, #100`);
+
+  it('passes records in falling or equal date order', () => {
+    const text = file(dated('2026-10-22', 'A'), dated('2026-10-22', 'B'), dated('2026-09-28', 'C'));
+    expect(check(text).exitCode).toBe(0);
+  });
+
+  it('fails a record dated later than the one before it, naming both by line, with the rule', () => {
+    const r = check(file(dated('2026-09-28', 'Older'), dated('2026-10-04', 'Newer')));
+    expect(r.exitCode).toBe(1);
+    expect(r.lines).toHaveLength(1);
+    expect(out(r)).toContain(
+      'x/DESIGN.md:11 (Newer) is dated 2026-10-04, later than x/DESIGN.md:5 (Older) (2026-09-28)'
+    );
+    expect(out(r)).toContain(`Rule: ${RULE}`);
+  });
+
+  it('compares against the nearest earlier record that has a date', () => {
+    const r = check(
+      file(dated('2026-09-28', 'A'), record('B', 20, ['date']), dated('2026-10-04', 'C'))
+    );
+    expect(r.exitCode).toBe(1);
+    expect(out(r)).toContain('(C) is dated 2026-10-04, later than x/DESIGN.md:5 (A)');
+  });
+});
+
 describe('run: the header', () => {
   it('fails a changed header and prints the expected one', () => {
     const r = check(file(record()).replace('At most 150', 'At most 200'));
@@ -162,6 +197,10 @@ describe('run: failure output', () => {
       expect(r.exitCode).toBe(1);
       expect(out(r)).toContain(`Rule: ${RULE}`);
     }
+  });
+
+  it('writes the limits into the header from MAX_WORDS and NOTE_WORDS', () => {
+    expect(RULE).toContain(`At most ${MAX_WORDS} words per record; aim for under ${NOTE_WORDS}.`);
   });
 
   it('names the rule as the header paragraph', () => {
