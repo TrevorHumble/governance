@@ -2,9 +2,11 @@
 
 ## Before step 1: is it hard?
 
-Judge the goal first. It is hard if it is novel and deep (hard math or algorithms, no prior art to reuse), or something we can't get back (a loss outside git: user data, someone else's work, money, something public). Deleting what git holds is not that. It is also hard if the owner says so. Trouble mid-run is the orchestrator's call: `_claude/agents/orchestrator.md`.
+Judge the goal first. It is hard if it is novel and deep (hard math or algorithms, no prior art to reuse), or something we can't get back (a loss outside git: user data, someone else's work, money, something public). Deleting what git holds is not that. It is also hard if the owner says so.
 
 If it is hard, your first message asks the owner to switch the session to the `hard` award's orchestrator model and effort in `seats.json`, with `/model`.
+
+Mid-run, it is hard when the same finding fails review three times, or the implementer hands back unfinished work other than a stop to ask the owner or before a risky step. Then commit the attempt to the branch as a wip commit naming the issue, and revert it in a second commit, so the attempt stays in history and the tree is back where step 08 began. Add the `hard` label (`gh issue edit <N> --add-label hard`), a pipeline call. Restart step 08 from the issue, starting every agent from the award from then on. Earlier review findings and decision lines do not carry over; deferred notes do. Your own seat stays, and nothing goes back to the owner.
 
 ## The steps
 

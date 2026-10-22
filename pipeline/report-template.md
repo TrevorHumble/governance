@@ -14,7 +14,7 @@ Agents pass the first test and fail the second. Short and useless is the common 
 
 ## What goes in
 
-Open with one line: `Moved up: no.` or `Moved up: yes, <why>`; the session's own seat counts, as in "yes, session at start, <why>". The why is the part of the hard test that applied (`pipeline/PIPELINE.md`) or the trouble mid-run (`_claude/agents/orchestrator.md`). Every report carries it.
+Open with one line: `Moved up: no.` or `Moved up: yes, <why>`; the session's own seat counts, as in "yes, session at start, <why>". The why is the part of the hard test that applied (`pipeline/PIPELINE.md`), at the start or mid-run. Every report carries it.
 
 Three parts, in this order. Leave out a part that has nothing in it.
 
