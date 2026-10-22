@@ -63,6 +63,7 @@ describe('governance-ci.yml', () => {
       'check:budget',
       'check:banned',
       'check:seats',
+      'check:design',
     ]) {
       expect(a).toMatch(new RegExp(`run: npm (run )?${script}$`, 'm'));
     }
