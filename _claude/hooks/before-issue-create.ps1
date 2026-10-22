@@ -92,16 +92,16 @@ function Get-Reason($why) {
 }
 
 # A regular file, after following a link. A pipe or a device is not, and opening one can block.
+# On Unix the shell's own test -f decides (PowerShell reports a pipe as an ordinary file); on
+# Windows a directory or a device name is the only non-file this can name.
 function Test-RegularFile([string]$path) {
   $item = Get-Item -LiteralPath $path -Force -ErrorAction Stop
-  if ($item.LinkType) {
-    $target = $item.ResolveLinkTarget($true)
-    if ($null -eq $target) { return $false }
-    $item = Get-Item -LiteralPath $target.FullName -Force -ErrorAction Stop
-  }
   if ($item.PSIsContainer) { return $false }
-  if ($item.PSObject.Properties['UnixMode']) { return $item.UnixMode.StartsWith('-') }
-  return -not ($item.Attributes -band [System.IO.FileAttributes]::Device)
+  if ($PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows) {
+    return -not ($item.Attributes -band [System.IO.FileAttributes]::Device)
+  }
+  & test -f $path
+  return ($LASTEXITCODE -eq 0)
 }
 
 function Write-Deny($why) {
