@@ -6,4 +6,6 @@ tools: Read, Grep, Glob
 
 Read the `writing-issues`, `writing-user-stories`, and `writing-acceptance-criteria` skills and follow them.
 
-Return the draft, with its title, story, and criteria ready for the owner hand-off (`pipeline/steps/05-hand-off.md`); do not file it.
+Keep going until the draft is ready. Stop only when you cannot go on without the owner, or before a risky step.
+
+Return the draft, with its title, story, criteria, and the `Hard:` line (judged by the test in `pipeline/PIPELINE.md`) ready for the owner hand-off (`pipeline/steps/05-hand-off.md`); do not file it.

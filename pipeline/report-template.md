@@ -14,6 +14,8 @@ Agents pass the first test and fail the second. Short and useless is the common 
 
 ## What goes in
 
+Open with one line: `Moved up: no.` or `Moved up: yes, <why>`; the session's own seat counts, as in "yes, session at start, <why>". The why is the part of the hard test that applied (`pipeline/PIPELINE.md`), at the start or mid-run. Every report carries it.
+
 Three parts, in this order. Leave out a part that has nothing in it.
 
 **Decisions.** One line for every call the agents made inside the criteria, copied from the implementer's lines. Say what was decided and which way, in plain words. A case left alone gets a line too. The owner may skim these or not.
@@ -34,4 +36,4 @@ A price is what the option costs: tokens, files, time, or money. If you need a f
 
 ## Nothing on your own initiative
 
-The report is where the owner learns of a note. Do not file an issue, label, or PR about it on your own initiative; the owner decides whether it becomes work. The pipeline's own calls, such as the labels at step 07 and the PR at step 11, are not this.
+The report is where the owner learns of a note. Do not file an issue, label, or PR about it on your own initiative; the owner decides whether it becomes work. The pipeline's own calls, such as the `hard` label, the labels at step 07, and the PR at step 11, are not this.

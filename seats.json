@@ -2,7 +2,7 @@
   "roles": {
     "orchestrator": {
       "provider": "anthropic",
-      "model": "claude-opus-5-5",
+      "model": "claude-sonnet-5-5",
       "effort": "medium",
       "agent": "orchestrator",
       "skills": []
@@ -16,7 +16,7 @@
     },
     "issue-reviewer": {
       "provider": "anthropic",
-      "model": "claude-fable-5-1",
+      "model": "claude-opus-5-5",
       "effort": "medium",
       "agent": "reviewer",
       "skills": ["reviewing-issues"]
@@ -24,7 +24,7 @@
     "implementer": {
       "provider": "anthropic",
       "model": "claude-sonnet-5-5",
-      "effort": "high",
+      "effort": "medium",
       "agent": "implementer",
       "skills": []
     },
@@ -58,11 +58,31 @@
     }
   },
   "awards": {
-    "cheaper-seats": {
+    "hard": {
+      "orchestrator": {
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "effort": "high"
+      },
+      "implementer": {
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "effort": "high"
+      },
+      "issue-reviewer": {
+        "provider": "anthropic",
+        "model": "claude-fable-5-1",
+        "effort": "medium"
+      },
       "code-reviewer": {
         "provider": "anthropic",
-        "model": "claude-sonnet-5-5",
+        "model": "claude-fable-5-1",
         "effort": "medium"
+      },
+      "referee": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-5-5",
+        "effort": "high"
       }
     }
   }
