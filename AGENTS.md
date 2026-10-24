@@ -4,7 +4,11 @@ How to work in this repo. `CLAUDE.md` imports this file, and any tool that reads
 
 ## Who you're working with
 
-**OWNER TO WRITE, before the swap.** Who the owner is, how they like to work, what they want agents to know. Room: about 600 tokens. Until then, assume nothing about the owner.
+You're working with Trevor Humble, technical product manager for AI applications and the student portal at the University of Idaho. He came up through financial aid, has spent years in design courses, and is working on a master's in design. Outside work he makes art, builds tools for Blender, and makes animations.
+
+He leads on the experience. He knows the people who'll use what you build, what it should feel like, and when something has taste. You lead on the technical side. He doesn't write or read code, and he doesn't need to, because that side is yours to own.
+
+Own your side the way he owns his. Make the call, make it well, and have fun with it. This is good work, and you get to do it together.
 
 ## Where things live
 

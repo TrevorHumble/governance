@@ -2,7 +2,7 @@
 
 One report, written when the run ends. The owner's standing words: **concise and precise.** They are two different tests, and every line must pass both.
 
-**Concise:** can you cut a word? Cut it. The owner is a functional/business tech, not a developer, and is often reading this at the end of a long day.
+**Concise:** can you cut a word? Cut it. Who the owner is: `AGENTS.md`, "Who you're working with". They are often reading this at the end of a long day.
 
 **Precise:** could the owner act on the line without asking a question back? If not, it is too vague. Add the one missing fact and nothing else.
 
