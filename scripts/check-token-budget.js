@@ -102,6 +102,15 @@ function notCountedOf(budget, where) {
   return list;
 }
 
+// The manifest's own not-counted list ships to children, so it is read from the manifest alone.
+function manifestNotCountedOf(manifest, where) {
+  const list = manifest.notCounted ?? [];
+  if (!Array.isArray(list) || !list.every((e) => typeof e === 'string')) {
+    throw new Error(`notCounted in governance-manifest.json ${where} must be an array of strings`);
+  }
+  return list;
+}
+
 // The manifest's shared paths decide what counts. Each side is filtered by its own manifest, so a
 // PR that drops a path from sharedPaths shows up as a file that leaves the count.
 function sharedPathsOf(manifest, where) {
@@ -126,10 +135,12 @@ function readHead(root) {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'governance-manifest.json'), 'utf8'));
   return {
     profile,
+    manifest,
     caps: { total: budget.total, reviewer: budget.reviewer },
     view: {
       listing: gitLines(root, ['ls-files']),
       notCounted: notCountedOf(budget, 'repo-profile.json'),
+      manifestNotCounted: manifestNotCountedOf(manifest, 'on the head'),
       sharedPaths: sharedPathsOf(manifest, 'on the head'),
       retired: retiredOf(manifest),
       exemptRetired: profile.governanceHome !== 'self',
@@ -151,9 +162,13 @@ function readBase(root, ref, headSharedPaths) {
   }
   // A base that predates the manifest is counted by the head's shared paths.
   let sharedPaths = headSharedPaths;
+  let manifest = {};
+  let manifestNotCounted = [];
   if (listing.includes('governance-manifest.json')) {
     try {
-      sharedPaths = sharedPathsOf(JSON.parse(show('governance-manifest.json')), `at ${ref}`);
+      manifest = JSON.parse(show('governance-manifest.json'));
+      sharedPaths = sharedPathsOf(manifest, `at ${ref}`);
+      manifestNotCounted = manifestNotCountedOf(manifest, `at ${ref}`);
     } catch (err) {
       throw new Error(
         `cannot read governance-manifest.json at ${ref} (${err.message.split('\n')[0]})`,
@@ -167,9 +182,15 @@ function readBase(root, ref, headSharedPaths) {
   }
   return {
     profile,
+    manifest,
     guarded: 'budget' in profile,
     caps: { total: budget.total, reviewer: budget.reviewer },
-    view: { listing, notCounted: notCountedOf(budget, `repo-profile.json at ${ref}`), sharedPaths },
+    view: {
+      listing,
+      notCounted: notCountedOf(budget, `repo-profile.json at ${ref}`),
+      manifestNotCounted,
+      sharedPaths,
+    },
     read: (file) => show(file),
   };
 }
@@ -196,11 +217,20 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
     }
     try {
       const base = readBase(root, found.ref, head.view.sharedPaths);
+      // A PR must not leave the parent's guard by changing governanceHome: self at either end holds.
+      if (base.profile.governanceHome === 'self') head.view.exemptRetired = false;
       baseCounts = run(countInputs(base.view), base.read, base.caps);
       if (base.guarded) {
         const changed = changedFiles(root, found.ref);
         guardLines.push(
-          ...guardFailures(guardedChanges(base, head), changed, base.profile, head.profile)
+          ...guardFailures(
+            guardedChanges(base, head),
+            changed,
+            base.profile,
+            head.profile,
+            base.manifest,
+            head.manifest
+          )
         );
       }
     } catch (err) {

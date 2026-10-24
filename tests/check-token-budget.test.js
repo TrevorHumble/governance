@@ -541,6 +541,41 @@ describe('what counts, and the guarded changes', () => {
     expect(guardedChanges(base, state({ notCounted: [] }))).toEqual([]);
   });
 
+  it('skips a manifest notCounted entry in the count, as a prefix or an exact path', () => {
+    const listing = ['a.md', 'b.md', 'skills/one/SKILL.md', 'skills/two/SKILL.md'];
+    const sharedPaths = ['a.md', 'b.md', 'skills/**'];
+    expect(
+      countInputs(view({ listing, sharedPaths, manifestNotCounted: ['skills/one/', 'b.md'] }))
+    ).toEqual(['a.md', 'skills/two/SKILL.md']);
+    // an entry for a folder that does not exist yet matches nothing and breaks nothing
+    expect(countInputs(view({ listing, sharedPaths, manifestNotCounted: ['nope/'] }))).toEqual([
+      'a.md',
+      'b.md',
+      'skills/one/SKILL.md',
+      'skills/two/SKILL.md',
+    ]);
+  });
+
+  it('flags a manifest notCounted entry added in the parent, never in a child', () => {
+    const base = state({ manifestNotCounted: ['x/'] });
+    const parent = state({ manifestNotCounted: ['x/', 'y/'] });
+    expect(guardedChanges(base, parent)).toEqual(['governance-manifest.json notCounted gained y/']);
+    const child = state({ manifestNotCounted: ['x/', 'y/'], exemptRetired: true });
+    expect(guardedChanges(base, child)).toEqual([]);
+    expect(guardedChanges(base, state({ manifestNotCounted: [] }))).toEqual([]);
+  });
+
+  it('lets governance-manifest.json ride with a guarded change only when just notCounted differs', () => {
+    const changes = ['governance-manifest.json notCounted gained y/'];
+    const m = { sharedPaths: ['a.md'], notCounted: [] };
+    const added = { sharedPaths: ['a.md'], notCounted: ['y/'] };
+    const files = ['governance-manifest.json', 'buildlog/1-2.md', 'BUILDLOG.md'];
+    expect(guardFailures(changes, files, {}, {}, m, added)).toEqual([]);
+    const widened = { sharedPaths: ['a.md', 'b.md'], notCounted: ['y/'] };
+    const lines = guardFailures(changes, files, {}, {}, m, widened);
+    expect(lines.join('\n')).toContain('Other changed files: governance-manifest.json');
+  });
+
   it('flags a counted file that still exists but is dropped by notCounted', () => {
     const listing = ['a.md', 'b.md'];
     const changes = guardedChanges(state({ listing }), state({ listing, notCounted: ['b.md'] }));
@@ -743,6 +778,105 @@ describe('the wrapper, on temp git repos', () => {
     const r = check(root, []);
     // a.md 100 + skill 10 + other/f.md 5000 = 5110 words -> 6899; buildlog/ is skipped
     expect(r.out).toContain('6899 tokens in total');
+  });
+
+  describe('the manifest notCounted list', () => {
+    const SELF = { ...PROFILE, governanceHome: 'self' };
+    const withList = (notCounted) => ({ ...MANIFEST, notCounted });
+    const listIn = (root, notCounted) =>
+      put(root, 'governance-manifest.json', withList(notCounted));
+    // A repo on main holding an empty list, in the parent or in a child.
+    const makeListRepo = (profile) => makeRepo({ profile, manifest: withList([]) });
+
+    it('fails a parent PR that gains an entry beside other files, and names the list', () => {
+      const root = makeListRepo(SELF);
+      listIn(root, ['other/']);
+      put(root, 'standards/x.md', 'x');
+      commit(root);
+      const r = check(root);
+      expect(r.exitCode).toBe(1);
+      expect(r.out).toContain('governance-manifest.json notCounted gained other/');
+      expect(r.out).toContain('Other changed files: standards/x.md');
+    });
+
+    it('passes a parent PR that gains an entry alone, or with only a buildlog fragment', () => {
+      const root = makeListRepo(SELF);
+      listIn(root, ['other/']);
+      commit(root);
+      expect(check(root).exitCode).toBe(0);
+      put(root, 'buildlog/9-9.md', 'note');
+      put(root, 'BUILDLOG.md', 'log');
+      commit(root);
+      expect(check(root).exitCode).toBe(0);
+    });
+
+    it('fails a parent PR that gains an entry and changes the manifest elsewhere', () => {
+      const root = makeListRepo(SELF);
+      put(root, 'governance-manifest.json', {
+        ...withList(['other/']),
+        sharedPaths: [...MANIFEST.sharedPaths, 'extra/**'],
+      });
+      commit(root);
+      const r = check(root);
+      expect(r.exitCode).toBe(1);
+      expect(r.out).toContain('Other changed files: governance-manifest.json');
+    });
+
+    it('keeps the parent guard when a PR changes governanceHome away from self', () => {
+      const root = makeListRepo(SELF);
+      put(root, 'repo-profile.json', { ...PROFILE, governanceHome: 'child' });
+      listIn(root, ['other/']);
+      put(root, 'standards/x.md', 'x');
+      commit(root);
+      const r = check(root);
+      expect(r.exitCode).toBe(1);
+      expect(r.out).toContain('governance-manifest.json notCounted gained other/');
+    });
+
+    it('passes a child sync PR that gains an entry beside other files', () => {
+      const root = makeListRepo(PROFILE);
+      listIn(root, ['other/']);
+      put(root, 'standards/x.md', 'x');
+      commit(root);
+      const r = check(root);
+      expect(r.exitCode).toBe(0);
+      expect(r.out).not.toContain('notCounted gained');
+    });
+
+    it('skips a path under a listed prefix, and still counts an unlisted sibling', () => {
+      const root = makeListRepo(PROFILE);
+      put(root, 'standards/f.md', words(5000));
+      put(root, 'other/f.md', words(5000));
+      listIn(root, ['other/']);
+      commit(root);
+      // a.md 100 + skill 10 + standards/f.md 5000 = 5110 words -> 6899; other/f.md is skipped
+      expect(check(root, []).out).toContain('6899 tokens in total');
+    });
+
+    it('counts a child whose profile lists nothing the manifest lists', () => {
+      const root = makeRepo({
+        profile: { ...PROFILE, budget: { total: 25000, reviewer: 10000 } },
+        manifest: withList(['other/']),
+        files: { 'other/f.md': words(5000), 'standards/f.md': words(5000) },
+      });
+      // a.md 100 + skill 10 + standards/f.md 5000 = 5110 words -> 6899
+      expect(check(root, []).out).toContain('6899 tokens in total');
+    });
+
+    it('accepts a prefix entry for a folder that does not exist yet', () => {
+      const root = makeListRepo(SELF);
+      listIn(root, ['.claude/skills/baby/']);
+      commit(root);
+      expect(check(root).exitCode).toBe(0);
+    });
+
+    it('fails a manifest notCounted that is not an array of strings', () => {
+      const root = makeRepo();
+      put(root, 'governance-manifest.json', { ...MANIFEST, notCounted: 'other/' });
+      const r = check(root, []);
+      expect(r.exitCode).toBe(1);
+      expect(r.out).toContain('notCounted in governance-manifest.json on the head');
+    });
   });
 
   it('skips the guard on a push or a local run, and still counts', () => {
