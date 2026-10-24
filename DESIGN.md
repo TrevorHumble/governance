@@ -30,7 +30,7 @@ Decided: `NORTH-STAR.md` guides work on this repo only. It is not counted in the
 
 Why: The owner said "the north star is for development on this repo, the other repos will have their own", and "if it isn't mark down passed to child repos we don't worry about it". Earlier he said "it's not part of the machine".
 
-Gave up: The 700-token reserve in the budget plan. The file is still a placeholder.
+Gave up: The 700-token reserve in the budget plan.
 
 ## The token budget is a hard CI gate
 
