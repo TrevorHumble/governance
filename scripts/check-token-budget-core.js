@@ -87,24 +87,27 @@ function isSharedPath(file, sharedPaths) {
 
 /**
  * What a tree counts: every tracked `.md` that the manifest's shared paths cover, minus the
- * vendored root and the not-counted entries. Existence on disk alone never counts.
- * @param {{listing: string[], notCounted: string[], sharedPaths: string[]}} view
+ * vendored root and the not-counted entries of the profile and of the manifest. Existence on disk
+ * alone never counts.
+ * @param {{listing: string[], notCounted: string[], manifestNotCounted?: string[], sharedPaths: string[]}} view
  * @returns {string[]}
  */
-function countInputs({ listing, notCounted, sharedPaths }) {
+function countInputs({ listing, notCounted, manifestNotCounted = [], sharedPaths }) {
   return listing.filter(
     (f) =>
       f.endsWith('.md') &&
       isSharedPath(f, sharedPaths) &&
       !isVendored(f) &&
-      !isNotCounted(f, notCounted)
+      !isNotCounted(f, notCounted) &&
+      !isNotCounted(f, manifestNotCounted)
   );
 }
 
 /**
- * The guarded budget changes between a base and the head: a cap raised, a notCounted entry added,
- * a path counted at the base that still exists at the head but is not counted there. Each is a
- * line; no lines means none.
+ * The guarded budget changes between a base and the head: a cap raised, a profile notCounted entry
+ * added, a manifest notCounted entry added (only where the repo is the parent, `exemptRetired`
+ * false: a child gains entries by pulling), a path counted at the base that still exists at the
+ * head but is not counted there. Each is a line; no lines means none.
  * @param {{caps: {total: number, reviewer: number}, view: object}} base
  * @param {{caps: {total: number, reviewer: number}, view: object}} head
  * @returns {string[]}
@@ -118,6 +121,14 @@ function guardedChanges(base, head) {
   }
   for (const entry of head.view.notCounted) {
     if (!base.view.notCounted.includes(entry)) changes.push(`budget.notCounted gained ${entry}`);
+  }
+  if (!head.view.exemptRetired) {
+    const baseManifestList = base.view.manifestNotCounted || [];
+    for (const entry of head.view.manifestNotCounted || []) {
+      if (!baseManifestList.includes(entry)) {
+        changes.push(`governance-manifest.json notCounted gained ${entry}`);
+      }
+    }
   }
   const headCounted = new Set(countInputs(head.view));
   const headExists = new Set(head.view.listing);
@@ -134,17 +145,31 @@ function guardedChanges(base, head) {
 }
 
 /**
- * Fails when a guarded change is not the PR's only change. The budget's home
- * (repo-profile.json) may change with it; `buildlog/` and BUILDLOG.md may too.
+ * Fails when a guarded change is not the PR's only change. The budget's homes may change with it:
+ * repo-profile.json, and governance-manifest.json when only its `notCounted` list differs;
+ * `buildlog/` and BUILDLOG.md may too.
  * @param {string[]} changes output of guardedChanges
  * @param {string[]} changed repo-relative paths the PR changes
  * @param {object} baseProfile
  * @param {object} headProfile
+ * @param {object} [baseManifest]
+ * @param {object} [headManifest]
  * @returns {string[]} failure lines
  */
-function guardFailures(changes, changed, baseProfile, headProfile) {
+function guardFailures(
+  changes,
+  changed,
+  baseProfile,
+  headProfile,
+  baseManifest = {},
+  headManifest = {}
+) {
   if (changes.length === 0) return [];
   const homes = ['repo-profile.json'];
+  const stripList = ({ notCounted: _list, ...rest }) => rest;
+  if (isDeepStrictEqual(stripList(baseManifest), stripList(headManifest))) {
+    homes.push('governance-manifest.json');
+  }
   const others = changed.filter((f) => !homes.includes(f) && !ridesAlong(f));
   const strip = ({ budget: _budget, ...rest }) => rest;
   const profileRides =

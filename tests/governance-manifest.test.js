@@ -109,6 +109,12 @@ describe('governance-manifest.json', () => {
     expect(manifest.excludedPaths.length).toBeGreaterThan(0);
   });
 
+  it('has a `notCounted` array of strings, the list the token budget skips (prefix entries end in /)', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    expect(Array.isArray(manifest.notCounted)).toBe(true);
+    for (const entry of manifest.notCounted) expect(typeof entry).toBe('string');
+  });
+
   it('every sharedPaths entry resolves to at least one existing file in the tree', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     const allFiles = listFilesUnder(REPO_ROOT).filter(

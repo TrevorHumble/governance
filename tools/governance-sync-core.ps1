@@ -318,8 +318,8 @@ function Resolve-GhPath {
 # names alphabetically; array elements are canonicalized in place but their
 # own order is left untouched: canonicalization treats every array as ordered
 # content by default, so a reorder still counts as a value change here.
-# (Test-IsAdditiveManifestDiff below treats sharedPaths and arrivesAsStructure
-# as order-free sets for its own narrower comparison; that is a property of
+# (Test-IsAdditiveManifestDiff below treats sharedPaths, arrivesAsStructure and
+# notCounted as order-free sets for its own narrower comparison; that is a property of
 # that one check, not of canonical-JSON equality in general. excludedPaths
 # gets its own ordered comparison there instead.) The one recursive step
 # Get-CanonicalJson needs so two manifests that differ only in JSON key order
@@ -396,8 +396,8 @@ function Get-ManifestDiffFields {
 
 # Get-ManifestArrayFieldOrEmpty -- $Manifest.$Name as an array, or an empty
 # array when the property is absent or explicitly null. Shared by
-# Test-IsAdditiveManifestDiff's sharedPaths/excludedPaths/arrivesAsStructure
-# checks so a manifest that omits one of those fields reads as "declares
+# Test-IsAdditiveManifestDiff's sharedPaths/excludedPaths/arrivesAsStructure/
+# notCounted checks so a manifest that omits one of those fields reads as "declares
 # none" rather than throwing.
 function Get-ManifestArrayFieldOrEmpty {
   param(
@@ -446,13 +446,13 @@ function Test-IsAdditiveManifestDiff {
     [Parameter(Mandatory = $true)] $ChildManifest,
     [string[]]$ChildTrackedFiles
   )
-  $allowedFields = @('sharedPaths', 'excludedPaths', 'classes', 'arrivesAsStructure')
+  $allowedFields = @('sharedPaths', 'excludedPaths', 'classes', 'arrivesAsStructure', 'notCounted')
   $diffFields = Get-ManifestDiffFields -ParentManifest $ParentManifest -ChildManifest $ChildManifest
   foreach ($f in $diffFields) {
     if ($allowedFields -notcontains $f) {
       return [PSCustomObject]@{
         IsAdditive = $false
-        Reason     = "field '$f' differs and is outside the additive exception's four fields (sharedPaths, excludedPaths, classes, arrivesAsStructure)"
+        Reason     = "field '$f' differs and is outside the additive exception's five fields (sharedPaths, excludedPaths, classes, arrivesAsStructure, notCounted)"
       }
     }
   }
@@ -466,6 +466,7 @@ function Test-IsAdditiveManifestDiff {
 
   $addedSharedPaths = @()
   $addedClassesKeys = @()
+  $addedNotCounted = @()
 
   foreach ($f in $diffFields) {
     if ($f -eq 'classes') {
@@ -533,9 +534,10 @@ function Test-IsAdditiveManifestDiff {
         }
       }
     } else {
-      # sharedPaths, arrivesAsStructure: membership only, since a pure
-      # reorder is safe here (neither Resolve-SharedSet nor the
-      # arrivesAsStructure check in Get-PlanPathClassification reads order).
+      # sharedPaths, arrivesAsStructure, notCounted: membership only, since a
+      # pure reorder is safe here (neither Resolve-SharedSet, the
+      # arrivesAsStructure check in Get-PlanPathClassification, nor the
+      # token-budget check's isNotCounted reads order).
       # excludedPaths gets its own branch above because isExcluded does
       # read order.
       $parentArr = Get-ManifestArrayFieldOrEmpty -Manifest $ParentManifest -Name $f
@@ -551,6 +553,9 @@ function Test-IsAdditiveManifestDiff {
       $added = @($parentArr | Where-Object { -not $childSet.Contains($_) })
       if ($f -eq 'sharedPaths') {
         $addedSharedPaths = $added
+      }
+      if ($f -eq 'notCounted') {
+        $addedNotCounted = $added
       }
       # arrivesAsStructure additions need no collision test: pushing a path
       # onto it only forces structure on that path's first delivery, the
@@ -574,6 +579,22 @@ function Test-IsAdditiveManifestDiff {
         return [PSCustomObject]@{
           IsAdditive = $false
           Reason     = "classes key '$entry' collides with tracked child file '$tracked'"
+        }
+      }
+    }
+  }
+
+  # A notCounted entry is an exact path, or a prefix when it ends in '/'
+  # (the token-budget check's rule, not the '/**' glob of the entries above).
+  # One that covers a file the child already tracks would drop that file from
+  # the child's count, so it is not a safe addition.
+  foreach ($entry in $addedNotCounted) {
+    foreach ($tracked in $ChildTrackedFiles) {
+      $covers = if ($entry.EndsWith('/')) { $tracked.StartsWith($entry) } else { $tracked -ceq $entry }
+      if ($covers) {
+        return [PSCustomObject]@{
+          IsAdditive = $false
+          Reason     = "notCounted entry '$entry' collides with tracked child file '$tracked'"
         }
       }
     }

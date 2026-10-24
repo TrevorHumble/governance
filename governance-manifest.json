@@ -459,6 +459,7 @@
     ".gitattributes": "content",
     "governance-manifest.json": "content"
   },
+  "notCounted": [],
   "classesDefault": "structure",
   "arrivesAsStructure": [".githooks/pre-commit", "pipeline/PIPELINE.md"],
   "repoProfileFields": [
