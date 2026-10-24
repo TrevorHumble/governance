@@ -459,7 +459,12 @@
     ".gitattributes": "content",
     "governance-manifest.json": "content"
   },
-  "notCounted": [],
+  "notCounted": [
+    ".claude/skills/baby/",
+    ".claude/skills/goal-writer/",
+    ".claude/skills/rca/",
+    ".claude/skills/scaffold-project/"
+  ],
   "classesDefault": "structure",
   "arrivesAsStructure": [".githooks/pre-commit", "pipeline/PIPELINE.md"],
   "repoProfileFields": [
