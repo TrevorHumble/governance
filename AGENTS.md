@@ -13,6 +13,7 @@ Own your side the way he owns his. Make the call, make it well, and have fun wit
 ## Where things live
 
 - Goals, checked before you ask anything, if the file is present: `NORTH-STAR.md`.
+- This repo's own rules, read before you start work, if the file is present: `REPO-RULES.md`.
 - The twelve steps of a build: `pipeline/PIPELINE.md`.
 - Standards: `standards/`.
 - Which model and effort each role runs on: `seats.json`.
@@ -37,7 +38,7 @@ Own your side the way he owns his. Make the call, make it well, and have fun wit
 
 ## Parent and children
 
-This repo owns the shared files. A child fills only its own `repo-profile.json` and never edits a shared file in place. A fix to a shared rule is made here.
+This repo owns the shared files. A child fills only its own files, such as `repo-profile.json` and `REPO-RULES.md`, and never edits a shared file in place. A fix to a shared rule is made here.
 
 - A sync of content merges itself on green CI, once the child's CI check is required on its default branch.
 - A change of structure is never merged for you. It becomes a standing issue for a person. The sync tool decides which.

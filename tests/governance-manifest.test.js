@@ -470,6 +470,7 @@ describe('the new tree is the shared set', () => {
       'CLAUDE.md',
       'NORTH-STAR.md',
       'owner-declines.md',
+      'REPO-RULES.md',
       'DESIGN.md',
       'repo-profile.json',
       '.claude/settings.json',
