@@ -4,7 +4,7 @@
 'use strict';
 
 const { isDeepStrictEqual } = require('util');
-const { ridesAlong } = require('./check-token-budget-core');
+const { ridesAlong, isNotCounted } = require('./check-token-budget-core');
 
 const REQUIRED_ROLES = [
   'orchestrator',
@@ -271,19 +271,36 @@ function isSeatValueChange({ path, before, after }) {
 const describeSeat = (path) => (path[0] === 'roles' ? path[1] : `${path[1]} / ${path[2]}`);
 
 /**
- * Whether a PR changes only seat values, and the changed seats for the owner.
+ * Whether a PR stays inside the configuration lane: only seat values in seats.json, or only files
+ * under the user-started skill folders (plus buildlog/ and BUILDLOG.md either way).
  * @param {object} args
  * @param {string[]} args.changed repo-relative paths the PR changes
  * @param {unknown} args.baseSeats parsed seats.json at the base, or undefined when absent there
  * @param {unknown} args.headSeats parsed seats.json at the head
- * @returns {{seatsOnly: boolean, reasons: string[], changes: {seat: string, field: string, before: string, after: string}[]}}
- *   `reasons` says why the PR is not seats-only; `changes` lists the provider, model, and effort
+ * @param {string[]} [args.userSkills] user-started skill folders, each ending in `/`
+ * @returns {{lane: 'seats'|'skills'|null, reasons: string[], changes: {seat: string, field: string, before: string, after: string}[]}}
+ *   `reasons` names why the PR is out of the lane; `changes` lists the provider, model, and effort
  *   values that differ
  */
-function classifyPr({ changed, baseSeats, headSeats }) {
+function classifyPr({ changed, baseSeats, headSeats, userSkills = [] }) {
+  const inSkills = (f) => isNotCounted(f, userSkills);
+  const skillFiles = changed.filter(inSkills);
+  const touchesSeats = changed.includes('seats.json');
+  const others = changed.filter((f) => f !== 'seats.json' && !ridesAlong(f) && !inSkills(f));
+  const outcome = (lane, reasons, changes) => ({
+    lane: reasons.length === 0 ? lane : null,
+    reasons,
+    changes,
+  });
+
+  if (!touchesSeats && skillFiles.length > 0) {
+    const reasons = others.length > 0 ? [`it also changes ${others.join(', ')}`] : [];
+    return outcome('skills', reasons, []);
+  }
+
   const reasons = [];
-  const others = changed.filter((f) => f !== 'seats.json' && !ridesAlong(f));
-  if (!changed.includes('seats.json')) reasons.push('the PR does not change seats.json');
+  if (!touchesSeats) reasons.push('the PR does not change seats.json');
+  if (skillFiles.length > 0) reasons.push(`it also changes ${skillFiles.join(', ')}`);
   if (others.length > 0) reasons.push(`it also changes ${others.join(', ')}`);
   if (baseSeats === undefined) reasons.push('seats.json is not readable at the base');
 
@@ -301,7 +318,7 @@ function classifyPr({ changed, baseSeats, headSeats }) {
     after,
   }));
   if (reasons.length === 0 && changes.length === 0) reasons.push('no seat value changes');
-  return { seatsOnly: reasons.length === 0, reasons, changes };
+  return outcome('seats', reasons, changes);
 }
 
 function changeTable(changes) {
@@ -314,7 +331,7 @@ function changeTable(changes) {
 }
 
 /**
- * The gate's verdict. Rule failures exit 1; a PR that is not seats-only is reported, not failed.
+ * The gate's verdict. Rule failures exit 1; a PR outside the lane is reported, not failed.
  * @param {unknown} headSeats the parsed seats.json at the head
  * @param {{ref: string, baseSeats: unknown, changed: string[]}} [base] set when a base was given
  * @param {{tracked: string[], lenses: string[], sharedMarkdown: {path: string, text: string}[]}} [refs]
@@ -337,14 +354,18 @@ function run(headSeats, base, refs) {
   }
   if (base) {
     const verdict = classifyPr({ ...base, headSeats });
-    if (verdict.seatsOnly) {
+    if (verdict.lane === 'seats') {
       lines.push(
-        `check-seats: seats-only PR against ${base.ref}: only provider, model, and effort values change`,
+        `check-seats: configuration lane (model swap) against ${base.ref}: only provider, model, and effort values change`,
         ...changeTable(verdict.changes)
+      );
+    } else if (verdict.lane === 'skills') {
+      lines.push(
+        `check-seats: configuration lane (user-started skill edit) against ${base.ref}: only user-started skill files change`
       );
     } else {
       lines.push(
-        `check-seats: not a seats-only PR against ${base.ref}: ${verdict.reasons.join('; ')}`
+        `check-seats: does not qualify for the configuration lane against ${base.ref}: ${verdict.reasons.join('; ')}`
       );
     }
   }
