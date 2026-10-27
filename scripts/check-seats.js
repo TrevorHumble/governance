@@ -1,9 +1,10 @@
 // scripts/check-seats.js
 // CI gate: seats.json holds every rule (a seat per role, known providers and efforts, models that
 // differ where independence needs it, agents, skills and lenses that name real files, no model ID
-// in shared markdown), and a PR that changes only seat values is reported as
-// seats-only with a before/after table for the owner. The rules live in check-seats-core.js; this
-// file reads disk and git. The base comes from the budget gate's handling of --base and CI events.
+// in shared markdown), and a PR is reported as inside or outside the configuration lane: only seat
+// values (with a before/after table for the owner), or only user-started skill files. The rules
+// live in check-seats-core.js; this file reads disk and git. The base comes from the budget gate's
+// handling of --base and CI events.
 //
 //   node scripts/check-seats.js [--base <ref>]
 'use strict';
@@ -12,15 +13,17 @@ const fs = require('fs');
 const path = require('path');
 const { run, failLine } = require('./check-seats-core');
 const { isSharedPath } = require('./check-token-budget-core');
-const { baseRef, git, changedFiles } = require('./check-token-budget');
+const { baseRef, git, changedFiles, manifestNotCountedOf } = require('./check-token-budget');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SEATS_FILE = 'seats.json';
+// Only an entry shaped like one skill folder puts files in the lane.
+const SKILL_FOLDER = /^\.claude\/skills\/[^/]+\/$/;
 
 const fail = (text) => ({ lines: [failLine(text)], exitCode: 1 });
 
 // The base's seats.json, or undefined when it is absent or unparseable there: a PR that adds or
-// repairs the file is then simply not seats-only, rather than failing on the base's state.
+// repairs the file is then simply outside the lane, rather than failing on the base's state.
 function readBaseSeats(root, ref) {
   try {
     return JSON.parse(git(root, ['show', `${ref}:${SEATS_FILE}`]));
@@ -39,7 +42,12 @@ function readRefs(root) {
   const sharedMarkdown = tracked
     .filter((f) => f.endsWith('.md') && isSharedPath(f, manifest.sharedPaths))
     .map((f) => ({ path: f, text: fs.readFileSync(path.join(root, f), 'utf8') }));
-  return { tracked, lenses: profile.lenses, sharedMarkdown };
+  return {
+    tracked,
+    lenses: profile.lenses,
+    sharedMarkdown,
+    userSkills: manifestNotCountedOf(manifest, 'on the head').filter((e) => SKILL_FOLDER.test(e)),
+  };
 }
 
 function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.env } = {}) {
@@ -76,7 +84,12 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
   }
   return run(
     headSeats,
-    { ref: found.ref, baseSeats: readBaseSeats(root, found.ref), changed },
+    {
+      ref: found.ref,
+      baseSeats: readBaseSeats(root, found.ref),
+      changed,
+      userSkills: refs.userSkills,
+    },
     refs
   );
 }

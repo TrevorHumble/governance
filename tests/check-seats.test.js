@@ -477,7 +477,7 @@ describe('seats-only detection', () => {
       s.roles.implementer.model = 'claude-sonnet-5-6';
       s.roles.implementer.effort = 'max';
     });
-    expect(r.seatsOnly).toBe(true);
+    expect(r.lane).toBe('seats');
     expect(r.changes).toEqual([
       {
         seat: 'implementer',
@@ -494,7 +494,7 @@ describe('seats-only detection', () => {
       s.roles.researcher.provider = 'anthropic2';
       s.awards.hard['code-reviewer'].effort = 'high';
     });
-    expect(r.seatsOnly).toBe(true);
+    expect(r.lane).toBe('seats');
     expect(r.changes.map((c) => c.seat)).toEqual(['researcher', 'hard / code-reviewer']);
   });
 
@@ -503,12 +503,12 @@ describe('seats-only detection', () => {
       (s) => (s.roles.researcher.effort = 'high'),
       ['seats.json', 'buildlog/94-seats.md', 'BUILDLOG.md']
     );
-    expect(r.seatsOnly).toBe(true);
+    expect(r.lane).toBe('seats');
   });
 
   it('is not seats-only when another file changes, and names it', () => {
     const r = classify((s) => (s.roles.researcher.effort = 'high'), ['seats.json', 'README.md']);
-    expect(r.seatsOnly).toBe(false);
+    expect(r.lane).toBeNull();
     expect(r.reasons).toEqual(['it also changes README.md']);
   });
 
@@ -517,59 +517,95 @@ describe('seats-only detection', () => {
       (s) => (s.roles.researcher.effort = 'high'),
       ['seats.json', 'buildlog/rules.md', 'standards/rules.md']
     );
-    expect(r.seatsOnly).toBe(false);
+    expect(r.lane).toBeNull();
     expect(r.reasons).toEqual(['it also changes standards/rules.md']);
   });
 
   it('is not seats-only when seats.json is not among the changed files', () => {
     const r = classify((s) => (s.roles.researcher.effort = 'high'), ['buildlog/x.md']);
-    expect(r.seatsOnly).toBe(false);
+    expect(r.lane).toBeNull();
     expect(r.reasons).toContain('the PR does not change seats.json');
   });
 
   it('is not seats-only when nothing in seats.json changes', () => {
     const r = classify(() => {});
-    expect(r.seatsOnly).toBe(false);
+    expect(r.lane).toBeNull();
     expect(r.reasons).toEqual(['no seat value changes']);
   });
 
   it('is not seats-only when an agent changes', () => {
     const r = classify((s) => (s.roles.researcher.agent = 'other'));
-    expect(r.seatsOnly).toBe(false);
+    expect(r.lane).toBeNull();
     expect(r.reasons[0]).toContain('roles.researcher.agent');
   });
 
   it('is not seats-only when a skills list changes, even by a reorder', () => {
     const reorder = classify((s) => s.roles['code-reviewer'].skills.reverse());
-    expect(reorder.seatsOnly).toBe(false);
+    expect(reorder.lane).toBeNull();
     expect(reorder.reasons[0]).toContain('roles.code-reviewer.skills');
-    expect(classify((s) => s.roles.researcher.skills.push('researching')).seatsOnly).toBe(false);
+    expect(classify((s) => s.roles.researcher.skills.push('researching')).lane).toBeNull();
   });
 
   it('is not seats-only when a role or an award is added or removed', () => {
-    expect(classify((s) => delete s.roles.referee).seatsOnly).toBe(false);
-    expect(classify((s) => (s.roles.extra = seat('claude-haiku-5-5'))).seatsOnly).toBe(false);
-    expect(classify((s) => delete s.awards.hard).seatsOnly).toBe(false);
-    expect(classify((s) => (s.awards.other = {})).seatsOnly).toBe(false);
-    expect(classify((s) => delete s.awards.hard['code-reviewer']).seatsOnly).toBe(false);
+    expect(classify((s) => delete s.roles.referee).lane).toBeNull();
+    expect(classify((s) => (s.roles.extra = seat('claude-haiku-5-5'))).lane).toBeNull();
+    expect(classify((s) => delete s.awards.hard).lane).toBeNull();
+    expect(classify((s) => (s.awards.other = {})).lane).toBeNull();
+    expect(classify((s) => delete s.awards.hard['code-reviewer']).lane).toBeNull();
   });
 
   it('is not seats-only when a seat field is added or removed, or changes type', () => {
-    expect(classify((s) => delete s.roles.researcher.effort).seatsOnly).toBe(false);
-    expect(classify((s) => (s.roles.researcher.note = 'x')).seatsOnly).toBe(false);
-    expect(classify((s) => (s.roles.researcher.model = { id: 'x' })).seatsOnly).toBe(false);
+    expect(classify((s) => delete s.roles.researcher.effort).lane).toBeNull();
+    expect(classify((s) => (s.roles.researcher.note = 'x')).lane).toBeNull();
+    expect(classify((s) => (s.roles.researcher.model = { id: 'x' })).lane).toBeNull();
+  });
+
+  describe('user-started skill edits', () => {
+    const userSkills = ['.claude/skills/baby/', '.claude/skills/rca/'];
+    const skills = (changed) =>
+      classifyPr({ changed, baseSeats: valid(), headSeats: valid(), userSkills });
+
+    it('qualifies when only user-started skill files change, beside buildlog', () => {
+      const r = skills(['.claude/skills/baby/SKILL.md', 'buildlog/151.md', 'BUILDLOG.md']);
+      expect(r.lane).toBe('skills');
+    });
+
+    it('does not qualify when another file rides along, and names it', () => {
+      const r = skills(['.claude/skills/rca/SKILL.md', '.claude/skills/build/SKILL.md']);
+      expect(r.lane).toBeNull();
+      expect(r.reasons).toEqual(['it also changes .claude/skills/build/SKILL.md']);
+    });
+
+    it('does not qualify when a sibling folder only shares a prefix', () => {
+      expect(skills(['.claude/skills/baby-sitter/SKILL.md']).lane).toBeNull();
+    });
+
+    it('does not qualify when skill files mix with a seat change, and names the skill path', () => {
+      const r = classifyPr({
+        changed: ['seats.json', '.claude/skills/baby/SKILL.md'],
+        baseSeats: valid(),
+        headSeats: withChange((s) => (s.roles.researcher.effort = 'high')),
+        userSkills,
+      });
+      expect(r.lane).toBeNull();
+      expect(r.reasons).toEqual(['it also changes .claude/skills/baby/SKILL.md']);
+    });
+
+    it('does not qualify with only buildlog files', () => {
+      expect(skills(['buildlog/x.md']).lane).toBeNull();
+    });
   });
 
   it('is not seats-only when the base has no readable seats.json', () => {
     const r = classifyPr({ changed: ['seats.json'], baseSeats: undefined, headSeats: valid() });
-    expect(r.seatsOnly).toBe(false);
+    expect(r.lane).toBeNull();
     expect(r.reasons).toContain('seats.json is not readable at the base');
   });
 
   it('never throws when the head is not an object', () => {
     for (const head of [null, 'x', []]) {
       const r = classifyPr({ changed: ['seats.json'], baseSeats: valid(), headSeats: head });
-      expect(r.seatsOnly).toBe(false);
+      expect(r.lane).toBeNull();
     }
   });
 });
@@ -600,7 +636,7 @@ describe('run output', () => {
     expect(r.exitCode).toBe(0);
     expect(r.lines).toEqual([
       'check-seats: ok, 7 roles and 1 award(s) hold every rule',
-      'check-seats: seats-only PR against origin/v2: only provider, model, and effort values change',
+      'check-seats: configuration lane (model swap) against origin/v2: only provider, model, and effort values change',
       '  Seat         Field  Before             After',
       '  implementer  model  claude-sonnet-5-5  claude-sonnet-5-6',
     ]);
@@ -609,7 +645,7 @@ describe('run output', () => {
   it('says why a PR is not seats-only, and still exits 0 when the rules hold', () => {
     const r = runBase(base((s) => (s.roles.researcher.agent = 'other')));
     expect(r.exitCode).toBe(0);
-    expect(r.lines[1]).toContain('not a seats-only PR against origin/v2');
+    expect(r.lines[1]).toContain('does not qualify for the configuration lane against origin/v2');
     expect(r.lines[1]).toContain('roles.researcher.agent');
   });
 
@@ -617,7 +653,7 @@ describe('run output', () => {
     const r = runBase(base((s) => (s.roles.researcher.effort = 'warp')));
     expect(r.exitCode).toBe(1);
     expect(r.lines.some((l) => l.includes('FAIL'))).toBe(true);
-    expect(r.lines.join('\n')).toContain('seats-only PR against origin/v2');
+    expect(r.lines.join('\n')).toContain('configuration lane (model swap) against origin/v2');
   });
 });
 
@@ -663,7 +699,7 @@ describe('the CLI on temp git repos', () => {
     for (const argv of [['--base', 'trunk'], ['--base=trunk']]) {
       const r = main({ root: dir, argv, env: {} });
       expect(r.exitCode).toBe(0);
-      expect(r.lines.join('\n')).toContain('seats-only PR against trunk');
+      expect(r.lines.join('\n')).toContain('configuration lane (model swap) against trunk');
       expect(r.lines.join('\n')).toContain('researcher  effort  medium  high');
     }
   });
@@ -680,6 +716,59 @@ describe('the CLI on temp git repos', () => {
     expect(r.lines.join('\n')).toContain('it also changes other.txt');
   });
 
+  it('qualifies a user-started skill edit, reading the folders from the manifest', () => {
+    git('checkout', '-q', 'trunk');
+    write('governance-manifest.json', {
+      sharedPaths: ['seats.json'],
+      notCounted: ['.claude/skills/baby/'],
+    });
+    write('.claude/skills/baby/SKILL.md', 'x');
+    commit('skill');
+    git('checkout', '-q', '-b', 'edit', 'trunk');
+    write('.claude/skills/baby/SKILL.md', 'edited');
+    commit('edit');
+    const r = main({ root: dir, argv: ['--base', 'trunk'], env: {} });
+    expect(r.exitCode).toBe(0);
+    expect(r.lines.join('\n')).toContain('user-started skill edit');
+  });
+
+  it('ignores notCounted entries that are not one skill folder', () => {
+    git('checkout', '-q', 'trunk');
+    write('governance-manifest.json', {
+      sharedPaths: ['seats.json'],
+      notCounted: ['.claude/skills/', 'README.md'],
+    });
+    write('.claude/skills/baby/SKILL.md', 'x');
+    commit('skill');
+    git('checkout', '-q', '-b', 'edit', 'trunk');
+    write('.claude/skills/baby/SKILL.md', 'edited');
+    commit('edit');
+    const r = main({ root: dir, argv: ['--base', 'trunk'], env: {} });
+    expect(r.exitCode).toBe(0);
+    expect(r.lines.join('\n')).toContain('does not qualify');
+  });
+
+  it('reports a mixed PR as not qualifying, names the path, and exits 0', () => {
+    write('governance-manifest.json', {
+      sharedPaths: ['seats.json'],
+      notCounted: ['.claude/skills/baby/'],
+    });
+    commit('manifest');
+    git('checkout', '-q', 'trunk');
+    git('merge', '-q', 'topic');
+    git('checkout', '-q', '-b', 'mixed', 'trunk');
+    write(
+      'seats.json',
+      withChange((s) => (s.roles.researcher.effort = 'high'))
+    );
+    write('.claude/skills/baby/SKILL.md', 'edited');
+    commit('mixed');
+    const r = main({ root: dir, argv: ['--base', 'trunk'], env: {} });
+    expect(r.exitCode).toBe(0);
+    expect(r.lines.join('\n')).toContain('does not qualify');
+    expect(r.lines.join('\n')).toContain('.claude/skills/baby/SKILL.md');
+  });
+
   it('is not seats-only when a tracked file is renamed into buildlog/, and names the source', () => {
     git('checkout', '-q', 'trunk');
     write('standards/rules.md', 'rules');
@@ -694,7 +783,7 @@ describe('the CLI on temp git repos', () => {
     commit('seat and move');
     const r = main({ root: dir, argv: ['--base', 'trunk'], env: {} });
     expect(r.exitCode).toBe(0);
-    expect(r.lines.join('\n')).toContain('not a seats-only PR');
+    expect(r.lines.join('\n')).toContain('does not qualify for the configuration lane');
     expect(r.lines.join('\n')).toContain('standards/rules.md');
   });
 
@@ -732,7 +821,7 @@ describe('the CLI on temp git repos', () => {
     const env = { GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'trunk' };
     const r = main({ root: dir, argv: [], env });
     expect(r.exitCode).toBe(0);
-    expect(r.lines.join('\n')).toContain('seats-only PR against origin/trunk');
+    expect(r.lines.join('\n')).toContain('configuration lane (model swap) against origin/trunk');
   });
 
   it('takes the base from a merge_group payload', () => {
@@ -750,7 +839,7 @@ describe('the CLI on temp git repos', () => {
     const r = main({ root: dir, argv: [], env });
     fs.rmSync(payload);
     expect(r.exitCode).toBe(0);
-    expect(r.lines.join('\n')).toContain('seats-only PR against');
+    expect(r.lines.join('\n')).toContain('configuration lane (model swap) against');
   });
 
   it('validates only, with no verdict, when no base applies (a push)', () => {
@@ -814,6 +903,17 @@ describe('the CLI on temp git repos', () => {
     const r = main({ root: dir, argv: [], env: {} });
     expect(r.exitCode).toBe(1);
     expect(r.lines.join('\n')).toContain('lenses must be an array of strings');
+  });
+
+  it('fails when the head manifest notCounted is not an array of strings', () => {
+    write('governance-manifest.json', {
+      sharedPaths: ['seats.json'],
+      notCounted: '.claude/skills/',
+    });
+    commit('bad notCounted');
+    const r = main({ root: dir, argv: [], env: {} });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines.join('\n')).toContain('must be an array of strings');
   });
 
   it('fails, not crashes, on a missing manifest or profile', () => {

@@ -25,13 +25,17 @@ Run these twelve steps in order. Each line says what the step is for and what it
 11. **Ship** (`pipeline/steps/11-ship.md`). Open the PR and merge it on green. Hands on: a merged change.
 12. **Report** (`pipeline/steps/12-report.md`). Tell the owner what happened and what needs them, using `pipeline/report-template.md`. Hands on: the report.
 
-## The seats-only lane
+## The configuration lane
 
-A model-swap PR, one that only changes a provider, a model, or an effort in `seats.json`, needs no issue and no review rounds. It runs steps 1, 10, 11, and 12 and skips the rest.
+Configuration is not a build. Tuning your own setup does not change the product, so the full build is for work that does.
 
-`npm run check:seats` decides whether a PR qualifies, against the PR base. Only `seats.json` (plus `buildlog/` and `BUILDLOG.md`) may change, and only the `provider`, `model`, or `effort` values within it. Anything else runs all twelve steps.
+A model swap, which only changes provider, model, or effort values in `seats.json`, runs steps 1, 10, 11, and 12, with no issue and no review. Cite the standing "Seat changes" issue, #111, in the commit.
 
-The check prints a before and after table. Show it to the owner and merge on green only after the owner says yes in chat. Cite the standing "Seat changes" issue, #111, in the commit.
+An edit that only touches a skill the owner starts (the `notCounted` folders in `governance-manifest.json`) runs the same steps plus one `reviewing-skills` pass, and its commit cites no issue. Fix the pass's findings and merge, with no re-check round, even for a `blocker:`. That is an exception to `standards/reviewing.md` § "Re-check rounds".
+
+`npm run check:seats` decides whether a PR qualifies, against the PR base, and names the path that keeps it out. A PR with anything else runs all twelve steps.
+
+Show the owner the check's output, and merge on green only after the owner says yes in chat.
 
 ## Reviewers
 

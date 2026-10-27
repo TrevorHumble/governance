@@ -268,4 +268,4 @@ if (require.main === module) {
   process.exitCode = exitCode;
 }
 
-module.exports = { main, readHead, baseRef, git, changedFiles };
+module.exports = { main, readHead, baseRef, git, changedFiles, manifestNotCountedOf };

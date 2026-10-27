@@ -39,7 +39,7 @@ jobs:
       - name: Banned words
         run: npm run check:banned
       # Same base handling as the token budget step: validates seats.json, and on a pull_request or
-      # merge_group event also reports whether the PR is seats-only.
+      # merge_group event also reports whether the PR qualifies for the configuration lane.
       - name: Seats
         run: npm run check:seats
       # Checks the shape and length of each record in the design file.

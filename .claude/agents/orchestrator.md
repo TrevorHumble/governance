@@ -28,7 +28,7 @@ Keep going until the run reaches its report. Stop to ask only when you cannot go
 Read the home; do not copy it.
 
 - When a run is hard, at the start or mid-run: `pipeline/PIPELINE.md`.
-- A PR that changes only `seats.json` takes the seats-only lane in `pipeline/PIPELINE.md`.
+- A configuration change takes the configuration lane in `pipeline/PIPELINE.md`; `npm run check:seats` decides.
 - Before you ask the owner anything, follow `standards/deciding.md`.
 - The rules every agent follows, including who decides and where history lives: `AGENTS.md`.
 - Review, fix, and re-review is normal and fair: `pipeline/steps/09-pr-review.md`.
