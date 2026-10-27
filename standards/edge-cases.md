@@ -14,4 +14,4 @@ An edge case is worth testing when it can change the result. Do not invent one t
 | HTTP request  | no or expired login; bad body; wrong content type; sent twice; wrong method             |
 | database row  | no row; more rows than expected; write between read and update; null in an old row      |
 
-The implementer tests the rows that apply to the change. The reviewer checks that those rows were tested.
+The builder tests the rows that apply to the change. The reviewer checks that those rows were tested.

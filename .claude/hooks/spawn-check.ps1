@@ -3,7 +3,9 @@
 # or [<role> hard] for the hard award. It denies a missing or unknown tag rather than guess, a tag
 # without hard while .run_state/hard exists for a role the award covers, and a reviewer role (a role
 # whose agent is "reviewer" in seats.json) unless run_in_background is exactly false, so that
-# reviewer-done can fire when the reviewer returns.
+# reviewer-done can fire when the reviewer returns. It also denies a reviewer whose seat model family
+# is the one the session itself last ran on (the payload's transcript_path, latest assistant message),
+# so a reviewer never shares the builder's model. If that transcript cannot be read, it allows.
 # The project root (seats.json, .run_state) is CLAUDE_PROJECT_DIR, else the input's cwd.
 # The reason text lives in notes.md; if that file cannot be read, one generic line still denies.
 # It fails closed on a spawn it can judge, as before-issue-create does: input that is not empty but
@@ -21,6 +23,22 @@ function Write-Deny([string[]]$keys, [hashtable]$values = @{}) {
   $out = [ordered]@{ hookSpecificOutput = [ordered]@{
       hookEventName = 'PreToolUse'; permissionDecision = 'deny'; permissionDecisionReason = "spawn-check: $text" } }
   Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
+}
+
+# The model family on the session's latest assistant message, or $null when it cannot be read.
+function Get-SessionFamily($path) {
+  try {
+    if ($path -isnot [string] -or $path -eq '' -or -not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
+    $lines = [IO.File]::ReadAllLines($path)
+    for ($i = $lines.Length - 1; $i -ge 0; $i--) {
+      if ($lines[$i] -notmatch '"type"\s*:\s*"assistant"') { continue }
+      try { $o = $lines[$i] | ConvertFrom-Json } catch { continue }
+      if ($o.type -eq 'assistant' -and $o.message.model -is [string] -and $o.message.model -match '^claude-') {
+        return (Get-Family $o.message.model)
+      }
+    }
+  } catch { }
+  return $null
 }
 
 $coreLoaded = $false
@@ -74,6 +92,13 @@ try {
   $label = if ($hard) { "$role hard" } else { $role }
   $alias = Get-Family $seat.model
   $effort = [string]$seat.effort
+  if ((Get-ReviewerRoles $seats) -ccontains $role) {
+    $session = Get-SessionFamily $payload.transcript_path
+    if ($session -and $session -ceq $alias) {
+      Write-Deny @('same-model') @{ tag = $label; model = $alias; orchestrator = (Get-Family $seats.roles.orchestrator.model) }
+      exit 0
+    }
+  }
   $model = Get-Family $payload.tool_input.model
   $passed = $payload.tool_input.effort
   if ($passed -isnot [string] -and $null -ne $passed -and $passed.PSObject.Properties['level']) { $passed = $passed.level }

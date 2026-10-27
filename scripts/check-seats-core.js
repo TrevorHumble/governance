@@ -6,15 +6,7 @@
 const { isDeepStrictEqual } = require('util');
 const { ridesAlong, isNotCounted } = require('./check-token-budget-core');
 
-const REQUIRED_ROLES = [
-  'orchestrator',
-  'issue-writer',
-  'issue-reviewer',
-  'implementer',
-  'code-reviewer',
-  'referee',
-  'researcher',
-];
+const REQUIRED_ROLES = ['orchestrator', 'issue-reviewer', 'code-reviewer', 'referee'];
 const SEAT_FIELDS = ['provider', 'model', 'effort'];
 // The one award: it moves the seats up for hard work. No award lets a guarded pair share a model.
 const KNOWN_AWARDS = ['hard'];
@@ -35,9 +27,9 @@ const PROVIDERS = {
 
 // Pairs of roles that must run on different models, on the base seats and under every award.
 const INDEPENDENT_PAIRS = [
-  { a: 'implementer', b: 'code-reviewer' },
-  { a: 'issue-writer', b: 'issue-reviewer' },
-  { a: 'referee', b: 'implementer' },
+  { a: 'orchestrator', b: 'code-reviewer' },
+  { a: 'orchestrator', b: 'issue-reviewer' },
+  { a: 'referee', b: 'orchestrator' },
   { a: 'referee', b: 'code-reviewer' },
 ];
 
@@ -105,7 +97,7 @@ function roleProblems(roles) {
   return problems;
 }
 
-function awardProblems(awards) {
+function awardProblems(awards, roles) {
   const problems = [];
   for (const [name, entries] of Object.entries(awards)) {
     if (!KNOWN_AWARDS.includes(name)) {
@@ -120,6 +112,10 @@ function awardProblems(awards) {
       const label = `award "${name}" role "${role}"`;
       if (!REQUIRED_ROLES.includes(role)) {
         problems.push(`award "${name}" names unknown role "${role}"`);
+        continue;
+      }
+      if (isObject(roles[role]) && roles[role].agent !== 'reviewer') {
+        problems.push(`${label} is not a reviewer; an award moves only the reviewer roles up`);
         continue;
       }
       if (!isObject(seat)) {
@@ -241,7 +237,7 @@ function validateSeats(seats) {
   if (!isObject(roles)) problems.push('"roles" must be an object');
   if (!isObject(awards)) problems.push('"awards" must be an object');
   if (problems.length > 0) return problems;
-  problems.push(...roleProblems(roles), ...awardProblems(awards));
+  problems.push(...roleProblems(roles), ...awardProblems(awards, roles));
   problems.push(...independenceProblems(roles, awards));
   return problems;
 }

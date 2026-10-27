@@ -4,7 +4,7 @@ You are about to ask for the owner's time, so make it a short ask. Send one mess
 
 ## What the message holds
 
-The `issue-writer` seat drafts it with the `writing-issues`, `writing-user-stories`, and `writing-acceptance-criteria` skills. Send, in this order and in plain words:
+Read the `writing-issues`, `writing-user-stories`, and `writing-acceptance-criteria` skills now, and draft it with them. Send, in this order and in plain words:
 
 ```
 Title: ...
@@ -20,7 +20,7 @@ Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whos
 
 ## Is it hard?
 
-A second look, while the owner is here. The `issue-writer` seat judges it when it drafts the message, you check it before you send, and the owner's reply settles it. The test is in `pipeline/PIPELINE.md`. If it is newly hard, ask the owner to switch the session as that section says. If the owner says not hard after the session switched at the start, they may switch back.
+A second look, while the owner is here. You judge it when you draft the message, check it again before you send, and the owner's reply settles it. The test is in `pipeline/PIPELINE.md`. If it is newly hard, say so in the message. "Before step 1" in `pipeline/PIPELINE.md` says what that moves.
 
 ## The token change
 

@@ -14,14 +14,14 @@ const SCRIPT = path.join(HOOKS, 'reviewer-done.ps1');
 
 const SEATS = {
   roles: {
-    implementer: { agent: 'implementer' },
+    orchestrator: { agent: 'orchestrator' },
     'issue-reviewer': { agent: 'reviewer' },
     'code-reviewer': { agent: 'reviewer' },
     referee: { agent: 'reviewer' },
     // A role the hook has never heard of: proof that the list comes from seats.json.
     auditor: { agent: 'reviewer' },
     // A role named like a reviewer whose agent is not one.
-    'fake-reviewer': { agent: 'implementer' },
+    'fake-reviewer': { agent: 'orchestrator' },
   },
 };
 
@@ -92,7 +92,7 @@ maybeDescribe('.claude/hooks/reviewer-done.ps1', () => {
   });
 
   it('prints nothing for other roles, no tag, an unknown role, or a tag that is not first', () => {
-    expect(run(returned('[implementer] build #99'))).toBe('');
+    expect(run(returned('[orchestrator] build #99'))).toBe('');
     expect(run(returned('review #99'))).toBe('');
     expect(run(returned('[stranger] review #99'))).toBe('');
     expect(run(returned('see [referee] later'))).toBe('');

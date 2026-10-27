@@ -1,5 +1,5 @@
 # 03-research
 
-Before you plan, find out what the repo and the web already know. Start the `researcher` on its seat (`.claude/agents/orchestrator.md`) with the question. It follows the `researching` skill and returns what it found and where, with no decisions.
+Before you plan, find out what the repo and the web already know. Read the `researching` skill now and follow it. It leaves you with what you found and where, and no decisions yet.
 
-Then use what came back. If something already does the job, extend it; do not build a second one. If nothing fits, say so in the plan and carry on.
+Then use what you found. If something already does the job, extend it; do not build a second one. If nothing fits, say so in the plan and carry on.

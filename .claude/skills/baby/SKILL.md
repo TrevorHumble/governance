@@ -29,7 +29,7 @@ Good:
 >
 > You approved pixels. Hash says pixels moved. Something broke your look.
 >
-> Implementer puts it back. No new issue. No churn.
+> The builder puts it back. No new issue. No churn.
 
 Bad, this is what he interrupts:
 

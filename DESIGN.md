@@ -2,11 +2,21 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## The main session builds
+
+2026-10-27, #155
+
+Decided: The main session researches, drafts issues and builds by its skills, each loaded at its own step. The researcher, issue-writer and implementer agents are removed. Review stays with fresh agents. A hard run moves only the reviewers, and the referee moves to Opus.
+
+Why: The owner wanted less lost in hand-offs and each run cheaper. Black-box checking earns a separate agent; hand-off specialists fold into skills. The owner chose "only the reviewers move up". The referee must differ from the orchestrator and the reviewers.
+
+Gave up: A separate builder, and the orchestrator's hard seat.
+
 ## Agents own the technical calls
 
 2026-10-24, #135
 
-Decided: Models make technical calls inside the acceptance criteria, write each down in a line, and report at the end. The orchestrator never writes the deliverable. The owner keeps what users experience, workflows, taste, whether to do it, money, publishing and irreversible acts.
+Decided: Models make technical calls inside the acceptance criteria, write each down in a line, and report at the end. The orchestrator never writes the deliverable. (Since #155 the main session builds; see "The main session builds".) The owner keeps what users experience, workflows, taste, whether to do it, money, publishing and irreversible acts.
 
 Why: The owner wants to stop "models coming back to me when something is clearly part of what we're working on", and asked to "inspire them to take ownership". On 2026-10-24 he cut repeated lines and "visionary feels like a lot".
 
@@ -56,7 +66,7 @@ Gave up: Building in place. The new rules took effect only as the swap landed.
 
 2026-10-22, #115
 
-Decided: Everyday runs use Sonnet 5.5; issue and code review stay on Opus. A `hard` label (the test is in `pipeline/PIPELINE.md`, "Before step 1") moves the orchestrator and implementer to Opus, reviewers to Fable, the referee to Sonnet at high. The orchestrator judges it at the start and asks the owner to run `/model`.
+Decided: Everyday runs use Sonnet 5.5; issue and code review stay on Opus. A `hard` label (the test is in `pipeline/PIPELINE.md`, "Before step 1") moves the orchestrator and implementer to Opus, reviewers to Fable, the referee to Sonnet at high. The orchestrator judges it at the start and asks the owner to run `/model`. (Since #155 only the reviewers move; see "The main session builds".)
 
 Why: The owner was "hitting my limit much faster" and wanted it "significantly cheaper", with Sonnet the default about 70 percent of the time. He chose to ratchet up for hard problems, kept reviews on Opus, set three failures since two "isn't that uncommon", and wanted hard judged at the start, as issue review "is too late". Haiku lost to Sonnet (#98).
 

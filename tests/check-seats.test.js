@@ -20,31 +20,26 @@ const seat = (model, effort = 'medium', extra = {}) => ({
   ...extra,
 });
 
-// Every role on a legal model: opus reviews issues and code, fable referees, sonnet builds.
+// Every role on a legal model: opus reviews issues and code, fable referees, sonnet runs the session.
 function valid() {
   return {
     roles: {
       orchestrator: seat('claude-sonnet-5-5', 'medium', { agent: 'orchestrator', skills: [] }),
-      'issue-writer': seat('claude-sonnet-5-5', 'medium', { agent: 'issue-writer', skills: [] }),
       'issue-reviewer': seat('claude-opus-5-5', 'medium', {
         agent: 'reviewer',
         skills: ['reviewing-issues'],
       }),
-      implementer: seat('claude-sonnet-5-5', 'medium', { agent: 'implementer', skills: [] }),
       'code-reviewer': seat('claude-opus-5-5', 'medium', {
         agent: 'reviewer',
         skills: ['reviewing-prs', 'reviewing-docs'],
       }),
       referee: seat('claude-fable-5-1', 'medium', { agent: 'reviewer', skills: ['refereeing'] }),
-      researcher: seat('claude-sonnet-5-5', 'medium', { agent: 'researcher', skills: [] }),
     },
     awards: {
       hard: {
-        orchestrator: seat('claude-opus-5-5', 'high'),
-        implementer: seat('claude-opus-5-5', 'high'),
         'issue-reviewer': seat('claude-fable-5-1'),
         'code-reviewer': seat('claude-fable-5-1'),
-        referee: seat('claude-sonnet-5-5', 'high'),
+        referee: seat('claude-opus-5-5', 'high'),
       },
     },
   };
@@ -71,17 +66,19 @@ describe('a valid file', () => {
 
   it('accepts a dated snapshot ID and every known effort word', () => {
     for (const effort of ['low', 'medium', 'high', 'xhigh', 'max']) {
-      expect(problems((s) => (s.roles.researcher = { ...s.roles.researcher, effort }))).toEqual([]);
+      expect(problems((s) => (s.roles.orchestrator = { ...s.roles.orchestrator, effort }))).toEqual(
+        []
+      );
     }
-    const dated = problems((s) => (s.roles.researcher.model = 'claude-haiku-4-20250514'));
+    const dated = problems((s) => (s.roles.orchestrator.model = 'claude-haiku-4-20250514'));
     expect(dated).toEqual([]);
-    expect(problems((s) => (s.roles.researcher.model = 'claude-haiku-4-5-20251001'))).toEqual([]);
+    expect(problems((s) => (s.roles.orchestrator.model = 'claude-haiku-4-5-20251001'))).toEqual([]);
   });
 });
 
 describe('required roles', () => {
-  it('names every one of the seven', () => {
-    expect(REQUIRED_ROLES).toHaveLength(7);
+  it('names every one of the four', () => {
+    expect(REQUIRED_ROLES).toHaveLength(4);
   });
 
   it('fails a missing role and names it', () => {
@@ -89,19 +86,19 @@ describe('required roles', () => {
     expect(p).toEqual(['required role "referee" has no seat']);
   });
 
-  it('fails a role outside the seven (a typo)', () => {
+  it('fails a role outside the four (a typo)', () => {
     const p = problems((s) => {
-      s.roles.implementor = s.roles.implementer;
-      delete s.roles.implementer;
+      s.roles.orchestrater = s.roles.orchestrator;
+      delete s.roles.orchestrator;
     });
-    expect(has(p, 'role "implementor" is not one of the required roles')).toBe(true);
-    expect(has(p, 'required role "implementer" has no seat')).toBe(true);
+    expect(has(p, 'role "orchestrater" is not one of the required roles')).toBe(true);
+    expect(has(p, 'required role "orchestrator" has no seat')).toBe(true);
   });
 
   it('fails a role that is not an object, without throwing', () => {
     for (const bad of [null, 'opus', 7, [], true]) {
-      const p = problems((s) => (s.roles.researcher = bad));
-      expect(p).toEqual(['role "researcher" must be an object']);
+      const p = problems((s) => (s.roles.orchestrator = bad));
+      expect(p).toEqual(['role "orchestrator" must be an object']);
     }
   });
 });
@@ -110,20 +107,20 @@ describe('provider, model, and effort', () => {
   it('fails an unknown or missing provider', () => {
     expect(
       has(
-        problems((s) => (s.roles.researcher.provider = 'openai')),
+        problems((s) => (s.roles.orchestrator.provider = 'openai')),
         '"openai"'
       )
     ).toBe(true);
     expect(
       has(
-        problems((s) => delete s.roles.researcher.provider),
+        problems((s) => delete s.roles.orchestrator.provider),
         'unknown provider'
       )
     ).toBe(true);
     // an inherited key such as "constructor" is not a provider
     expect(
       has(
-        problems((s) => (s.roles.researcher.provider = 'constructor')),
+        problems((s) => (s.roles.orchestrator.provider = 'constructor')),
         'unknown'
       )
     ).toBe(true);
@@ -146,7 +143,7 @@ describe('provider, model, and effort', () => {
       null,
       55,
     ]) {
-      const p = problems((s) => (s.roles.researcher.model = model));
+      const p = problems((s) => (s.roles.orchestrator.model = model));
       expect(has(p, 'is not a well-formed anthropic model ID')).toBe(true);
     }
   });
@@ -154,7 +151,7 @@ describe('provider, model, and effort', () => {
   it('fails a missing model', () => {
     expect(
       has(
-        problems((s) => delete s.roles.researcher.model),
+        problems((s) => delete s.roles.orchestrator.model),
         'well-formed'
       )
     ).toBe(true);
@@ -162,12 +159,12 @@ describe('provider, model, and effort', () => {
 
   it('fails an unknown effort, including a wrong case and a missing one', () => {
     for (const effort of ['extreme', 'High', '', 3, null]) {
-      const p = problems((s) => (s.roles.researcher.effort = effort));
+      const p = problems((s) => (s.roles.orchestrator.effort = effort));
       expect(has(p, 'is not a known anthropic effort')).toBe(true);
     }
     expect(
       has(
-        problems((s) => delete s.roles.researcher.effort),
+        problems((s) => delete s.roles.orchestrator.effort),
         'known anthropic effort'
       )
     ).toBe(true);
@@ -175,37 +172,37 @@ describe('provider, model, and effort', () => {
 });
 
 describe('independence', () => {
-  it('fails the implementer and code reviewer on one model', () => {
+  it('fails the orchestrator and code reviewer on one model', () => {
     const p = problems((s) => (s.roles['code-reviewer'].model = 'claude-sonnet-5-5'));
     expect(p).toEqual([
-      '"implementer" and "code-reviewer" share the model claude-sonnet-5-5; they must differ',
+      '"orchestrator" and "code-reviewer" share the model claude-sonnet-5-5; they must differ',
     ]);
   });
 
-  it('fails the implementer and code reviewer on one model under the hard award', () => {
-    const p = problems((s) => (s.awards.hard['code-reviewer'].model = 'claude-opus-5-5'));
+  it('fails the orchestrator and code reviewer on one model under the hard award', () => {
+    const p = problems((s) => (s.awards.hard['code-reviewer'].model = 'claude-sonnet-5-5'));
     expect(p).toEqual([
-      'under award "hard", "implementer" and "code-reviewer" share the model claude-opus-5-5; they must differ',
+      'under award "hard", "orchestrator" and "code-reviewer" share the model claude-sonnet-5-5; they must differ',
     ]);
   });
 
-  it('fails the issue writer and issue reviewer on one model under the hard award', () => {
+  it('fails the orchestrator and issue reviewer on one model under the hard award', () => {
     const p = problems((s) => (s.awards.hard['issue-reviewer'].model = 'claude-sonnet-5-5'));
     expect(p).toEqual([
-      'under award "hard", "issue-writer" and "issue-reviewer" share the model claude-sonnet-5-5; they must differ',
+      'under award "hard", "orchestrator" and "issue-reviewer" share the model claude-sonnet-5-5; they must differ',
     ]);
   });
 
-  it('fails the issue writer and issue reviewer on one model', () => {
+  it('fails the orchestrator and issue reviewer on one model', () => {
     const p = problems((s) => (s.roles['issue-reviewer'].model = 'claude-sonnet-5-5'));
-    expect(has(p, '"issue-writer" and "issue-reviewer" share the model claude-sonnet-5-5')).toBe(
+    expect(has(p, '"orchestrator" and "issue-reviewer" share the model claude-sonnet-5-5')).toBe(
       true
     );
   });
 
-  it('fails the referee sharing a model with the implementer or the code reviewer', () => {
-    const withImplementer = problems((s) => (s.roles.referee.model = 'claude-sonnet-5-5'));
-    expect(has(withImplementer, '"referee" and "implementer"')).toBe(true);
+  it('fails the referee sharing a model with the orchestrator or the code reviewer', () => {
+    const withOrchestrator = problems((s) => (s.roles.referee.model = 'claude-sonnet-5-5'));
+    expect(has(withOrchestrator, '"referee" and "orchestrator"')).toBe(true);
     const withReviewer = problems((s) => (s.roles.referee.model = 'claude-opus-5-5'));
     expect(has(withReviewer, '"referee" and "code-reviewer"')).toBe(true);
   });
@@ -217,14 +214,19 @@ describe('independence', () => {
     ]);
   });
 
-  it('fails the referee sharing a model with the implementer under an award that moves the implementer', () => {
-    const p = problems((s) => (s.awards.hard.implementer = seat('claude-sonnet-5-5', 'high')));
-    expect(has(p, 'under award "hard", "referee" and "implementer"')).toBe(true);
+  it('fails an award that moves the orchestrator, since only reviewers move up', () => {
+    const p = problems((s) => (s.awards.hard.orchestrator = seat('claude-opus-5-5', 'high')));
+    expect(
+      has(
+        p,
+        'award "hard" role "orchestrator" is not a reviewer; an award moves only the reviewer roles up'
+      )
+    ).toBe(true);
   });
 
   it('does not repeat a base-role failure under every award', () => {
     const p = problems((s) => (s.roles.referee.model = 'claude-sonnet-5-5'));
-    expect(p.filter((x) => x.includes('"referee" and "implementer"'))).toHaveLength(1);
+    expect(p.filter((x) => x.includes('"referee" and "orchestrator"'))).toHaveLength(1);
   });
 });
 
@@ -285,11 +287,11 @@ describe('awards', () => {
 describe('agent and skills', () => {
   it('fails a role with no agent, an empty agent, or a non-string agent', () => {
     for (const edit of [
-      (s) => delete s.roles.researcher.agent,
-      (s) => (s.roles.researcher.agent = ''),
-      (s) => (s.roles.researcher.agent = 4),
+      (s) => delete s.roles.orchestrator.agent,
+      (s) => (s.roles.orchestrator.agent = ''),
+      (s) => (s.roles.orchestrator.agent = 4),
     ]) {
-      expect(problems(edit)).toEqual(['role "researcher" has no agent']);
+      expect(problems(edit)).toEqual(['role "orchestrator" has no agent']);
     }
   });
 
@@ -315,8 +317,8 @@ describe('agent and skills', () => {
 
   it('fails skills that are not an array of names', () => {
     for (const skills of [undefined, 'reviewing-prs', [1], [''], null]) {
-      const p = problems((s) => (s.roles.researcher.skills = skills));
-      expect(p).toEqual(['role "researcher" skills must be an array of skill names']);
+      const p = problems((s) => (s.roles.orchestrator.skills = skills));
+      expect(p).toEqual(['role "orchestrator" skills must be an array of skill names']);
     }
   });
 });
@@ -333,10 +335,7 @@ describe('a malformed file', () => {
 // The files valid() points at: one agent file per agent, one skill folder per skill.
 const TRACKED = [
   '.claude/agents/orchestrator.md',
-  '.claude/agents/issue-writer.md',
   '.claude/agents/reviewer.md',
-  '.claude/agents/implementer.md',
-  '.claude/agents/researcher.md',
   '.claude/skills/reviewing-issues/SKILL.md',
   '.claude/skills/reviewing-prs/SKILL.md',
   '.claude/skills/reviewing-docs/SKILL.md',
@@ -354,25 +353,28 @@ describe('agents, skills and lenses name real files', () => {
   });
 
   it('fails an agent with no file in .claude/agents/, and names role and agent', () => {
-    const list = refs((s) => (s.roles.researcher.agent = 'no-such-agent'));
+    const list = refs((s) => (s.roles.orchestrator.agent = 'no-such-agent'));
     expect(list).toEqual([
-      'role "researcher" agent "no-such-agent" is not a file in .claude/agents/',
+      'role "orchestrator" agent "no-such-agent" is not a file in .claude/agents/',
     ]);
   });
 
   it('fails an agent that is only a folder, a nested file, or in another folder', () => {
-    for (const bad of ['.claude/agents/nested/researcher.md', '.claude/skills/researcher/x.md']) {
-      const tracked = TRACKED.filter((f) => f !== '.claude/agents/researcher.md').concat(bad);
+    for (const bad of [
+      '.claude/agents/nested/orchestrator.md',
+      '.claude/skills/orchestrator/x.md',
+    ]) {
+      const tracked = TRACKED.filter((f) => f !== '.claude/agents/orchestrator.md').concat(bad);
       expect(
         has(
           refs(() => {}, tracked),
-          'agent "researcher"'
+          'agent "orchestrator"'
         )
       ).toBe(true);
     }
     expect(
       has(
-        refs((s) => (s.roles.researcher.agent = 'a/b')),
+        refs((s) => (s.roles.orchestrator.agent = 'a/b')),
         'agent "a/b"'
       )
     ).toBe(true);
@@ -387,7 +389,7 @@ describe('agents, skills and lenses name real files', () => {
 
   it('fails a skill whose name is a file, not a folder', () => {
     const tracked = TRACKED.concat('.claude/skills/loose.md');
-    const list = refs((s) => s.roles.researcher.skills.push('loose.md'), tracked);
+    const list = refs((s) => s.roles.orchestrator.skills.push('loose.md'), tracked);
     expect(has(list, 'skill "loose.md"')).toBe(true);
   });
 
@@ -474,47 +476,47 @@ describe('seats-only detection', () => {
 
   it('is seats-only for model and effort changes, and lists them', () => {
     const r = classify((s) => {
-      s.roles.implementer.model = 'claude-sonnet-5-6';
-      s.roles.implementer.effort = 'max';
+      s.roles.orchestrator.model = 'claude-sonnet-5-6';
+      s.roles.orchestrator.effort = 'max';
     });
     expect(r.lane).toBe('seats');
     expect(r.changes).toEqual([
       {
-        seat: 'implementer',
+        seat: 'orchestrator',
         field: 'model',
         before: 'claude-sonnet-5-5',
         after: 'claude-sonnet-5-6',
       },
-      { seat: 'implementer', field: 'effort', before: 'medium', after: 'max' },
+      { seat: 'orchestrator', field: 'effort', before: 'medium', after: 'max' },
     ]);
   });
 
   it('is seats-only for a provider change and an award seat change, named by award and role', () => {
     const r = classify((s) => {
-      s.roles.researcher.provider = 'anthropic2';
+      s.roles.orchestrator.provider = 'anthropic2';
       s.awards.hard['code-reviewer'].effort = 'high';
     });
     expect(r.lane).toBe('seats');
-    expect(r.changes.map((c) => c.seat)).toEqual(['researcher', 'hard / code-reviewer']);
+    expect(r.changes.map((c) => c.seat)).toEqual(['orchestrator', 'hard / code-reviewer']);
   });
 
   it('allows buildlog files and BUILDLOG.md beside seats.json', () => {
     const r = classify(
-      (s) => (s.roles.researcher.effort = 'high'),
+      (s) => (s.roles.orchestrator.effort = 'high'),
       ['seats.json', 'buildlog/94-seats.md', 'BUILDLOG.md']
     );
     expect(r.lane).toBe('seats');
   });
 
   it('is not seats-only when another file changes, and names it', () => {
-    const r = classify((s) => (s.roles.researcher.effort = 'high'), ['seats.json', 'README.md']);
+    const r = classify((s) => (s.roles.orchestrator.effort = 'high'), ['seats.json', 'README.md']);
     expect(r.lane).toBeNull();
     expect(r.reasons).toEqual(['it also changes README.md']);
   });
 
   it('is not seats-only when a rename hides a source, which the changed list names', () => {
     const r = classify(
-      (s) => (s.roles.researcher.effort = 'high'),
+      (s) => (s.roles.orchestrator.effort = 'high'),
       ['seats.json', 'buildlog/rules.md', 'standards/rules.md']
     );
     expect(r.lane).toBeNull();
@@ -522,7 +524,7 @@ describe('seats-only detection', () => {
   });
 
   it('is not seats-only when seats.json is not among the changed files', () => {
-    const r = classify((s) => (s.roles.researcher.effort = 'high'), ['buildlog/x.md']);
+    const r = classify((s) => (s.roles.orchestrator.effort = 'high'), ['buildlog/x.md']);
     expect(r.lane).toBeNull();
     expect(r.reasons).toContain('the PR does not change seats.json');
   });
@@ -534,16 +536,16 @@ describe('seats-only detection', () => {
   });
 
   it('is not seats-only when an agent changes', () => {
-    const r = classify((s) => (s.roles.researcher.agent = 'other'));
+    const r = classify((s) => (s.roles.orchestrator.agent = 'other'));
     expect(r.lane).toBeNull();
-    expect(r.reasons[0]).toContain('roles.researcher.agent');
+    expect(r.reasons[0]).toContain('roles.orchestrator.agent');
   });
 
   it('is not seats-only when a skills list changes, even by a reorder', () => {
     const reorder = classify((s) => s.roles['code-reviewer'].skills.reverse());
     expect(reorder.lane).toBeNull();
     expect(reorder.reasons[0]).toContain('roles.code-reviewer.skills');
-    expect(classify((s) => s.roles.researcher.skills.push('researching')).lane).toBeNull();
+    expect(classify((s) => s.roles.orchestrator.skills.push('researching')).lane).toBeNull();
   });
 
   it('is not seats-only when a role or an award is added or removed', () => {
@@ -555,9 +557,9 @@ describe('seats-only detection', () => {
   });
 
   it('is not seats-only when a seat field is added or removed, or changes type', () => {
-    expect(classify((s) => delete s.roles.researcher.effort).lane).toBeNull();
-    expect(classify((s) => (s.roles.researcher.note = 'x')).lane).toBeNull();
-    expect(classify((s) => (s.roles.researcher.model = { id: 'x' })).lane).toBeNull();
+    expect(classify((s) => delete s.roles.orchestrator.effort).lane).toBeNull();
+    expect(classify((s) => (s.roles.orchestrator.note = 'x')).lane).toBeNull();
+    expect(classify((s) => (s.roles.orchestrator.model = { id: 'x' })).lane).toBeNull();
   });
 
   describe('user-started skill edits', () => {
@@ -584,7 +586,7 @@ describe('seats-only detection', () => {
       const r = classifyPr({
         changed: ['seats.json', '.claude/skills/baby/SKILL.md'],
         baseSeats: valid(),
-        headSeats: withChange((s) => (s.roles.researcher.effort = 'high')),
+        headSeats: withChange((s) => (s.roles.orchestrator.effort = 'high')),
         userSkills,
       });
       expect(r.lane).toBeNull();
@@ -622,7 +624,7 @@ describe('run output', () => {
   it('prints ok and exits 0 for a valid file with no base', () => {
     const r = run(valid());
     expect(r.exitCode).toBe(0);
-    expect(r.lines).toEqual(['check-seats: ok, 7 roles and 1 award(s) hold every rule']);
+    expect(r.lines).toEqual(['check-seats: ok, 4 roles and 1 award(s) hold every rule']);
   });
 
   it('prints each failure and exits 1', () => {
@@ -632,25 +634,25 @@ describe('run output', () => {
   });
 
   it('prints the seats-only verdict and a before/after table on stdout lines', () => {
-    const r = runBase(base((s) => (s.roles.implementer.model = 'claude-sonnet-5-6')));
+    const r = runBase(base((s) => (s.roles.orchestrator.model = 'claude-sonnet-5-6')));
     expect(r.exitCode).toBe(0);
     expect(r.lines).toEqual([
-      'check-seats: ok, 7 roles and 1 award(s) hold every rule',
+      'check-seats: ok, 4 roles and 1 award(s) hold every rule',
       'check-seats: configuration lane (model swap) against origin/v2: only provider, model, and effort values change',
-      '  Seat         Field  Before             After',
-      '  implementer  model  claude-sonnet-5-5  claude-sonnet-5-6',
+      '  Seat          Field  Before             After',
+      '  orchestrator  model  claude-sonnet-5-5  claude-sonnet-5-6',
     ]);
   });
 
   it('says why a PR is not seats-only, and still exits 0 when the rules hold', () => {
-    const r = runBase(base((s) => (s.roles.researcher.agent = 'other')));
+    const r = runBase(base((s) => (s.roles.orchestrator.agent = 'other')));
     expect(r.exitCode).toBe(0);
     expect(r.lines[1]).toContain('does not qualify for the configuration lane against origin/v2');
-    expect(r.lines[1]).toContain('roles.researcher.agent');
+    expect(r.lines[1]).toContain('roles.orchestrator.agent');
   });
 
   it('exits 1 on a rule failure even in a seats-only PR, and still prints the table', () => {
-    const r = runBase(base((s) => (s.roles.researcher.effort = 'warp')));
+    const r = runBase(base((s) => (s.roles.orchestrator.effort = 'warp')));
     expect(r.exitCode).toBe(1);
     expect(r.lines.some((l) => l.includes('FAIL'))).toBe(true);
     expect(r.lines.join('\n')).toContain('configuration lane (model swap) against origin/v2');
@@ -693,21 +695,21 @@ describe('the CLI on temp git repos', () => {
   it('reads a seats-only change against --base, in both argument forms', () => {
     write(
       'seats.json',
-      withChange((s) => (s.roles.researcher.effort = 'high'))
+      withChange((s) => (s.roles.orchestrator.effort = 'high'))
     );
     commit('seat');
     for (const argv of [['--base', 'trunk'], ['--base=trunk']]) {
       const r = main({ root: dir, argv, env: {} });
       expect(r.exitCode).toBe(0);
       expect(r.lines.join('\n')).toContain('configuration lane (model swap) against trunk');
-      expect(r.lines.join('\n')).toContain('researcher  effort  medium  high');
+      expect(r.lines.join('\n')).toContain('orchestrator  effort  medium  high');
     }
   });
 
   it('is not seats-only when the PR changes another file', () => {
     write(
       'seats.json',
-      withChange((s) => (s.roles.researcher.effort = 'high'))
+      withChange((s) => (s.roles.orchestrator.effort = 'high'))
     );
     write('other.txt', 'x');
     commit('seat and more');
@@ -759,7 +761,7 @@ describe('the CLI on temp git repos', () => {
     git('checkout', '-q', '-b', 'mixed', 'trunk');
     write(
       'seats.json',
-      withChange((s) => (s.roles.researcher.effort = 'high'))
+      withChange((s) => (s.roles.orchestrator.effort = 'high'))
     );
     write('.claude/skills/baby/SKILL.md', 'edited');
     commit('mixed');
@@ -776,7 +778,7 @@ describe('the CLI on temp git repos', () => {
     git('checkout', '-q', '-b', 'moved', 'trunk');
     write(
       'seats.json',
-      withChange((s) => (s.roles.researcher.effort = 'high'))
+      withChange((s) => (s.roles.orchestrator.effort = 'high'))
     );
     fs.mkdirSync(path.join(dir, 'buildlog'));
     git('mv', 'standards/rules.md', 'buildlog/rules.md');
@@ -814,7 +816,7 @@ describe('the CLI on temp git repos', () => {
   it('takes the base from GITHUB_BASE_REF on a pull_request event', () => {
     write(
       'seats.json',
-      withChange((s) => (s.roles.researcher.effort = 'high'))
+      withChange((s) => (s.roles.orchestrator.effort = 'high'))
     );
     commit('seat');
     git('update-ref', 'refs/remotes/origin/trunk', 'base-copy');
@@ -827,7 +829,7 @@ describe('the CLI on temp git repos', () => {
   it('takes the base from a merge_group payload', () => {
     write(
       'seats.json',
-      withChange((s) => (s.roles.researcher.effort = 'high'))
+      withChange((s) => (s.roles.orchestrator.effort = 'high'))
     );
     commit('seat');
     const payload = path.join(dir, '..', `payload-${path.basename(dir)}.json`);
@@ -845,7 +847,7 @@ describe('the CLI on temp git repos', () => {
   it('validates only, with no verdict, when no base applies (a push)', () => {
     const r = main({ root: dir, argv: [], env: { GITHUB_EVENT_NAME: 'push' } });
     expect(r).toEqual({
-      lines: ['check-seats: ok, 7 roles and 1 award(s) hold every rule'],
+      lines: ['check-seats: ok, 4 roles and 1 award(s) hold every rule'],
       exitCode: 0,
     });
   });
@@ -886,13 +888,13 @@ describe('the CLI on temp git repos', () => {
   });
 
   it('fails on an agent, a skill or a lens that names no file', () => {
-    fs.rmSync(path.join(dir, '.claude/agents/researcher.md'));
+    fs.rmSync(path.join(dir, '.claude/agents/orchestrator.md'));
     fs.rmSync(path.join(dir, '.claude/skills/refereeing'), { recursive: true });
     write('repo-profile.json', { lenses: ['ui-lens'] });
     commit('break names');
     const r = main({ root: dir, argv: [], env: {} });
     expect(r.exitCode).toBe(1);
-    expect(r.lines.join('\n')).toContain('role "researcher" agent "researcher"');
+    expect(r.lines.join('\n')).toContain('role "orchestrator" agent "orchestrator"');
     expect(r.lines.join('\n')).toContain('role "referee" skill "refereeing"');
     expect(r.lines.join('\n')).toContain('lens "ui-lens"');
   });
@@ -947,21 +949,16 @@ describe('the shipped seats.json', () => {
     );
     expect(table).toEqual({
       orchestrator: ['anthropic', 'claude-sonnet-5-5', 'medium'],
-      'issue-writer': ['anthropic', 'claude-sonnet-5-5', 'medium'],
       'issue-reviewer': ['anthropic', 'claude-opus-5-5', 'medium'],
-      implementer: ['anthropic', 'claude-sonnet-5-5', 'medium'],
       'code-reviewer': ['anthropic', 'claude-opus-5-5', 'medium'],
       referee: ['anthropic', 'claude-fable-5-1', 'medium'],
-      researcher: ['anthropic', 'claude-sonnet-5-5', 'medium'],
     });
     const entry = (model, effort) => ({ provider: 'anthropic', model, effort });
     expect(shipped.awards).toEqual({
       hard: {
-        orchestrator: entry('claude-opus-5-5', 'high'),
-        implementer: entry('claude-opus-5-5', 'high'),
         'issue-reviewer': entry('claude-fable-5-1', 'medium'),
         'code-reviewer': entry('claude-fable-5-1', 'medium'),
-        referee: entry('claude-sonnet-5-5', 'high'),
+        referee: entry('claude-opus-5-5', 'high'),
       },
     });
   });
@@ -981,7 +978,7 @@ describe('the shipped seats.json', () => {
         .filter((f) => f && isSharedPath(f, manifest.sharedPaths))
         .map((f) => ({ path: f, text: fs.readFileSync(path.join(root, f), 'utf8') })),
     });
-    expect(r.lines).toEqual(['check-seats: ok, 7 roles and 1 award(s) hold every rule']);
+    expect(r.lines).toEqual(['check-seats: ok, 4 roles and 1 award(s) hold every rule']);
   });
 
   it('lists the reviewing skills under the code reviewer and the others under their roles', () => {
@@ -995,8 +992,7 @@ describe('the shipped seats.json', () => {
     ]);
     expect(shipped.roles['issue-reviewer'].skills).toEqual(['reviewing-issues']);
     expect(shipped.roles.referee.skills).toEqual(['refereeing']);
-    const others = ['orchestrator', 'issue-writer', 'implementer', 'researcher'];
-    for (const role of others) expect(shipped.roles[role].skills).toEqual([]);
+    expect(shipped.roles.orchestrator.skills).toEqual([]);
   });
 
   it('is wired as an npm script, a checkCommand, and shared scripts', () => {

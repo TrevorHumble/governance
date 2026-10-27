@@ -13,7 +13,7 @@ Seat every reviewer as `.claude/agents/orchestrator.md` says. Run each specialis
 - `reviewing-docs`: when docs change.
 - Every skill named in `lenses` (`repo-profile.json`).
 
-A specialist does not loop. Have the implementer fix what they raise.
+A specialist does not loop. Fix what they raise yourself.
 
 ## The PR reviewer
 
@@ -21,7 +21,7 @@ Then start one fresh PR reviewer with `reviewing-prs`. Hand it the issue and a n
 
 Put the run's deferred notes in the briefing too, and ask for one ruling line per note: could it have been fixed in this run, yes or no, and why. Step 12 reads those lines.
 
-On a FAIL, fix every `blocker:` and answer every `question:`, then re-check as `standards/reviewing.md` § "Re-check rounds" says. A finding the implementer contests goes to `refereeing`, once.
+On a FAIL, fix every `blocker:` and answer every `question:`, then re-check as `standards/reviewing.md` § "Re-check rounds" says. A finding you contest goes to `refereeing`, once.
 
 ## Evidence before a PASS
 
