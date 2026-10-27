@@ -4,8 +4,7 @@ name: Dependabot auto-merge
 # reviewer. There is no classifier: CI is the only guard (accepted risk, #90).
 #
 # pull_request_target runs this file from the default branch, with a token that can write, so the
-# workflow checks out nothing from the pull request and runs none of its code. Until cutover (#102)
-# the default branch is not v2, so this file does nothing on v2.
+# workflow checks out nothing from the pull request and runs none of its code.
 #
 # The repo needs "Allow auto-merge" and "Allow squash merging" turned on in Settings, and a required
 # check: `gh pr merge --auto` fails without them.
