@@ -23,7 +23,7 @@ const metaFor = (description, effort) => ({ description, model: 'x', effort });
 
 describe('roleTag', () => {
   it('reads [<role>] and [<role> hard] at the start of a description', () => {
-    expect(roleTag('[implementer] build #118')).toEqual({ role: 'implementer', hard: false });
+    expect(roleTag('[orchestrator] build #118')).toEqual({ role: 'orchestrator', hard: false });
     expect(roleTag('[code-reviewer hard] review #118')).toEqual({
       role: 'code-reviewer',
       hard: true,
@@ -34,8 +34,8 @@ describe('roleTag', () => {
   it('returns null for a description with no tag at its start', () => {
     for (const d of [
       '#118 implement CI',
-      'build [implementer]',
-      '[Implementer] x',
+      'build [orchestrator]',
+      '[Orchestrator] x',
       '[] x',
       '[x y]',
     ]) {
@@ -47,18 +47,18 @@ describe('roleTag', () => {
 
 describe('seatFor', () => {
   it('returns the role seat, and the award laid over it on hard', () => {
-    expect(seatFor(SEATS, { role: 'implementer', hard: false })).toMatchObject({
+    expect(seatFor(SEATS, { role: 'orchestrator', hard: false })).toMatchObject({
       model: 'claude-sonnet-5-5',
       effort: 'medium',
     });
-    expect(seatFor(SEATS, { role: 'implementer', hard: true })).toMatchObject({
-      model: 'claude-opus-5-5',
-      effort: 'high',
+    expect(seatFor(SEATS, { role: 'code-reviewer', hard: true })).toMatchObject({
+      model: 'claude-fable-5-1',
+      effort: 'medium',
     });
   });
 
   it('falls back to the role seat when hard but the award has no entry for the role', () => {
-    expect(seatFor(SEATS, { role: 'researcher', hard: true })).toMatchObject({
+    expect(seatFor(SEATS, { role: 'orchestrator', hard: true })).toMatchObject({
       model: 'claude-sonnet-5-5',
       effort: 'medium',
     });
@@ -66,8 +66,8 @@ describe('seatFor', () => {
 
   it('returns null for a role seats.json lacks, and for a malformed seats.json', () => {
     expect(seatFor(SEATS, { role: 'nobody', hard: false })).toBeNull();
-    expect(seatFor(null, { role: 'implementer', hard: false })).toBeNull();
-    expect(seatFor({ roles: null }, { role: 'implementer', hard: false })).toBeNull();
+    expect(seatFor(null, { role: 'orchestrator', hard: false })).toBeNull();
+    expect(seatFor({ roles: null }, { role: 'orchestrator', hard: false })).toBeNull();
   });
 });
 
@@ -95,17 +95,19 @@ describe('checkSpawn', () => {
     checkSpawn({ name: 'a1', meta: metaFor(description, effort), transcript: text, seats: SEATS });
 
   it('is ok when the served model and asked effort equal the seat', () => {
-    const r = check('[implementer] x', 'medium', transcript('claude-sonnet-5-5'));
+    const r = check('[orchestrator] x', 'medium', transcript('claude-sonnet-5-5'));
     expect(r).toEqual({ name: 'a1', status: 'ok', lines: [] });
   });
 
   it('checks the award seat for a hard tag', () => {
-    expect(check('[implementer hard] x', 'high', transcript('claude-opus-5-5')).status).toBe('ok');
-    const r = check('[implementer hard] x', 'medium', transcript('claude-sonnet-5-5'));
+    expect(check('[code-reviewer hard] x', 'medium', transcript('claude-fable-5-1')).status).toBe(
+      'ok'
+    );
+    const r = check('[code-reviewer hard] x', 'high', transcript('claude-sonnet-5-5'));
     expect(r.status).toBe('mismatch');
     expect(r.lines).toHaveLength(2);
-    expect(r.lines[0]).toContain('seat model claude-opus-5-5, served claude-sonnet-5-5');
-    expect(r.lines[1]).toContain('seat effort high, asked medium');
+    expect(r.lines[0]).toContain('seat model claude-fable-5-1, served claude-sonnet-5-5');
+    expect(r.lines[1]).toContain('seat effort medium, asked high');
   });
 
   it('reports a served model that differs from the seat', () => {
@@ -118,7 +120,7 @@ describe('checkSpawn', () => {
 
   it('reports a spawn served by two models even when one is the seat', () => {
     const r = check(
-      '[implementer] x',
+      '[orchestrator] x',
       'medium',
       transcript('claude-sonnet-5-5', 'claude-opus-5-5')
     );
@@ -127,11 +129,11 @@ describe('checkSpawn', () => {
   });
 
   it('reports an effort that differs, and an effort not recorded', () => {
-    const wrong = check('[implementer] x', 'high', transcript('claude-sonnet-5-5'));
+    const wrong = check('[orchestrator] x', 'high', transcript('claude-sonnet-5-5'));
     expect(wrong.lines).toEqual([expect.stringContaining('seat effort medium, asked high')]);
     const none = checkSpawn({
       name: 'a1',
-      meta: { description: '[implementer] x' },
+      meta: { description: '[orchestrator] x' },
       transcript: transcript('claude-sonnet-5-5'),
       seats: SEATS,
     });
@@ -139,10 +141,10 @@ describe('checkSpawn', () => {
   });
 
   it('reports a missing transcript and a transcript with no served model', () => {
-    const missing = check('[implementer] x', 'medium', undefined);
+    const missing = check('[orchestrator] x', 'medium', undefined);
     expect(missing.status).toBe('mismatch');
     expect(missing.lines[0]).toContain('no transcript');
-    const empty = check('[implementer] x', 'medium', '\n');
+    const empty = check('[orchestrator] x', 'medium', '\n');
     expect(empty.lines[0]).toContain('records no served model');
   });
 
@@ -173,7 +175,7 @@ describe('run', () => {
     const spawns = [
       {
         name: 'a',
-        meta: metaFor('[implementer] x', 'medium'),
+        meta: metaFor('[orchestrator] x', 'medium'),
         transcript: transcript('claude-sonnet-5-5'),
       },
     ];
@@ -188,7 +190,7 @@ describe('run', () => {
     const spawns = [
       {
         name: 'a',
-        meta: metaFor('[implementer] x', 'medium'),
+        meta: metaFor('[orchestrator] x', 'medium'),
         transcript: transcript('claude-sonnet-5-5'),
       },
       {
@@ -237,23 +239,23 @@ describe('the CLI on real transcripts', () => {
     it('passes when each spawn is tagged for the seat that served it', () => {
       // a328 was served by sonnet and asked for high; a1442 by fable at medium; a7fa by opus at
       // medium.
-      retag('a328c05dadefa7e08', '[implementer] seat ratchet');
+      retag('a328c05dadefa7e08', '[orchestrator] seat ratchet');
       retag('a1442c218df15290d', '[referee hard] x');
       retag('a7fa399433d9ecf6e', '[code-reviewer] x');
       const r = main({ argv: [dir] });
       expect(r.exitCode).toBe(1);
-      // implementer: sonnet served is right, effort high was asked against a medium seat.
+      // orchestrator: sonnet served is right, effort high was asked against a medium seat.
       expect(
         r.lines.some(
           (l) => l.includes('a328c05dadefa7e08') && l.includes('seat effort medium, asked high')
         )
       ).toBe(true);
-      // referee hard: seat is sonnet/high, fable served and medium asked.
+      // referee hard: seat is opus/high, fable served and medium asked.
       expect(
         r.lines.some(
           (l) =>
             l.includes('a1442c218df15290d') &&
-            l.includes('seat model claude-sonnet-5-5, served claude-fable-5-1')
+            l.includes('seat model claude-opus-5-5, served claude-fable-5-1')
         )
       ).toBe(true);
       // code-reviewer: opus/medium, opus served and medium asked.

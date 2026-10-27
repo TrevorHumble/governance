@@ -72,7 +72,10 @@ maybeDescribe('.claude/hooks/hook-core.ps1: notes, tags, seats, root', () => {
 
   it('reads the role tag at the start of a description', () => {
     expect(ps(`Get-RoleTag '[code-reviewer] x'`)).toEqual({ Role: 'code-reviewer', Hard: false });
-    expect(ps(`Get-RoleTag '  [implementer hard] x'`)).toEqual({ Role: 'implementer', Hard: true });
+    expect(ps(`Get-RoleTag '  [orchestrator hard] x'`)).toEqual({
+      Role: 'orchestrator',
+      Hard: true,
+    });
     for (const d of ["'x [referee]'", "'[Referee] x'", "'[] x'", "'[referee  soft] x'", '$null']) {
       expect(ps(`Get-RoleTag ${d}`)).toBeNull();
     }
@@ -100,7 +103,7 @@ maybeDescribe('.claude/hooks/hook-core.ps1: notes, tags, seats, root', () => {
         JSON.stringify({
           roles: {
             a: { agent: 'reviewer' },
-            b: { agent: 'implementer' },
+            b: { agent: 'orchestrator' },
             c: { agent: 'reviewer' },
           },
           awards: { hard: { b: { model: 'claude-opus-5-5' } } },

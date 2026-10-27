@@ -4,9 +4,9 @@
 
 Judge the goal first. It is hard if it is novel and deep (hard math or algorithms, no prior art to reuse), or something we can't get back (a loss outside git: user data, someone else's work, money, something public). Deleting what git holds is not that. It is also hard if the owner says so.
 
-If it is hard, your first message asks the owner to switch the session to the `hard` award's orchestrator model and effort in `seats.json`, with `/model`.
+If it is hard, only the reviewers move up: they run on the `hard` award in `seats.json`, and your seat stays. `npm run check:seats` rejects an award for any other role.
 
-Mid-run, it is hard when the same finding fails review three times, or the implementer hands back unfinished work other than a stop to ask the owner or before a risky step. Then commit the attempt to the branch as a wip commit naming the issue, and revert it in a second commit, so the attempt stays in history and the tree is back where step 08 began. Add the `hard` label (`gh issue edit <N> --add-label hard`), a pipeline call. Restart step 08 from the issue, starting every agent from the award from then on. Earlier review findings and decision lines do not carry over; deferred notes do. Your own seat stays, and nothing goes back to the owner.
+Mid-run, it is hard when the same finding fails review three times. Then commit the attempt to the branch as a wip commit naming the issue, and revert it in a second commit, so the attempt stays in history and the tree is back where step 08 began. Add the `hard` label (`gh issue edit <N> --add-label hard`), a pipeline call. Restart step 08 from the issue, starting every reviewer from the award from then on, as above. Earlier review findings and decision lines do not carry over; deferred notes do. Nothing goes back to the owner.
 
 ## The steps
 
@@ -19,7 +19,7 @@ Run these twelve steps in order. Each line says what the step is for and what it
 5. **Hand-off** (`pipeline/steps/05-hand-off.md`). One short message to the owner: title, story, criteria, whether it is hard, token change, any proposed cut. Hands on: the owner's yes.
 6. **Issue** (`pipeline/steps/06-issue.md`). File what the owner approved. This step may call the architecture specialist first. Hands on: an issue number.
 7. **Issue review** (`pipeline/steps/07-issue-review.md`). A fresh reviewer reads the issue. Hands on: a passing issue.
-8. **Implement** (`pipeline/steps/08-implement.md`). The implementer builds what the issue asks. You do not. Hands on: the change.
+8. **Implement** (`pipeline/steps/08-implement.md`). You build what the issue asks, by the `implementing` skill. Hands on: the change.
 9. **PR review** (`pipeline/steps/09-pr-review.md`). Review, fix, and re-check until it passes. Hands on: a passing change.
 10. **Commit** (`pipeline/steps/10-commit.md`). Commit the change, naming the issue. Hands on: a commit.
 11. **Ship** (`pipeline/steps/11-ship.md`). Open the PR and merge it on green. Hands on: a merged change.

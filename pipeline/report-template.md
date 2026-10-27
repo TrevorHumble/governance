@@ -14,11 +14,11 @@ Agents pass the first test and fail the second. Short and useless is the common 
 
 ## What goes in
 
-Open with one line: `Moved up: no.` or `Moved up: yes, <why>`; the session's own seat counts, as in "yes, session at start, <why>". The why is the part of the hard test that applied (`pipeline/PIPELINE.md`), at the start or mid-run. Every report carries it.
+Open with one line: `Moved up: no.` or `Moved up: yes, <why>`. The why is the part of the hard test that applied (`pipeline/PIPELINE.md`), at the start or mid-run. Every report carries it.
 
 Three parts, in this order. Leave out a part that has nothing in it.
 
-**Decisions.** One line for every call the agents made inside the criteria, copied from the implementer's lines. Say what was decided and which way, in plain words. A case left alone gets a line too. The owner may skim these or not.
+**Decisions.** One line for every call the agents made inside the criteria, copied from your decision lines. Say what was decided and which way, in plain words. A case left alone gets a line too. The owner may skim these or not.
 
 **For you.** Anything only the owner can decide, and any change parked because it went over a cap while the owner was away. Name the question in a line, then price each option, with a percentage for how likely it is the right pick (they add up to 100):
 

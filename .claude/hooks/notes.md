@@ -27,6 +27,7 @@ unknown: '{tag}' is not a seat.
 hard-run: This run is hard (.run_state/hard). Tag it [{role} hard].
 foreground: Spawn reviewers with run_in_background false; several in one message still run in parallel.
 wrong-seat: The {tag} seat is model {alias}, effort {effort}. You passed model {model}, effort {passed}.
+same-model: This session is running on {model}, the model of the {tag} seat, so the reviewer would not be a fresh pair of eyes. The session cannot switch its own model, so ask the owner to run /model {orchestrator} to switch back, then spawn again.
 unreadable: The spawn input was unreadable. Try again.
 
 ## session-greeting

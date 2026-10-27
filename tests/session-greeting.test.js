@@ -17,12 +17,10 @@ const SCRIPT = path.join(HOOKS, 'session-greeting.ps1');
 const SEATS = {
   roles: {
     orchestrator: { model: 'claude-sonnet-5-5', effort: 'medium' },
-    implementer: { model: 'claude-sonnet-5-5', effort: 'medium' },
   },
   awards: {
     hard: {
-      orchestrator: { model: 'claude-opus-5-5', effort: 'high' },
-      implementer: { model: 'claude-opus-5-5', effort: 'high' },
+      'code-reviewer': { model: 'claude-opus-5-5', effort: 'high' },
     },
   },
 };
@@ -130,8 +128,7 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: the greeting', () => {
     expect(run(start('claude-sonnet-5-5'))).toBe(armed());
   });
 
-  it('accepts the hard award orchestrator model, a short alias, and a context-window suffix', () => {
-    expect(run(start('claude-opus-5-5'))).toBe(armed());
+  it('accepts a short alias and a context-window suffix', () => {
     expect(run(start('sonnet'))).toBe(armed());
     expect(run(start('claude-sonnet-5-5[1m]'))).toBe(armed());
   });
@@ -235,13 +232,11 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: the git hooks', () => {
 });
 
 maybeDescribe('.claude/hooks/session-greeting.ps1: the session model', () => {
-  it('warns when the model is neither seat, naming both', () => {
+  it('warns when the model is not the orchestrator seat', () => {
     const out = run(start('claude-fable-5-1'));
     expect(out).toContain(armed());
     expect(out).toContain(
-      notes()
-        .model.replace('{model}', 'claude-fable-5-1')
-        .replace('{seats}', 'sonnet, or opus on a hard run')
+      notes().model.replace('{model}', 'claude-fable-5-1').replace('{seats}', 'sonnet')
     );
   });
 
@@ -266,7 +261,7 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: settings that override the se
 
   it.each([
     ['low', 'orchestrator', 'medium'],
-    ['medium', 'orchestrator hard', 'high'],
+    ['medium', 'code-reviewer hard', 'high'],
   ])('warns when maxEffortLevel %s is below a seat, naming %s', (cap, role, effort) => {
     fs.writeFileSync(
       path.join(root, '.claude', 'settings.json'),

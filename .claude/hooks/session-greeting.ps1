@@ -1,6 +1,6 @@
 # session-greeting: a SessionStart hook. It adds a greeting the model reads before the first prompt,
 # plus warnings when something would override the seats in seats.json:
-#   - the session's model is neither the orchestrator seat nor its hard award (checked only when the
+#   - the session's model is not the orchestrator seat (checked only when the
 #     input carries `model`; after /clear or a recovery it does not, and the greeting says so);
 #   - CLAUDE_CODE_EFFORT_LEVEL is set, or CLAUDE_CODE_SUBAGENT_MODEL_FORCE is 1;
 #   - a maxEffortLevel in settings is below a seat's effort;
@@ -84,20 +84,13 @@ try {
   try {
     if ($seats) {
       $orch = Get-Family $seats.roles.orchestrator.model
-      $hardOrch = $null
-      $hardAwards = Get-HardAwards $seats
-      if ($hardAwards -and $hardAwards.PSObject.Properties['orchestrator']) {
-        $hardOrch = Get-Family $hardAwards.orchestrator.model
-      }
-      $allowed = @($orch, $hardOrch) | Where-Object { $_ }
       $session = Get-Family $payload.model
       if (-not $orch) {
         # No orchestrator seat to compare with.
       } elseif (-not $session) {
         $lines += Get-Note 'session-greeting' 'unchecked'
-      } elseif ($allowed -cnotcontains $session) {
-        $shown = if ($hardOrch) { "$orch, or $hardOrch on a hard run" } else { $orch }
-        $lines += Fill (Get-Note 'session-greeting' 'model') @{ model = $payload.model; seats = $shown }
+      } elseif ($session -cne $orch) {
+        $lines += Fill (Get-Note 'session-greeting' 'model') @{ model = $payload.model; seats = $orch }
       }
     }
   } catch { }
