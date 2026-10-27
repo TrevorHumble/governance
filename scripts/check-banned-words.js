@@ -9,16 +9,18 @@
 const fs = require('fs');
 const path = require('path');
 const { findBannedWords } = require('./check-banned-words-core');
-const { VENDOR_ROOT } = require('./check-token-budget-core');
+const { VENDOR_ROOT, UPSTREAM_COPY_PATHS, isNotCounted } = require('./check-token-budget-core');
 const { git } = require('./check-token-budget');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
 // Every tracked .md file is scanned, shared or not: the repo's own README, goals and records are
 // prose the owner reads. Vendored skills, BUILDLOG.md and buildlog fragments get the phrases only.
+// The upstream files copied byte for byte into the Impeccable skill folder are not scanned.
 function scanSet(root) {
   const scan = [];
   for (const p of git(root, ['ls-files']).split('\n').filter(Boolean)) {
+    if (isNotCounted(p, UPSTREAM_COPY_PATHS)) continue;
     if (p.startsWith(VENDOR_ROOT) || p === 'BUILDLOG.md' || p.startsWith('buildlog/')) {
       scan.push({ path: p, scope: 'phrases' });
     } else if (p.endsWith('.md')) {

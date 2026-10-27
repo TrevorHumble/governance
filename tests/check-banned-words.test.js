@@ -115,6 +115,41 @@ describe('main on a scratch repo', () => {
     }
   );
 
+  it.each(['.claude/skills/impeccable/SKILL.md', '.claude/skills/impeccable/reference/audit.md'])(
+    'skips the upstream file %s, phrase and filler word',
+    (rel) => {
+      const r = main({
+        root: makeRepo({
+          'standards/s.md': 'ok',
+          [rel]: `${P3}
+${FILL}`,
+        }),
+      });
+      expect(r.exitCode).toBe(0);
+    }
+  );
+
+  it('still checks a file that only starts like an exact upstream path', () => {
+    const rel = '.claude/skills/impeccable/SKILL.md.md';
+    const r = main({ root: makeRepo({ 'standards/s.md': 'ok', [rel]: P3 }) });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines[0]).toBe(`${rel}:1: banned word "${P3}"`);
+  });
+
+  it('still checks our own NOTICE.md beside the upstream files', () => {
+    const rel = '.claude/skills/impeccable/NOTICE.md';
+    const r = main({ root: makeRepo({ 'standards/s.md': 'ok', [rel]: P3 }) });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines[0]).toBe(`${rel}:1: banned word "${P3}"`);
+  });
+
+  it('still checks a sibling skill folder', () => {
+    const rel = '.claude/skills/impeccable-extra/SKILL.md';
+    const r = main({ root: makeRepo({ 'standards/s.md': 'ok', [rel]: P3 }) });
+    expect(r.exitCode).toBe(1);
+    expect(r.lines[0]).toBe(`${rel}:1: banned word "${P3}"`);
+  });
+
   it('passes a filler word in BUILDLOG.md', () => {
     const r = main({ root: makeRepo({ 'standards/s.md': 'ok', 'BUILDLOG.md': FILL }) });
     expect(r.exitCode).toBe(0);

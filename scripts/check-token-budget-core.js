@@ -9,6 +9,15 @@ const LARGEST_FILES_SHOWN = 5;
 // Tokens per word is 1.35, kept as a whole number so the arithmetic stays exact.
 const TOKENS_PER_100_WORDS = 135;
 const VENDOR_ROOT = 'vendor/skills/';
+// The upstream files in the Impeccable skill folder, copied byte for byte. The em-dash and
+// banned-word checks skip these and nothing else; our own NOTICE.md and LICENSE beside them are
+// still read. Matched as isNotCounted does: an entry ending in / is a prefix, any other is an
+// exact path.
+const UPSTREAM_COPY_PATHS = [
+  '.claude/skills/impeccable/SKILL.md',
+  '.claude/skills/impeccable/reference/',
+  '.claude/skills/impeccable/scripts/',
+];
 
 const REVIEWER_FOLDER = /(?:^|\/)\.claude\/skills\/((?:reviewing-[^/]+)|refereeing)\/.+/;
 const REVIEWER_SHARED_PATHS = ['standards/reviewing.md', '.claude/agents/reviewer.md', 'AGENTS.md'];
@@ -447,4 +456,5 @@ module.exports = {
   failLine,
   ridesAlong,
   VENDOR_ROOT,
+  UPSTREAM_COPY_PATHS,
 };

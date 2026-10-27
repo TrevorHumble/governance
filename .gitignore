@@ -1,4 +1,6 @@
 data/
+# Impeccable ships its font index here; keep it.
+!.claude/skills/impeccable/scripts/data/
 node_modules/
 .review_state/
 .run_state/
