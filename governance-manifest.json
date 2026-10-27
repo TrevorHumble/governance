@@ -470,6 +470,7 @@
   "notCounted": [
     ".claude/skills/baby/",
     ".claude/skills/goal-writer/",
+    ".claude/skills/impeccable/",
     ".claude/skills/rca/",
     ".claude/skills/scaffold-project/"
   ],
