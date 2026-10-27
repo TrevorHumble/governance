@@ -5,3 +5,4 @@
 *.ps1
 .githooks/
 vendor/skills/
+.claude/skills/impeccable/

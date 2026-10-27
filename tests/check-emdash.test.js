@@ -144,6 +144,50 @@ describe('findEmdashViolations: exemptions', () => {
   });
 });
 
+describe('findEmdashViolations: copied upstream folder', () => {
+  it.each([
+    '.claude/skills/impeccable/SKILL.md',
+    '.claude/skills/impeccable/reference/audit.md',
+    '.claude/skills/impeccable/scripts/live-browser.js',
+  ])('skips an addition in the upstream file %s', (file) => {
+    const diff = fileDiff({
+      file,
+      hunks: [{ header: '@@ -0,0 +1,1 @@', body: [`+upstream text ${EM_DASH} kept as shipped`] }],
+    });
+    expect(findEmdashViolations(diff)).toEqual([]);
+  });
+
+  it('still reports an addition in a file that only starts like an exact upstream path', () => {
+    const diff = fileDiff({
+      file: '.claude/skills/impeccable/SKILL.md.orig',
+      hunks: [{ header: '@@ -0,0 +1,1 @@', body: [`+our note ${EM_DASH} here`] }],
+    });
+    expect(findEmdashViolations(diff)).toEqual([
+      { file: '.claude/skills/impeccable/SKILL.md.orig', line: 1, match: EM_DASH },
+    ]);
+  });
+
+  it('still reports an addition in our own NOTICE.md beside the upstream files', () => {
+    const diff = fileDiff({
+      file: '.claude/skills/impeccable/NOTICE.md',
+      hunks: [{ header: '@@ -0,0 +1,1 @@', body: [`+our note ${EM_DASH} here`] }],
+    });
+    expect(findEmdashViolations(diff)).toEqual([
+      { file: '.claude/skills/impeccable/NOTICE.md', line: 1, match: EM_DASH },
+    ]);
+  });
+
+  it('still reports an addition in a sibling skill folder', () => {
+    const diff = fileDiff({
+      file: '.claude/skills/impeccable-extra/SKILL.md',
+      hunks: [{ header: '@@ -0,0 +1,1 @@', body: [`+our text ${EM_DASH} here`] }],
+    });
+    expect(findEmdashViolations(diff)).toEqual([
+      { file: '.claude/skills/impeccable-extra/SKILL.md', line: 1, match: EM_DASH },
+    ]);
+  });
+});
+
 describe('findEmdashViolations: structural edges', () => {
   it('returns an empty array for an empty diff', () => {
     expect(findEmdashViolations('')).toEqual([]);

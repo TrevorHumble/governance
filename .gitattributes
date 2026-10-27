@@ -3,3 +3,5 @@
 .githooks/** text eol=lf
 *.sh text eol=lf
 vendor/skills/** -text
+# Impeccable is copied byte for byte from upstream; git must not touch its line endings.
+.claude/skills/impeccable/** -text

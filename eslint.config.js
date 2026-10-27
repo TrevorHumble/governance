@@ -6,7 +6,7 @@ const prettier = require('eslint-config-prettier');
 
 module.exports = [
   {
-    ignores: ['data/**', '.review_state/**', '.run_state/**'],
+    ignores: ['data/**', '.review_state/**', '.run_state/**', '.claude/skills/impeccable/**'],
   },
   js.configs.recommended,
   {

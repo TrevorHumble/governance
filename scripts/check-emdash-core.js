@@ -3,6 +3,8 @@
 // (Ported from the wedding-scavenger-hunt repo's issue #1171.)
 'use strict';
 
+const { UPSTREAM_COPY_PATHS, isNotCounted } = require('./check-token-budget-core');
+
 const EM_DASH = String.fromCharCode(0x2014);
 const AMP = String.fromCharCode(0x26); // '&'
 const HASH = String.fromCharCode(0x23); // '#'
@@ -17,14 +19,14 @@ const EMDASH_PATTERN = new RegExp(
   `(${EM_DASH}|${NAMED_ENTITY_SRC}|${DECIMAL_ENTITY_SRC}|${HEX_ENTITY_SRC})`
 );
 
-// This repo declares no excluded paths for the em-dash gate: every added
-// line in every file is checked. The wedding-scavenger-hunt repo this gate
-// is ported from carved out its own archival governance/ directory; that
-// carve-out does not apply here and is not replaced by anything else.
-const EXCLUDED_PATHS = [];
+// Every added line in every file is checked, except the upstream files copied
+// byte for byte into the Impeccable skill folder: their text is not ours to
+// change. The wedding-scavenger-hunt repo this gate is ported from carved out
+// its own archival governance/ directory; that carve-out does not apply here.
+const EXCLUDED_PATHS = UPSTREAM_COPY_PATHS;
 
 function isExcludedPath(file) {
-  return EXCLUDED_PATHS.some((prefix) => file.startsWith(prefix));
+  return isNotCounted(file, EXCLUDED_PATHS);
 }
 
 /** Whitespace-normalized comparison key for carry detection. */
