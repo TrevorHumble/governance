@@ -31,8 +31,8 @@ function Get-StagedParentOwnedPath {
   # NUL-safe git output via Invoke-GitCaptureRaw (this file already
   # dot-sources tools/governance-sync-core.ps1, per the header). No
   # -WorkingDirectory: this wall always runs against the invoking tree.
-  # Rationale and the byte guarantee this actually gives: the governance
-  # repo's DESIGN.md § "NUL-safe git output: one home".
+  # Rationale and the byte guarantee this actually gives: DESIGN.md at the
+  # governance-v1 tag.
   $capture = Invoke-GitCaptureRaw -ArgumentList @('-c', 'core.quotepath=false', 'diff', '--cached', '-z', '--name-only')
   if ($capture.ExitCode -ne 0) {
     throw "Get-StagedParentOwnedPath: git diff --cached failed with exit code $($capture.ExitCode)"

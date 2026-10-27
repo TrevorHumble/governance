@@ -6,15 +6,32 @@
   "criticalPaths": [],
   "ciCheckNames": ["build"],
   "docCurrencyPaths": [],
-  "goalsDoc": "README.md",
   "checkCommands": {
     "install": "npm ci",
     "test": "npm test",
     "emdash": "npm run check:emdash",
+    "budget": "npm run check:budget",
+    "banned": "npm run check:banned",
+    "seats": "npm run check:seats",
     "lint": "npm run lint",
     "format": "npm run format:check"
   },
   "ghPath": "gh",
   "defaultBranch": "main",
-  "governanceHome": "self"
+  "dataClass": "public",
+  "governanceHome": "self",
+  "budget": {
+    "total": 20000,
+    "reviewer": 6000,
+    "notCounted": [
+      "BUILDLOG.md",
+      "DESIGN.md",
+      "NORTH-STAR.md",
+      "README.md",
+      "CLAUDE.md",
+      "owner-declines.md",
+      "buildlog/"
+    ]
+  },
+  "lenses": []
 }

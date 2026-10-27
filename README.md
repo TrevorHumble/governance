@@ -1,63 +1,46 @@
 # governance
 
-The parent governance repo. The constitution.
+The parent governance repo. It holds the pipeline, the standards, the agents, the skills, the hooks and the checks that every repo of ours builds under. Child repos pull it in; this repo is the one place a shared rule changes.
 
-Global standards, agent definitions, pipeline rules, and hooks live here and sync out
-to every child repo (wedding-scavenger-hunt, the Blender repos, and whatever comes next).
+For agents: `AGENTS.md`. For why things are the way they are: `DESIGN.md`.
 
-Rules of the road, settled 2026-08-16:
+## Adopting it in a child repo
 
-- **Global wins by default.** A child never edits its own local copy of a parent-owned file; the
-  one path to changing a global rule is changing it here. Full mechanics:
-  `standards/governance-sync.md`.
-- **Governance fixes are made here**, in this repo, even when discovered mid-build in a
-  child. Full review runs here.
-- **Children pull on build.** Every child checks this repo for updates at build start. A
-  content-classed pull lands as a small PR in the child and merges itself on green CI, no
-  reviewer. Full mechanics: `standards/governance-sync.md`.
+Set these in the child's `repo-profile.json`:
 
-Seed content comes from wedding-scavenger-hunt, the gold standard at the time this repo was
-created (2026-08-16). See `docs/seed-classification-2026-08-16.md` for the file-by-file
-classification that produced this tree, and `DESIGN.md` for the full rationale.
+- `governanceHome`: the URL or path of this repo. This repo itself says `self`.
+- `governanceRef`: the tag or branch to pull. Without it, sync pulls the default branch.
+- `syncIssue`: the number of the child's standing issue for governance syncs.
 
-## Goals
+Then run `tools/governance-sync.ps1` at build start. `tools/setup-hooks.ps1` turns on the git hooks in a fresh clone.
 
-- **One canonical governance home.** Standards, agent definitions, pipeline commands, hooks, and
-  worktree tools live in exactly one place instead of a separate copy per repo.
-- **Zero drift across child repos.** A child pulls updates from here instead of maintaining its
-  own diverging fork of the governance layer.
-- **Every improvement lands once.** A fix or a new rule discovered in any child's work is made
-  here, in this repo, and reaches every other child through the same sync path, rather than being
-  patched locally and never propagated.
-
-## Getting started
+## Commands
 
 ```
 npm install
 npm test
 npm run lint
 npm run format:check
+npm run check:budget
+npm run check:banned
 npm run check:emdash
+npm run check:seats
+npm run check:evidence
+npm run check:served
+npm run check:design
 ```
 
-If `format:check` fails, `npm run format` rewrites the flagged files in place.
-
-`tools/setup-hooks.ps1` wires the local `.githooks/` gates, `commit-msg` and `pre-commit`, into a fresh clone.
+`npm run format` fixes what `format:check` flags. `WHAT-IT-CHECKS.md` says what each check catches and misses.
 
 ## Where things live
 
-- `CLAUDE.md`: the operating rules an AI agent working in this repo follows (the pipeline, the
-  governing-artifact surface, the federalism rules above stated as law, repo conventions).
-- `repo-profile.json`: this repo's own declared values for every field a shared governance file
-  may need (pre-review process, CI check names, critical dependencies, default branch, and the
-  rest). Schema documented in `DESIGN.md`.
-- `governance-manifest.json`: the declared set of files a child repo receives on sync, and any
-  retired tombstones. Schema documented in `DESIGN.md`.
-- `tools/governance-sync.ps1`: pulls this repo's declared shared governance into a child, and
-  classifies what it finds as content or structure against `governance-manifest.json`. A
-  content-classed change ships as a small PR that merges itself on green CI, no reviewer; a
-  structure-classed change ships no PR and opens a standing issue in the child instead, for a
-  human to sequence by hand. Full mechanics: `standards/governance-sync.md`.
-- `DESIGN.md`: architecture decisions and rationale, including the founding ADR for this repo.
-- `standards/`, `agents/`, `.claude/`, `.githooks/`, `tools/`, `scripts/`: the governance layer
-  itself.
+- `AGENTS.md`, `CLAUDE.md`: the rules for agents.
+- `NORTH-STAR.md`: the owner's goals.
+- `DESIGN.md`: the design records.
+- `definition-of-done.md`, `owner-declines.md`: when a change is finished, and what the owner has already declined.
+- `pipeline/`: the twelve steps and the report template.
+- `standards/`: shared standards.
+- `.claude/`: skills, agents, hooks and settings.
+- `seats.json`: each role's model and effort.
+- `repo-profile.json`, `governance-manifest.json`: this repo's values, and which files a child receives.
+- `tools/`, `scripts/`, `.githooks/`, `.github/`: the machinery.

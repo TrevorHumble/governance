@@ -19,6 +19,8 @@ permissions:
   contents: read
 
 jobs:
+  # Keep this job's steps identical to governance-ci.yml's, the reusable copy child repos call;
+  # tests/workflows.test.js fails when they differ.
   build:
     runs-on: ubuntu-latest
     steps:
@@ -38,9 +40,22 @@ jobs:
         run: npm run lint
       - name: Format check
         run: npm run format:check
+      # No argument: the script takes its base from GITHUB_BASE_REF on a pull_request
+      # event and from the event payload on a merge_group event; a push skips the guard.
+      - name: Token budget
+        run: npm run check:budget
+      # Scans the tree, not a diff, so it has no `if:`.
+      - name: Banned words
+        run: npm run check:banned
+      # Same base handling as the token budget step: validates seats.json, and on a pull_request or
+      # merge_group event also reports whether the PR is seats-only.
+      - name: Seats
+        run: npm run check:seats
+      # Checks the shape and length of each record in the design file.
+      - name: Design records
+        run: npm run check:design
       # Runs only on pull_request/merge_group: a direct push to main has no
       # pull request, so no merge-base diff of added lines exists to judge.
-      # See DESIGN.md "CI gate for added em dashes".
       - name: Em-dash gate
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         run: npm run check:emdash

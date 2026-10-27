@@ -7,9 +7,10 @@
 # tools/governance-sync-core.ps1.
 #
 # Exit-code contract, the same-tree invariant, and the one-profile-parsed-once
-# rule this wrapper implements: the governance repo's DESIGN.md § "Governance
-# sync". Merge-on-green mechanics, the CI-guard gate, the superseded-PR
-# sweep, and the retained-divergent issue: standards/governance-sync.md.
+# rule this wrapper implements: DESIGN.md at the governance-v1 tag.
+# Merge-on-green mechanics, the CI-guard gate, the superseded-PR
+# sweep, and the retained-divergent issue: AGENTS.md "Parent and children" for the rules in one
+# line each; the code below is the rest.
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||. Native
 # command output is redirected on stdout only, never merged via 2>&1 (that
@@ -28,8 +29,7 @@ param(
 . (Join-Path $PSScriptRoot 'governance-sync-core.ps1')
 . (Join-Path $PSScriptRoot 'repo-profile-core.ps1')
 
-# The two standing issues: standards/governance-sync.md § "The standing-issue
-# rule". One open issue per title per child; the constant titles let
+# The two standing issues. One open issue per title per child; the constant titles let
 # Find-IssueByTitle match exactly, never via gh's own partial-match --search.
 $StructureIssueTitle = 'governance sync: structure change pending adoption'
 $DivergentIssueTitle = 'governance sync: retained divergent paths pending disposition'
@@ -133,8 +133,7 @@ function Close-IssueByTitle {
 }
 
 # Set-StandingStructureIssue / Close-StandingStructureIssue -- the structure
-# issue's own body shape (standards/governance-sync.md § "The standing-issue
-# rule") on top of the generic pair above.
+# issue's own body shape on top of the generic pair above.
 function Set-StandingStructureIssue {
   param(
     [Parameter(Mandatory = $true)] [string]$Gh,
@@ -240,8 +239,7 @@ function Get-CiGateStatus {
   # tools/apply-branch-protection.ps1 is this read site's twin, reading that
   # same field back with the identical .required_status_checks.checks path,
   # and the --input PUT above it is what writes the field. No shared home
-  # exists for the two reads (recorded gap, the governance repo's DESIGN.md §
-  # "Merge-on-green sync (issue #15)"): a GitHub field rename must fix both
+  # exists for the two reads (a recorded gap): a GitHub field rename must fix both
   # call sites by hand.
   $checksOut = & $Gh api "repos/{owner}/{repo}/branches/$DefaultBranch/protection" --jq '.required_status_checks.checks | map(.context)' 2>$null
   if ($LASTEXITCODE -ne 0) {
@@ -303,15 +301,14 @@ function Invoke-SupersededSyncSweep {
 # repo-relative and forward-slashed already (git's own form), NUL-split so a
 # path holding a newline, a carriage return, or a trailing space is read back
 # exactly as git recorded it, never re-split or rejoined by whitespace (the
-# byte guarantee this actually gives: the governance repo's DESIGN.md §
-# "NUL-safe git output: one home"). Feeds issue #53's additive-manifest
+# byte guarantee this actually gives: DESIGN.md at the governance-v1 tag).
+# Feeds issue #53's additive-manifest
 # exception (Test-IsAdditiveManifestDiff in tools/governance-sync-core.ps1):
 # $null on any git failure, so that exception fails closed to structure
 # rather than risk a collision check against an incomplete list.
 #
 # Calls Invoke-GitCaptureRaw (tools/governance-sync-core.ps1, dot-sourced
-# above; the shared home, see the governance repo's DESIGN.md § "NUL-safe
-# git output: one home"). Invoke-GitCaptureRaw itself does not catch, so
+# above; the shared home). Invoke-GitCaptureRaw itself does not catch, so
 # this function's own try/catch is what turns a genuine PowerShell error
 # into this function's own $null contract.
 function Get-ChildTrackedFiles {
@@ -325,9 +322,7 @@ function Get-ChildTrackedFiles {
     }
     $z = $capture.Output
     # Cuts at the last NUL rather than splitting on NUL and filtering blanks:
-    # see DESIGN.md's "additive-manifest exception (issue #53)" section, "Why
-    # Get-ChildTrackedFiles cuts at the last NUL instead of splitting and
-    # filtering blanks" for why the naive approach loses on Linux.
+    # the naive approach loses on Linux (DESIGN.md at the governance-v1 tag).
     $lastNul = $z.LastIndexOf([char]0)
     if ($lastNul -lt 0) {
       # The leading comma: see Get-UnacknowledgedDivergent's comment in
@@ -364,8 +359,7 @@ function Get-Classification {
   # Same tree this call classifies against, so the additive exception's
   # collision test (issue #53) reads the same tree the run itself applies to,
   # the dry-run preview and the real run alike (each already calls this
-  # function with its own tree; see the same-tree invariant, the governance repo's DESIGN.md §
-  # "Governance sync").
+  # function with its own tree; the same-tree invariant).
   $childTrackedFiles = Get-ChildTrackedFiles -ChildTreeRoot $ChildTreeRoot
   return Get-SyncClassification -ParentManifest $ParentManifest -ChildManifest $childManifest -Plan $Plan `
     -ParentRoot $ParentRoot -ChildTrackedFiles $childTrackedFiles
@@ -373,8 +367,8 @@ function Get-Classification {
 
 # Write-ClassificationLines -- prints the issue #14 AC5 contract for $Classification:
 # one `classify <class>: <path> (<reason>)` line per plan path, then one
-# `classify RUN <content|structure>: <reason>` line (`standards/pipeline/PIPELINE.md`
-# step 02 branches on that marker). The one call both the dry-run and
+# `classify RUN <content|structure>: <reason>` line (`pipeline/steps/02-sync.md`
+# branches on that marker). The one call both the dry-run and
 # real-run branches make, so the printed contract can never drift between
 # the two.
 function Write-ClassificationLines {
@@ -520,7 +514,6 @@ try {
     # computed against the branch being synced instead, per the same-tree
     # invariant, so this preview and a real run can legitimately disagree.
     $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $ChildRoot -Manifest $parentManifest
-    foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
     foreach ($p in $plan.Adds) { Write-Output "add: $p" }
     foreach ($p in $plan.Updates) { Write-Output "update: $p" }
     foreach ($p in $plan.Prunes) { Write-Output "prune: $p" }
@@ -560,14 +553,12 @@ try {
   # clean while the branch being synced holds diverged content, and a plan
   # computed against the wrong tree would silently revert that divergence.
   $plan = Get-SyncPlan -ParentRoot $tempCloneDir -ChildRoot $syncWorktreeDir -Manifest $parentManifest
-  foreach ($w in $plan.Warnings) { Write-Output "WARNING $w" }
   $unacknowledgedDivergent = Get-UnacknowledgedDivergent -Plan $plan -Acknowledged $acknowledgedDivergentPaths
   foreach ($p in $unacknowledgedDivergent) { Write-Output "WARNING retained divergent: $p" }
 
   $isEmpty = ($plan.Adds.Count -eq 0) -and ($plan.Updates.Count -eq 0) -and ($plan.Prunes.Count -eq 0)
   if ($isEmpty) {
-    # Best-effort only (standards/governance-sync.md § "The standing-issue
-    # rule"): a human can adopt a structure change by hand, leaving a stale
+    # Best-effort only: a human can adopt a structure change by hand, leaving a stale
     # open issue this cleans up, but "nothing to sync" must still print and
     # exit 0 even when gh cannot be resolved or reached. The divergence issue
     # (issue #15 AC6) and the superseded-PR sweep (issue #15 AC5) share the same best-effort
@@ -629,7 +620,7 @@ try {
     Write-Output "structure change: partial withhold ($($classification.RunReason)); child issue: $issueUrl"
     # Ship from Shipped, the classifier's own answer, rather than re-filtering
     # against Withheld. $plan.Prunes needs no such filter: rule 0
-    # (standards/ownership-map.md § "Change classes") classifies every Prune
+    # of Get-PlanPathClassification classifies every Prune
     # content, so a Prune never appears in Withheld.
     $shippedSet = New-Object 'System.Collections.Generic.HashSet[string]'
     foreach ($p in @($classification.Shipped)) { [void]$shippedSet.Add($p) }
@@ -696,9 +687,8 @@ try {
   #
   # The .githooks/ slice is staged separately, with --chmod=+x, and it is
   # built from the WHOLE .githooks/ set now present in the sync worktree,
-  # not just this run's Adds/Updates: rationale, tradeoff, and its one
-  # remaining limitation are in the governance repo's DESIGN.md §
-  # "Governance sync" ("The .githooks/ executable-bit repair").
+  # not just this run's Adds/Updates. Rationale, tradeoff, and its one
+  # remaining limitation: DESIGN.md at the governance-v1 tag.
   $stageAddUpdate = @($plan.Adds) + @($plan.Updates)
   $otherAddUpdate = @($stageAddUpdate | Where-Object { -not (Test-MatchesManifestEntry -Path $_ -Entry '.githooks/**') })
   # Resolved once and reused as both the hook-directory base and the
@@ -762,7 +752,7 @@ try {
     $bodyLines.Add("Governance sync from $governanceHome at $parentSha.")
   }
   $bodyLines.Add('')
-  $bodyLines.Add('Merges on green CI per `standards/governance-sync.md`: no reviewer.')
+  $bodyLines.Add('Merges on green CI per `AGENTS.md`: no reviewer.')
   $bodyLines.Add('')
   $bodyLines.Add('Add:')
   foreach ($p in $plan.Adds) { $bodyLines.Add("- $p") }
@@ -779,11 +769,6 @@ try {
   # stop opening the issue.
   $bodyLines.Add("Retained divergent, unacknowledged ($DivergentDisposalInstruction):")
   foreach ($p in $unacknowledgedDivergent) { $bodyLines.Add("- $p") }
-  if ($plan.Warnings.Count -gt 0) {
-    $bodyLines.Add('')
-    $bodyLines.Add('Warnings:')
-    foreach ($w in $plan.Warnings) { $bodyLines.Add("- $w") }
-  }
   $prBodyPath = Join-Path $tempRoot ('governance-sync-prbody-' + [guid]::NewGuid().ToString('N') + '.md')
   Set-Content -LiteralPath $prBodyPath -Value ($bodyLines -join "`n") -NoNewline
 

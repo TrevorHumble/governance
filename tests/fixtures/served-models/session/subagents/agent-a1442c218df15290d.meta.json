@@ -1,0 +1,10 @@
+{
+  "agentType": "general-purpose",
+  "description": "#115 issue review round 2",
+  "spawnDepth": 1,
+  "requestShape": "background",
+  "requestNonInteractive": true,
+  "model": "fable",
+  "effort": "medium",
+  "finished": true
+}

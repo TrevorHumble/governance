@@ -2,7 +2,7 @@
 // Vitest tests for tools/check-freshness.ps1: behind-count reporting, the
 // MAX_DRIFT_COMMITS boundary, and overlap detection including the append-only
 // carve-out. Uses a git-scratch-repo (makeRepo) and -File/-Command split
-// pattern mirrored from tests/classify-dep-pr.test.js. Launcher resolution is
+// pattern of the other PowerShell tests. Launcher resolution is
 // shared: see tests/ps-launcher.js.
 'use strict';
 
@@ -13,6 +13,22 @@ const path = require('path');
 const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const SCRIPT = path.join(__dirname, '..', 'tools', 'check-freshness.ps1');
+
+// The tool reads defaultBranch from the repo-profile.json one level above its
+// own folder. Running a copy from a folder with no profile there pins it to
+// its 'main' default, so these fixtures do not depend on this repo's profile.
+let stagedScript = null;
+function isolatedScript() {
+  if (!stagedScript) {
+    const toolsDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'freshness-tool-')), 'tools');
+    fs.mkdirSync(toolsDir);
+    for (const name of ['check-freshness.ps1', 'repo-profile-core.ps1']) {
+      fs.copyFileSync(path.join(__dirname, '..', 'tools', name), path.join(toolsDir, name));
+    }
+    stagedScript = path.join(toolsDir, 'check-freshness.ps1');
+  }
+  return stagedScript;
+}
 
 function git(cwd, args) {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -32,8 +48,8 @@ function writeFile(dir, rel, content) {
 // test, stands in for a build session's own branch) and "sibling" (used to
 // advance the remote default branch the way a merging wave-sibling would,
 // independent of the clone under test). The seed repo carries no
-// repo-profile.json, so check-freshness.ps1 falls back to its own literal
-// 'main' default, which matches the branch name this fixture creates below.
+// repo-profile.json, and runCheck runs an isolated copy of the tool (see
+// isolatedScript), so it uses its 'main' default, matching this fixture.
 function makeOriginAndClones() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'freshness-'));
   const originDir = path.join(root, 'origin.git');
@@ -88,7 +104,7 @@ function pushFileChange(siblingDir, relPath, content, message) {
 }
 
 function runCheck(cwd, touches) {
-  const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', SCRIPT];
+  const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', isolatedScript()];
   if (touches) {
     args.push('-Touches', touches);
   }
@@ -208,7 +224,7 @@ maybeDescribe('check-freshness.ps1', () => {
   });
 });
 
-// Regression guard for /realign step ordering. `.claude/commands/realign.md`
+// Regression guard for /realign step ordering. `.claude/skills/realign/SKILL.md`
 // must run the next-batch overlap report BEFORE fast-forwarding local main to
 // origin/main. This test proves WHY: check-freshness.ps1 derives its drift range
 // from merge-base(origin/main, HEAD)..origin/main, and in the primary checkout on

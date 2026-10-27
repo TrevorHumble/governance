@@ -1,0 +1,52 @@
+name: Governance CI
+
+# The shared checks, for a child repo to call: `uses: <owner>/governance/.github/workflows/governance-ci.yml@<ref>`.
+# This repo's ci.yml keeps its own `build` job (the name branch protection requires; a job that
+# `uses:` a workflow reports under a different name) and runs the same steps. The steps below must
+# match ci.yml's job step for step: tests/workflows.test.js fails when they differ.
+on:
+  workflow_call:
+
+# A called workflow can only reduce the caller's token permissions, never raise them.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth 0: the em-dash gate below diffs against the default
+      # branch, which a shallow checkout would not have.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Tests
+        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Format check
+        run: npm run format:check
+      # No argument: the script takes its base from GITHUB_BASE_REF on a pull_request
+      # event and from the event payload on a merge_group event; a push skips the guard.
+      - name: Token budget
+        run: npm run check:budget
+      # Scans the tree, not a diff, so it has no `if:`.
+      - name: Banned words
+        run: npm run check:banned
+      # Same base handling as the token budget step: validates seats.json, and on a pull_request or
+      # merge_group event also reports whether the PR is seats-only.
+      - name: Seats
+        run: npm run check:seats
+      # Checks the shape and length of each record in the design file.
+      - name: Design records
+        run: npm run check:design
+      # Runs only on pull_request/merge_group: a direct push to main has no
+      # pull request, so no merge-base diff of added lines exists to judge.
+      - name: Em-dash gate
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        run: npm run check:emdash

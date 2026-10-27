@@ -34,7 +34,6 @@ function basePlan(overrides) {
       Updates: [],
       Prunes: [],
       RetainedDivergent: [],
-      Warnings: [],
       IdenticalCount: 0,
     },
     overrides || {}
@@ -339,6 +338,35 @@ maybeDescribe('Test-IsAdditiveManifestDiff, via Get-SyncClassification (issue #5
     });
     const c = runAdditiveCase(parent, child, ['tools/a.ps1']);
     expect(c.RunClass).toBe('structure');
+  });
+
+  it('an added notCounted prefix entry that covers no tracked child file classifies content', () => {
+    const child = baseAdditiveManifest();
+    child.notCounted = [];
+    const parent = Object.assign({}, child, { notCounted: ['.claude/skills/baby/'] });
+    expect(runAdditiveCase(parent, child, ['tools/a.ps1']).RunClass).toBe('content');
+  });
+
+  it('a first notCounted list (absent in the child) that adds nothing classifies content', () => {
+    const child = baseAdditiveManifest();
+    const parent = Object.assign({}, child, { notCounted: [] });
+    expect(runAdditiveCase(parent, child, ['tools/a.ps1']).RunClass).toBe('content');
+  });
+
+  it('an added notCounted entry that covers a tracked child file, by prefix or exactly, classifies structure', () => {
+    const child = baseAdditiveManifest();
+    child.notCounted = [];
+    const byPrefix = Object.assign({}, child, { notCounted: ['docs/'] });
+    expect(runAdditiveCase(byPrefix, child, ['docs/a.md']).RunClass).toBe('structure');
+    const exact = Object.assign({}, child, { notCounted: ['tools/a.ps1'] });
+    expect(runAdditiveCase(exact, child, ['tools/a.ps1']).RunClass).toBe('structure');
+  });
+
+  it('a removed notCounted entry classifies structure', () => {
+    const parent = baseAdditiveManifest();
+    parent.notCounted = [];
+    const child = Object.assign({}, parent, { notCounted: ['docs/'] });
+    expect(runAdditiveCase(parent, child, []).RunClass).toBe('structure');
   });
 
   it('a plain added excludedPaths entry alone classifies content', () => {

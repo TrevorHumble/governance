@@ -1,14 +1,13 @@
 # tools/governance-sync-core.ps1: pure planning logic for pulling shared governance
 # from the home repo into a child. Dot-source this file; do not run it directly
-# (mirrors the -core.ps1 convention of tools/repo-profile-core.ps1 and
-# tools/classify-dep-pr-core.ps1). No side effects beyond reading the filesystem,
+# (mirrors the -core.ps1 convention of tools/repo-profile-core.ps1). No side effects beyond reading the filesystem,
 # running read-only git commands (Invoke-GitCaptureRaw), and, in Resolve-GhPath,
 # probing commands: every git/gh mutation lives in the wrapper,
 # tools/governance-sync.ps1, not here, so this file's functions can be
 # dot-sourced and called directly from tests with no repo state at risk.
 #
-# Design and the same-tree invariant this plan feeds: the governance repo's
-# DESIGN.md § "Governance sync".
+# Design and the same-tree invariant this plan feeds: DESIGN.md at the
+# governance-v1 tag.
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 
@@ -20,7 +19,7 @@
 # function-scoped so a genuine PowerShell error (git missing from PATH, a
 # temp directory that is full or read-only) actually propagates rather than
 # being swallowed. Full rationale and the byte guarantee this actually
-# gives: the governance repo's DESIGN.md § "NUL-safe git output: one home".
+# gives: DESIGN.md at the governance-v1 tag.
 #
 # Two traps every caller must not walk into: -ArgumentList joins its
 # elements with a plain space and applies no quoting, so never pass a path
@@ -235,8 +234,7 @@ function Resolve-SharedSet {
 }
 
 # Get-SyncPlan -- classifies a parent/child diff into Adds, Updates, Prunes,
-# and RetainedDivergent by content, never by count; see standards/governance-sync.md
-# for what each classification means to the reviewer.
+# and RetainedDivergent by content, never by count.
 function Get-SyncPlan {
   param(
     [Parameter(Mandatory = $true)]
@@ -280,32 +278,17 @@ function Get-SyncPlan {
     # Absent in the child: appears in neither Prunes nor RetainedDivergent.
   }
 
-  $warnings = New-Object System.Collections.Generic.List[string]
-  $childClaudeMd = Join-Path $childFull 'CLAUDE.md'
-  $hasHeading = $false
-  if (Test-Path -LiteralPath $childClaudeMd -PathType Leaf) {
-    $content = Get-Content -LiteralPath $childClaudeMd -Raw
-    if ($content -match '(?m)^## Governing-artifact surface\s*$') {
-      $hasHeading = $true
-    }
-  }
-  if (-not $hasHeading) {
-    $warnings.Add("child CLAUDE.md is missing the literal heading '## Governing-artifact surface'")
-  }
-
   return [PSCustomObject]@{
     Adds              = @($adds)
     Updates           = @($updates)
     IdenticalCount    = $identicalCount
     Prunes            = @($prunes)
     RetainedDivergent = @($retainedDivergent)
-    Warnings          = @($warnings)
   }
 }
 
 # Resolve-GhPath -- the gh resolution chain (a)-(d) below. Rationale for the
-# probe order and each guard: the governance repo's DESIGN.md § "Governance
-# sync" (the gh resolution chain paragraph).
+# probe order and each guard: DESIGN.md at the governance-v1 tag.
 function Resolve-GhPath {
   param(
     [string]$ProfileGhPath
@@ -335,11 +318,10 @@ function Resolve-GhPath {
 # names alphabetically; array elements are canonicalized in place but their
 # own order is left untouched: canonicalization treats every array as ordered
 # content by default, so a reorder still counts as a value change here.
-# (Test-IsAdditiveManifestDiff below treats sharedPaths and arrivesAsStructure
-# as order-free sets for its own narrower comparison; that is a property of
+# (Test-IsAdditiveManifestDiff below treats sharedPaths, arrivesAsStructure and
+# notCounted as order-free sets for its own narrower comparison; that is a property of
 # that one check, not of canonical-JSON equality in general. excludedPaths
-# gets its own ordered comparison there instead; see DESIGN.md, "The
-# additive-manifest exception (issue #53)".) The one recursive step
+# gets its own ordered comparison there instead.) The one recursive step
 # Get-CanonicalJson needs so two manifests that differ only in JSON key order
 # never read as a diff.
 function ConvertTo-CanonicalValue {
@@ -414,8 +396,8 @@ function Get-ManifestDiffFields {
 
 # Get-ManifestArrayFieldOrEmpty -- $Manifest.$Name as an array, or an empty
 # array when the property is absent or explicitly null. Shared by
-# Test-IsAdditiveManifestDiff's sharedPaths/excludedPaths/arrivesAsStructure
-# checks so a manifest that omits one of those fields reads as "declares
+# Test-IsAdditiveManifestDiff's sharedPaths/excludedPaths/arrivesAsStructure/
+# notCounted checks so a manifest that omits one of those fields reads as "declares
 # none" rather than throwing.
 function Get-ManifestArrayFieldOrEmpty {
   param(
@@ -450,9 +432,7 @@ function Get-ManifestObjectFieldOrEmpty {
 }
 
 # Test-IsAdditiveManifestDiff -- issue #53's narrow exception to "any manifest
-# difference forces structure" (rule: standards/governance-sync.md § "What a
-# sync is"; rationale: the governance repo's DESIGN.md § "The
-# additive-manifest exception (issue #53)"). An added `excludedPaths` entry
+# difference forces structure" (rationale: DESIGN.md at the governance-v1 tag). An added `excludedPaths` entry
 # counts as additive only when it is not a `!`-prefixed negation, since a
 # negation un-excludes a path and so is a subtraction in effect.
 # $ChildTrackedFiles must be the child's tracked file list (git ls-files
@@ -466,13 +446,13 @@ function Test-IsAdditiveManifestDiff {
     [Parameter(Mandatory = $true)] $ChildManifest,
     [string[]]$ChildTrackedFiles
   )
-  $allowedFields = @('sharedPaths', 'excludedPaths', 'classes', 'arrivesAsStructure')
+  $allowedFields = @('sharedPaths', 'excludedPaths', 'classes', 'arrivesAsStructure', 'notCounted')
   $diffFields = Get-ManifestDiffFields -ParentManifest $ParentManifest -ChildManifest $ChildManifest
   foreach ($f in $diffFields) {
     if ($allowedFields -notcontains $f) {
       return [PSCustomObject]@{
         IsAdditive = $false
-        Reason     = "field '$f' differs and is outside the additive exception's four fields (sharedPaths, excludedPaths, classes, arrivesAsStructure)"
+        Reason     = "field '$f' differs and is outside the additive exception's five fields (sharedPaths, excludedPaths, classes, arrivesAsStructure, notCounted)"
       }
     }
   }
@@ -486,13 +466,14 @@ function Test-IsAdditiveManifestDiff {
 
   $addedSharedPaths = @()
   $addedClassesKeys = @()
+  $addedNotCounted = @()
 
   foreach ($f in $diffFields) {
     if ($f -eq 'classes') {
       $parentClasses = Get-ManifestObjectFieldOrEmpty -Manifest $ParentManifest -Name 'classes'
       $childClasses = Get-ManifestObjectFieldOrEmpty -Manifest $ChildManifest -Name 'classes'
-      # Piped through ForEach-Object, not `.Properties.Name` directly: see
-      # DESIGN.md, "The additive-manifest exception (issue #53)", for why.
+      # Piped through ForEach-Object, not `.Properties.Name` directly; the
+      # reason is in DESIGN.md at the governance-v1 tag.
       $parentKeys = @($parentClasses.PSObject.Properties | ForEach-Object { $_.Name })
       $childKeys = @($childClasses.PSObject.Properties | ForEach-Object { $_.Name })
       $parentKeySet = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -517,13 +498,11 @@ function Test-IsAdditiveManifestDiff {
       # excludedPaths is order-sensitive (isExcluded applies entries in
       # order, last match wins), so a membership-only test is not enough:
       # only a strict append after the child's existing entries is proven
-      # safe here. See DESIGN.md, "The additive-manifest exception (issue
-      # #53)", for the reordering and mid-array-insertion cases this guards.
+      # safe here, which guards the reordering and mid-array-insertion cases.
       $parentArr = Get-ManifestArrayFieldOrEmpty -Manifest $ParentManifest -Name $f
       $childArr = Get-ManifestArrayFieldOrEmpty -Manifest $ChildManifest -Name $f
       if ($childArr.Count -gt $parentArr.Count) {
-        # A shorter parent array is not always a plain removal; see
-        # DESIGN.md, "The additive-manifest exception (issue #53)".
+        # A shorter parent array is not always a plain removal.
         return [PSCustomObject]@{
           IsAdditive = $false
           Reason     = "the parent's excludedPaths is shorter than the child's: an entry was removed, possibly along with a reorder or value change"
@@ -555,9 +534,10 @@ function Test-IsAdditiveManifestDiff {
         }
       }
     } else {
-      # sharedPaths, arrivesAsStructure: membership only, since a pure
-      # reorder is safe here (neither Resolve-SharedSet nor the
-      # arrivesAsStructure check in Get-PlanPathClassification reads order).
+      # sharedPaths, arrivesAsStructure, notCounted: membership only, since a
+      # pure reorder is safe here (neither Resolve-SharedSet, the
+      # arrivesAsStructure check in Get-PlanPathClassification, nor the
+      # token-budget check's isNotCounted reads order).
       # excludedPaths gets its own branch above because isExcluded does
       # read order.
       $parentArr = Get-ManifestArrayFieldOrEmpty -Manifest $ParentManifest -Name $f
@@ -573,6 +553,9 @@ function Test-IsAdditiveManifestDiff {
       $added = @($parentArr | Where-Object { -not $childSet.Contains($_) })
       if ($f -eq 'sharedPaths') {
         $addedSharedPaths = $added
+      }
+      if ($f -eq 'notCounted') {
+        $addedNotCounted = $added
       }
       # arrivesAsStructure additions need no collision test: pushing a path
       # onto it only forces structure on that path's first delivery, the
@@ -601,14 +584,28 @@ function Test-IsAdditiveManifestDiff {
     }
   }
 
+  # A notCounted entry is an exact path, or a prefix when it ends in '/'
+  # (the token-budget check's rule, not the '/**' glob of the entries above).
+  # One that covers a file the child already tracks would drop that file from
+  # the child's count, so it is not a safe addition.
+  foreach ($entry in $addedNotCounted) {
+    foreach ($tracked in $ChildTrackedFiles) {
+      $covers = if ($entry.EndsWith('/')) { $tracked.StartsWith($entry) } else { $tracked -ceq $entry }
+      if ($covers) {
+        return [PSCustomObject]@{
+          IsAdditive = $false
+          Reason     = "notCounted entry '$entry' collides with tracked child file '$tracked'"
+        }
+      }
+    }
+  }
+
   return [PSCustomObject]@{ IsAdditive = $true; Reason = 'every manifest difference is a safe addition' }
 }
 
 # Get-ManifestClassMatch -- the manifest.classes entry that decides $Path: an
 # exact key wins over a "prefix/**" key, and among "prefix/**" keys the
-# longest prefix wins (the governance repo's DESIGN.md § "Governance sync"
-# ("The classes lookup: precedence")). Matched is $null when nothing
-# matches.
+# longest prefix wins. Matched is $null when nothing matches.
 function Get-ManifestClassMatch {
   param(
     [Parameter(Mandatory = $true)] $Manifest,
@@ -658,9 +655,8 @@ function Test-IsContentLiteral {
 
 # Get-PlanPathClassification -- classifies one plan path content or
 # structure: the prune rule, the first-delivery (arrivesAsStructure) rule,
-# and the classes-match rule are standards/ownership-map.md § "Change
-# classes"; the final-default (classesDefault) rule is
-# standards/governance-sync.md § "What a sync is".
+# and the classes-match rule, then the final-default
+# (classesDefault) rule, are in the function below.
 function Get-PlanPathClassification {
   param(
     [Parameter(Mandatory = $true)] $Manifest,
@@ -721,17 +717,16 @@ function Get-PlanPathClassification {
 }
 
 # Get-SyncClassification -- classifies every path in a Get-SyncPlan result as
-# content or structure and returns the run-level verdict. Full rule set:
-# standards/governance-sync.md § "What a sync is"; rationale is recorded in
-# the governance repo's DESIGN.md § "Governance sync".
+# content or structure and returns the run-level verdict. Content or structure
+# is the line AGENTS.md "Parent and children" draws; rationale: DESIGN.md at
+# the governance-v1 tag.
 #
 # A structure RunClass withholds every plan path regardless of its own
 # per-file class, and the consistency rule does the same when a shipped Add
 # or Update cites a withheld path.
 #
 # $ChildTrackedFiles feeds issue #53's additive-manifest exception
-# (Test-IsAdditiveManifestDiff below; see the governance repo's DESIGN.md §
-# "The additive-manifest exception (issue #53)" for what qualifies). Omitted
+# (Test-IsAdditiveManifestDiff below, which defines what qualifies). Omitted
 # (or $null), a manifest difference behaves exactly as before this issue.
 function Get-SyncClassification {
   param(
@@ -762,8 +757,6 @@ function Get-SyncClassification {
     # comparison in this file (Get-ManifestDiffFields and the classes-key and
     # excludedPaths checks above): PowerShell's `-ne` is case-insensitive,
     # which would read a case-only difference as no difference at all.
-    # Rationale: the governance repo's DESIGN.md § "The additive-manifest
-    # exception (issue #53)", "Ordinal manifest comparisons".
     if (-not [string]::Equals((Get-CanonicalJson -Value $ParentManifest), (Get-CanonicalJson -Value $ChildManifest), [System.StringComparison]::Ordinal)) {
       $additive = Test-IsAdditiveManifestDiff -ParentManifest $ParentManifest -ChildManifest $ChildManifest `
         -ChildTrackedFiles $ChildTrackedFiles

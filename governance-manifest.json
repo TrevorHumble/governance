@@ -1,28 +1,338 @@
 {
-  "retired": [],
+  "retired": [
+    {
+      "path": ".agents/hooks.json",
+      "sha256": "5d62430cd890d5cb7827bbb99c863d8d3bd2063d5876f2d3942888f2887efe10"
+    },
+    {
+      "path": ".agents/rules/dependencies.md",
+      "sha256": "d3b44725e2cbfe6616967d5f43edc2b3c2474f1d3a44b51bce4e9ea2ac6ffe3a"
+    },
+    {
+      "path": ".agents/skills/build/SKILL.md",
+      "sha256": "6d372d2e9b5a597aa1e55b3af0da038096b78ad637bc7fd0087a452a3f0bb0a5"
+    },
+    {
+      "path": ".agents/skills/buildlog/SKILL.md",
+      "sha256": "04467f43fec55a2ae15367f9abca8938513d26077337fa8ca014df1f3fb4d991"
+    },
+    {
+      "path": ".agents/skills/capture-system-defect/SKILL.md",
+      "sha256": "240fa3db11ff711384db386182f33e42a0fdca1f3230f37fe10e470c497cbafd"
+    },
+    {
+      "path": ".agents/skills/github-write/SKILL.md",
+      "sha256": "bf2fa616476474447070e46b51503a25423319cb6d193fb4a5c46287408ee3ea"
+    },
+    {
+      "path": ".agents/skills/post-wave-review/SKILL.md",
+      "sha256": "aa32d39221797e8d7d46edd48a962a78a5ed3c9ec4765fddf66a7765a994ce53"
+    },
+    {
+      "path": ".agents/skills/realign/SKILL.md",
+      "sha256": "7fa63924237ae85ad01c916e24180c1a150c4c09ff7530effd591760e7834576"
+    },
+    {
+      "path": ".agents/skills/resume/SKILL.md",
+      "sha256": "8e33b10865d2a363eef4e47b4f6c2b2b05348f1ddcf8c1c0284a0f1f92b92c59"
+    },
+    {
+      "path": ".claude/commands/build.md",
+      "sha256": "2f360033186c3a4b5057c6c36872f4595704fd963bf946654bb172be524e75aa"
+    },
+    {
+      "path": ".claude/commands/buildlog.md",
+      "sha256": "825857f3e6444d7353cb5de89c858430441f51e1257a754dc5084d57f0d264cd"
+    },
+    {
+      "path": ".claude/commands/post-wave-review.md",
+      "sha256": "36ae2ce14fe927016edf46e94fabc313c466f582f74ceb3edb8c84fe93d70a05"
+    },
+    {
+      "path": ".claude/commands/realign.md",
+      "sha256": "def778933bc3bf687a33c6ed1e4175cfa237e64760e6715adeca7e9e82600879"
+    },
+    {
+      "path": ".claude/commands/resume.md",
+      "sha256": "09fea50a6f08329782310d8654cc1bbffffdced372bf4137959cf0c603e54ee2"
+    },
+    {
+      "path": ".claude/rules/dependencies.md",
+      "sha256": "40647b5d37eaf6efd4d6b934baa78f1f3212079646a91380f75dbfc6462baf87"
+    },
+    {
+      "path": ".claude/hooks/goal-gate.ps1",
+      "sha256": "4850c77f5cefe0705b219b422f4da5914d5e42f355a9c3f8f0d4dccc177a3308"
+    },
+    {
+      "path": ".claude/hooks/loop-gate.ps1",
+      "sha256": "351af0f4276e82e3cb260b7bdb8fa744f05d8b7f6f6cb339a6483a3e73038fb0"
+    },
+    {
+      "path": ".claude/skills/capture-system-defect/SKILL.md",
+      "sha256": "22db99a0b01cee866e962534b53294dc89ba7464212283e7c5f6f953c2384e65"
+    },
+    {
+      "path": "standards/adversarial-review-protocol.md",
+      "sha256": "670d31b03cda198005d66b261b4a330d47048ee02fdc59c27f8c02f44139053c"
+    },
+    {
+      "path": "standards/agent-standards.md",
+      "sha256": "ce32b924b392e08c6881a16eb494aab7884383522722b7cd62f470d831901ad4"
+    },
+    {
+      "path": "standards/decision-heuristics.md",
+      "sha256": "955163e0d4f528b3cdd7d2f01581d3fd64ee50f4e7f612d2c7a6b54e6da20884"
+    },
+    {
+      "path": "standards/design-philosophy-examples.md",
+      "sha256": "535ffdef9e4311ad1927b4bbb4485a472af39663e837af24eb37633c46343648"
+    },
+    {
+      "path": "standards/design-philosophy.md",
+      "sha256": "22e4e3204d9b0cd444cd3dea4a87783a71618b8de5b09623aab6532729faa2f8"
+    },
+    {
+      "path": "standards/documentation-standards.md",
+      "sha256": "3a7a03c2184e6e22c3bba4d5c37b08a85be7442399a7c576a7a833e69607e22b"
+    },
+    {
+      "path": "standards/edge-case-checklist.md",
+      "sha256": "40ae11794fa28835ec989aa0faac6a44ef3a09f8822a38d8a4d2bec14094d89c"
+    },
+    {
+      "path": "standards/governance-sync.md",
+      "sha256": "78052a9359510ce50e2f94031f38e15427a6588b53333b876233af24b4b8354c"
+    },
+    {
+      "path": "standards/issue-standards.md",
+      "sha256": "5648573666eb4e867de44b959b3cf86b4df266c1217a50ae02ff13a66554c752"
+    },
+    {
+      "path": "standards/ownership-map.md",
+      "sha256": "9f1575d38831e3955eb40e03afc41b9cdcd6f244465592987e51d821572694cc"
+    },
+    {
+      "path": "standards/pipeline/PIPELINE.md",
+      "sha256": "0baf7ccf3ef10d2594595a82db91053683cdd31987811068b9e784e9b32397b3"
+    },
+    {
+      "path": "standards/pipeline/edge/ac-amendment.md",
+      "sha256": "843f126e71c311ce90000e2c4292d48c787e905c3feb3fa4238c33e7f11edcaa"
+    },
+    {
+      "path": "standards/pipeline/edge/night-pass.md",
+      "sha256": "293b68e3e4a69427509b17295426623912a260d836624b79a7a3bda650f35174"
+    },
+    {
+      "path": "standards/pipeline/edge/referee-loop.md",
+      "sha256": "18eaa81d7d312d56cc95012d60b8ff41b682da62cf22b1687f3053e8d8693087"
+    },
+    {
+      "path": "standards/pipeline/edge/timed-run.md",
+      "sha256": "cd49646292e79ed7963b38facdafd7c28858559704b6ce1384cef3052e190ac0"
+    },
+    {
+      "path": "standards/pipeline/edge/unchanged-artifact-exemption.md",
+      "sha256": "8cfed187718296000ced66ef2b9015372f346df59e74e8493c4356936c7ca99c"
+    },
+    {
+      "path": "standards/pipeline/steps/01-isolate.md",
+      "sha256": "21b29411fb3abdb4a7695d865bd45ddc9cb6605771f6c4b0ac397f10cbc81300"
+    },
+    {
+      "path": "standards/pipeline/steps/02-sync.md",
+      "sha256": "b19237ec289362220a77ff27bf89e1473d5177fea7fae74e7323973fcbef3419"
+    },
+    {
+      "path": "standards/pipeline/steps/03-research.md",
+      "sha256": "584ac1e2f9c12a8db35f9145a6175209b766d2480bdbe1670997dbfa1279ab3e"
+    },
+    {
+      "path": "standards/pipeline/steps/04-pre-review.md",
+      "sha256": "dfeb7bd0c1b4f50687e0e21cecdcd1f7143c297c9d8e28fad9356011a073879c"
+    },
+    {
+      "path": "standards/pipeline/steps/05-hand-off.md",
+      "sha256": "5c48512d30ab7c4a1730a2ef1c73ded5a87f39d142864fd674eb4173d72f58f0"
+    },
+    {
+      "path": "standards/pipeline/steps/06-issue.md",
+      "sha256": "28d321519f9279550e3368b424569294e66b12a323cbee221e07786d054a477b"
+    },
+    {
+      "path": "standards/pipeline/steps/07-issue-review.md",
+      "sha256": "eaa73957f262d7534cfd59b8de545035f435e430bd710a1387955c754111e4c0"
+    },
+    {
+      "path": "standards/pipeline/steps/08-implement.md",
+      "sha256": "fa98a54fbf4d498984b19deaf86c9d370616ba0f8ad80dc48156fdad90eda34e"
+    },
+    {
+      "path": "standards/pipeline/steps/09-pr-review.md",
+      "sha256": "ed0f362d674f9465780ce72ced00d5d5a52424c3cf8300382f49f4e484e3d421"
+    },
+    {
+      "path": "standards/pipeline/steps/10-commit.md",
+      "sha256": "5d3c967e4494182651655ec85da8ccc241a64832042c14b4a7b22d56c7ba97e6"
+    },
+    {
+      "path": "standards/pipeline/steps/11-ship.md",
+      "sha256": "b85b5d417cbb9586fd2070e9f8f0d89c4e7620be50b3d6848edf47aa5b943367"
+    },
+    {
+      "path": "standards/pipeline/steps/12-report.md",
+      "sha256": "09275be562797237f492a0b067e7d5d699c00903526886ef2a83f87e8d0957d9"
+    },
+    {
+      "path": "standards/pipeline/templates/hand-off-format.md",
+      "sha256": "8d435c3e3348ec7125af67d741df50a803d7ed5cbbb0da6b944aff9b08e9b98a"
+    },
+    {
+      "path": "standards/pipeline/templates/model-tiers.md",
+      "sha256": "5d1111f3f54f7784fc6cbab652e64c525b13d8938df52d1b0e7b2e00a29434fe"
+    },
+    {
+      "path": "standards/pipeline/templates/report-template.md",
+      "sha256": "b6f16eb9afcb262120ff63f2e22fa406fe22f84e2d80619a060d4aefc1894b49"
+    },
+    {
+      "path": "standards/pipeline/templates/spawn-skeleton.md",
+      "sha256": "fe8f1181a3139133788dc29d8c3418c9e17bb8b53cae47a2ebe5c0576454804a"
+    },
+    {
+      "path": "standards/reviewer-conduct.md",
+      "sha256": "f62df915328ffb880d2bcfd01062ddc6ac061df5741f63e3bd8565b20cf4cdb6"
+    },
+    {
+      "path": "standards/skill-standards.md",
+      "sha256": "edfe0725ffc3c8b8ad5e5d01adba3520356df77a8a1bfaa28974c84c6076d143"
+    },
+    {
+      "path": "agents/implementation-agent.md",
+      "sha256": "83d658f9cd7f44acfa86ab0cd16337bb1c1d101faa27bd354380f43688a3193e"
+    },
+    {
+      "path": "agents/orchestrator.md",
+      "sha256": "55119add04b7bb097047997fbc5c1984ca3d04b3475a6003538e5e9f80dcc8f0"
+    },
+    {
+      "path": "agents/orchestrator/autonomous-timed-run.md",
+      "sha256": "9d3ce3a71abbf2a9e97fdb9ccbbc4c714534ec7abc279ac7476eb4dd1a588785"
+    },
+    {
+      "path": "agents/orchestrator/dependabot-pr-path.md",
+      "sha256": "d4bb08a93179853c29463f5cabc376529ebf0874a9c416da1ba54fecb2f0d5b5"
+    },
+    {
+      "path": "agents/researcher.md",
+      "sha256": "a53f85ad71ffc59ba47bc1c22df41b476741c1bdf5642821235f0cea798d93e9"
+    },
+    {
+      "path": "agents/reviewer-agent.md",
+      "sha256": "b9f5d74e1d7252b8b8d0ffe5455825614680356bb449a8ecd4d020879088d9d2"
+    },
+    {
+      "path": "agents/reviewer-architecture.md",
+      "sha256": "e9b0737bf13fd188ca3890864c2aad9ff83cb5c89ff3d4305f40c84597e4364c"
+    },
+    {
+      "path": "agents/reviewer-briefing.md",
+      "sha256": "2fb531650581838d02cf9885fcd766424f4cd98c31eec7c69e65d5f8c668251f"
+    },
+    {
+      "path": "agents/reviewer-design-philosophy.md",
+      "sha256": "f4c16f42aa8cefdcd866ca73bc84d38faf0cc235888b084151d1f1f0ed417ede"
+    },
+    {
+      "path": "agents/reviewer-documentation.md",
+      "sha256": "54098242723921de8302d01f8de9049bc698e5c544ae08eacf6a407f3ba725f2"
+    },
+    {
+      "path": "agents/reviewer-issue.md",
+      "sha256": "179362c6d6bbef8414a7969d610c114572986867d2aa7dafcbe19c278ca2a948"
+    },
+    {
+      "path": "agents/reviewer-notes.md",
+      "sha256": "7d1e7753af6e5467961fb8fbe7e26eb29c0dd58f636ef2378099f9d605b62947"
+    },
+    {
+      "path": "agents/reviewer-pr.md",
+      "sha256": "8309242be3bc9f548e2a3d680b4e614923ffbe3e7cacbe9e89142768a0b7142c"
+    },
+    {
+      "path": "agents/reviewer-referee.md",
+      "sha256": "18e04fbfcecfc11d14ae5a1f45fcdc821f1512819b77ef554b8ed00c4c016a76"
+    },
+    {
+      "path": "agents/reviewer-security.md",
+      "sha256": "d81b653359ae286226a683d97e6a4c2549f9dd4176632b333e3d5ddbf97ab521"
+    },
+    {
+      "path": "agents/reviewer-skill.md",
+      "sha256": "73ffe7343701b7b2358e32a59c152fb1c163e5f9e7053e4e2fb3ca509a841c15"
+    },
+    {
+      "path": "tools/file-claim-core.ps1",
+      "sha256": "c8df1c125ac8a7af5fb429a90cf544818e5bc567704085aa186135f693cfa978"
+    },
+    {
+      "path": "tools/classify-dep-pr.ps1",
+      "sha256": "8fc67eb0e6a3cd57dde6d057bfaca33712eda6a62067641c597a1e02d86954b3"
+    },
+    {
+      "path": "tools/classify-dep-pr-core.ps1",
+      "sha256": "c47e7f33aa27eb99d2f00707f1e85ccfa9d6abba4fa64ae78269d382b41aeacc"
+    },
+    {
+      "path": "tools/check-deps-parity.ps1",
+      "sha256": "b95ec4a68f1e0ee7b09b014ace352060ca9c977fc5e34a56fc0a91879916bb60"
+    }
+  ],
   "sharedPaths": [
-    ".agents/**",
-    "standards/**",
-    "agents/**",
-    ".claude/commands/build.md",
-    ".claude/commands/buildlog.md",
-    ".claude/commands/post-wave-review.md",
-    ".claude/commands/realign.md",
-    ".claude/commands/resume.md",
-    ".claude/rules/dependencies.md",
-    ".claude/hooks/goal-gate.ps1",
-    ".claude/hooks/loop-gate.ps1",
+    ".claude/agents/**",
+    ".claude/hooks/after-edit.ps1",
+    ".claude/hooks/before-issue-create.ps1",
+    ".claude/hooks/before-stop.ps1",
+    ".claude/hooks/goal-check.ps1",
+    ".claude/hooks/hook-core.ps1",
+    ".claude/hooks/notes.md",
+    ".claude/hooks/reviewer-done.ps1",
     ".claude/hooks/session-greeting.ps1",
-    ".claude/skills/capture-system-defect/SKILL.md",
-    ".claude/skills/github-write/SKILL.md",
+    ".claude/hooks/spawn-check.ps1",
+    ".claude/skills/baby/**",
+    ".claude/skills/build/**",
+    ".claude/skills/buildlog/**",
+    ".claude/skills/github-write/**",
+    ".claude/skills/goal-writer/**",
+    ".claude/skills/implementing/**",
+    ".claude/skills/rca/**",
+    ".claude/skills/realign/**",
+    ".claude/skills/refereeing/**",
+    ".claude/skills/reporting-a-defect/**",
+    ".claude/skills/researching/**",
+    ".claude/skills/resume/**",
+    ".claude/skills/reviewing-architecture/**",
+    ".claude/skills/reviewing-design/**",
+    ".claude/skills/reviewing-docs/**",
+    ".claude/skills/reviewing-issues/**",
+    ".claude/skills/reviewing-prs/**",
+    ".claude/skills/reviewing-security/**",
+    ".claude/skills/reviewing-skills/**",
+    ".claude/skills/scaffold-project/**",
+    ".claude/skills/working-autonomously/**",
+    ".claude/skills/writing-acceptance-criteria/**",
+    ".claude/skills/writing-issues/**",
+    ".claude/skills/writing-user-stories/**",
+    "standards/deciding.md",
+    "standards/edge-cases.md",
+    "standards/reviewing.md",
+    "standards/skills.md",
+    "standards/writing.md",
     ".githooks/**",
     "tools/apply-branch-protection.ps1",
     "tools/assert-worktree.ps1",
-    "tools/check-deps-parity.ps1",
     "tools/check-freshness.ps1",
-    "tools/classify-dep-pr-core.ps1",
-    "tools/classify-dep-pr.ps1",
-    "tools/file-claim-core.ps1",
     "tools/governance-sync-core.ps1",
     "tools/governance-sync.ps1",
     "tools/issue-core.ps1",
@@ -33,16 +343,30 @@
     "tools/setup-hooks.ps1",
     "scripts/buildlog-glue-core.js",
     "scripts/buildlog-glue.js",
+    "scripts/check-banned-words-core.js",
+    "scripts/check-banned-words.js",
+    "scripts/check-design-records-core.js",
+    "scripts/check-design-records.js",
     "scripts/check-emdash-core.js",
     "scripts/check-emdash.js",
+    "scripts/check-review-evidence-core.js",
+    "scripts/check-review-evidence.js",
+    "scripts/check-seats-core.js",
+    "scripts/check-seats.js",
+    "scripts/check-served-models-core.js",
+    "scripts/check-served-models.js",
+    "scripts/check-token-budget-core.js",
+    "scripts/check-token-budget.js",
+    "pipeline/**",
+    "seats.json",
     "AGENTS.md",
     "definition-of-done.md",
+    "WHAT-IT-CHECKS.md",
     "buildlog/README.md",
     ".gitattributes",
     "governance-manifest.json"
   ],
   "excludedPaths": [
-    "WHAT-IT-CHECKS.md",
     "package.json",
     "package-lock.json",
     "vitest.config.mjs",
@@ -56,37 +380,60 @@
     "BUILDLOG.md",
     "buildlog/**",
     "!buildlog/README.md",
-    "docs/**",
     "repo-profile.json",
     "CLAUDE.md",
     "CLAUDE.local.md",
     "DESIGN.md",
     ".claude/settings.json",
-    "owner-declines.md"
+    "owner-declines.md",
+    "NORTH-STAR.md",
+    "vendor/**",
+    "reviewer-library.json"
   ],
   "classes": {
-    ".agents/**": "content",
-    "standards/**": "content",
-    "agents/**": "content",
-    ".claude/commands/build.md": "content",
-    ".claude/commands/buildlog.md": "content",
-    ".claude/commands/post-wave-review.md": "content",
-    ".claude/commands/realign.md": "content",
-    ".claude/commands/resume.md": "content",
-    ".claude/rules/dependencies.md": "content",
-    ".claude/hooks/goal-gate.ps1": "content",
-    ".claude/hooks/loop-gate.ps1": "content",
+    ".claude/agents/**": "content",
+    ".claude/hooks/after-edit.ps1": "content",
+    ".claude/hooks/before-issue-create.ps1": "content",
+    ".claude/hooks/before-stop.ps1": "content",
+    ".claude/hooks/goal-check.ps1": "content",
+    ".claude/hooks/hook-core.ps1": "content",
+    ".claude/hooks/notes.md": "content",
+    ".claude/hooks/reviewer-done.ps1": "content",
     ".claude/hooks/session-greeting.ps1": "content",
-    ".claude/skills/capture-system-defect/SKILL.md": "content",
-    ".claude/skills/github-write/SKILL.md": "content",
+    ".claude/hooks/spawn-check.ps1": "content",
+    ".claude/skills/baby/**": "content",
+    ".claude/skills/build/**": "content",
+    ".claude/skills/buildlog/**": "content",
+    ".claude/skills/github-write/**": "content",
+    ".claude/skills/goal-writer/**": "content",
+    ".claude/skills/implementing/**": "content",
+    ".claude/skills/rca/**": "content",
+    ".claude/skills/realign/**": "content",
+    ".claude/skills/refereeing/**": "content",
+    ".claude/skills/reporting-a-defect/**": "content",
+    ".claude/skills/researching/**": "content",
+    ".claude/skills/resume/**": "content",
+    ".claude/skills/reviewing-architecture/**": "content",
+    ".claude/skills/reviewing-design/**": "content",
+    ".claude/skills/reviewing-docs/**": "content",
+    ".claude/skills/reviewing-issues/**": "content",
+    ".claude/skills/reviewing-prs/**": "content",
+    ".claude/skills/reviewing-security/**": "content",
+    ".claude/skills/reviewing-skills/**": "content",
+    ".claude/skills/scaffold-project/**": "content",
+    ".claude/skills/working-autonomously/**": "content",
+    ".claude/skills/writing-acceptance-criteria/**": "content",
+    ".claude/skills/writing-issues/**": "content",
+    ".claude/skills/writing-user-stories/**": "content",
+    "standards/deciding.md": "content",
+    "standards/edge-cases.md": "content",
+    "standards/reviewing.md": "content",
+    "standards/skills.md": "content",
+    "standards/writing.md": "content",
     ".githooks/**": "content",
     "tools/apply-branch-protection.ps1": "content",
     "tools/assert-worktree.ps1": "content",
-    "tools/check-deps-parity.ps1": "content",
     "tools/check-freshness.ps1": "content",
-    "tools/classify-dep-pr-core.ps1": "content",
-    "tools/classify-dep-pr.ps1": "content",
-    "tools/file-claim-core.ps1": "content",
     "tools/governance-sync-core.ps1": "content",
     "tools/governance-sync.ps1": "content",
     "tools/issue-core.ps1": "content",
@@ -97,20 +444,37 @@
     "tools/setup-hooks.ps1": "content",
     "scripts/buildlog-glue-core.js": "content",
     "scripts/buildlog-glue.js": "content",
+    "scripts/check-banned-words-core.js": "content",
+    "scripts/check-banned-words.js": "content",
+    "scripts/check-design-records-core.js": "content",
+    "scripts/check-design-records.js": "content",
     "scripts/check-emdash-core.js": "content",
     "scripts/check-emdash.js": "content",
+    "scripts/check-review-evidence-core.js": "content",
+    "scripts/check-review-evidence.js": "content",
+    "scripts/check-seats-core.js": "content",
+    "scripts/check-seats.js": "content",
+    "scripts/check-served-models-core.js": "content",
+    "scripts/check-served-models.js": "content",
+    "scripts/check-token-budget-core.js": "content",
+    "scripts/check-token-budget.js": "content",
+    "pipeline/**": "content",
+    "seats.json": "content",
     "AGENTS.md": "content",
     "definition-of-done.md": "content",
+    "WHAT-IT-CHECKS.md": "content",
     "buildlog/README.md": "content",
     ".gitattributes": "content",
     "governance-manifest.json": "content"
   },
-  "classesDefault": "structure",
-  "arrivesAsStructure": [
-    "standards/ownership-map.md",
-    ".githooks/pre-commit",
-    "standards/pipeline/PIPELINE.md"
+  "notCounted": [
+    ".claude/skills/baby/",
+    ".claude/skills/goal-writer/",
+    ".claude/skills/rca/",
+    ".claude/skills/scaffold-project/"
   ],
+  "classesDefault": "structure",
+  "arrivesAsStructure": [".githooks/pre-commit", "pipeline/PIPELINE.md"],
   "repoProfileFields": [
     {
       "name": "preReview",
@@ -141,10 +505,6 @@
       "type": "array of strings"
     },
     {
-      "name": "goalsDoc",
-      "type": "string"
-    },
-    {
       "name": "checkCommands",
       "type": "object"
     },
@@ -157,8 +517,20 @@
       "type": "string"
     },
     {
+      "name": "dataClass",
+      "type": "string"
+    },
+    {
       "name": "governanceHome",
       "type": "string"
+    },
+    {
+      "name": "budget",
+      "type": "object"
+    },
+    {
+      "name": "lenses",
+      "type": "array of strings"
     },
     {
       "name": "syncIssue",
@@ -173,5 +545,5 @@
       "type": "array of strings"
     }
   ],
-  "shelfRoots": ["docs/", "tools/", "scripts/", "skills/"]
+  "shelfRoots": ["tools/", "scripts/"]
 }

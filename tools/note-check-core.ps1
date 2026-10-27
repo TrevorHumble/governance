@@ -1,11 +1,11 @@
 # tools/note-check-core.ps1: the two mechanizable note pre-check decisions
-# defined in agents/orchestrator.md section "No agent files its own issue"
-# (rules 2 and 4): does a recorded owner decline suppress this note, and
+# named in AGENTS.md (owner-declines.md) and pipeline/steps/12-report.md:
+# does a recorded owner decline suppress this note, and
 # does an open issue already cover it. The match key is the note's
 # normalized one-line substance; anything fuzzier than the comparisons
 # stated on each function below is reviewer judgment, not mechanized (see
 # WHAT-IT-CHECKS.md). Dot-source this file; do not run it directly (mirrors
-# the -core.ps1 convention of tools/file-claim-core.ps1).
+# the -core.ps1 convention of tools/issue-core.ps1).
 #
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no &&, no ||.
 
@@ -59,7 +59,7 @@ function Test-DeclineMatch {
 # Touches line covers it when the whole substance is a fragment of that
 # line, which fires only when the substance names just the file. A note
 # that names a file among other words is not covered here; reviewer
-# judgment handles what exact matching cannot (agents/reviewer-notes.md).
+# judgment handles what exact matching cannot.
 function Find-CoveringIssue {
   param(
     [Parameter(Mandatory = $true)] $Issues,
