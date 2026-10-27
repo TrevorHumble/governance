@@ -388,7 +388,8 @@
     "owner-declines.md",
     "NORTH-STAR.md",
     "vendor/**",
-    "reviewer-library.json"
+    "reviewer-library.json",
+    "REPO-RULES.md"
   ],
   "classes": {
     ".claude/agents/**": "content",
