@@ -2,7 +2,7 @@
 name: reviewing-prs
 description: Use when reviewing a pull request or a single commit's diff against its issue, to say whether the change keeps the issue's promises.
 metadata:
-  reads: 'standards/reviewing.md standards/edge-cases.md'
+  reads: 'standards/reviewing.md standards/edge-cases.md standards/deciding.md NORTH-STAR.md'
 ---
 
 # Reviewing a pull request
