@@ -40,5 +40,6 @@ githooks-elsewhere: This is not a repo root, so nothing was set.
 model: This session runs {model}; the orchestrator seat is {seats}.
 unchecked: The session's model was not reported, so not checked.
 env: {name} is set and overrides the seats.
+fork: Fork mode is on, so reviewers may not start in front. Set CLAUDE_CODE_FORK_SUBAGENT to 0 in the env block of .claude/settings.json.
 cap: maxEffortLevel {cap} is below the {role} seat's effort ({effort}).
 marker: .run_state/hard exists, so spawns need the hard tag.
