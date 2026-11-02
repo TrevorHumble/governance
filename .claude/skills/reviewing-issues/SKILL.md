@@ -15,7 +15,7 @@ Read `standards/reviewing.md` first. Use the five labels, say why each finding m
 2. **A feature, not a layer.** `writing-issues` defines the slice and `writing-user-stories` the story. A story or issue that is a technical layer is a `blocker:`; name the feature it serves.
 3. **Criteria.** Judge them by `writing-acceptance-criteria`. Before you propose one, find whether an existing criterion already covers the case. If so, say which and propose nothing.
 4. **Bigger than its goal needs.** Could a smaller change reach the goal? Name what could come out and why. Never ask for more scope.
-5. **Expected token change.** The number must be there and plausible. `writing-issues` says what it means. Judge whether it fits the words the issue adds or removes in the files it touches. If it could push governance over its cap and the issue names no cut or cap request, raise a `question:`; you cannot run the check.
+5. **Expected token change.** In the governance home, the number must be there and plausible; a child issue without it passes. `writing-issues` says what it means. Judge whether it fits the words the issue adds or removes in the files it touches. If it could push governance over its cap and the issue names no cut or cap request, raise a `question:`; you cannot run the check.
 6. **Specialist notes.** A `blocker:` left open there is a `blocker:` here.
 7. **Hard.** Award `hard` when the plan meets the hard test in `pipeline/PIPELINE.md`, the issue lacks the label and its `Hard:` line is not `Hard: no (owner)`.
 

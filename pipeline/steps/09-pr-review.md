@@ -31,4 +31,4 @@ Run the check on the reviewed tree, before any `minor:` fixes. Those then go in 
 
 ## Token change
 
-If the measured token change differs materially from the one stated at hand-off, ask the owner again: `pipeline/steps/05-hand-off.md`.
+In the governance home, if the measured token change differs materially from the one stated at hand-off, ask the owner again: `pipeline/steps/05-hand-off.md`.
