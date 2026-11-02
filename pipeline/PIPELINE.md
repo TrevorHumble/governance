@@ -6,7 +6,7 @@ Judge the goal first. It is hard if it is novel and deep (hard math or algorithm
 
 If it is hard, only the reviewers move up: they run on the `hard` award in `seats.json`, and your seat stays. `npm run check:seats` rejects an award for any other role.
 
-Mid-run, it is hard when the same finding fails review three times. Then commit the attempt to the branch as a wip commit naming the issue, and revert it in a second commit, so the attempt stays in history and the tree is back where step 08 began. Add the `hard` label (`gh issue edit <N> --add-label hard`), a pipeline call. Restart step 08 from the issue, starting every reviewer from the award from then on, as above. Earlier review findings and decision lines do not carry over; deferred notes do. Nothing goes back to the owner.
+Mid-run, it is hard when the same finding fails review three times. Then commit the attempt to the branch as a wip commit naming the issue, and revert it in a second commit, so the attempt stays in history and the tree is back where step 08 began. Add the `hard` label (`gh issue edit <N> --add-label hard`), a pipeline call. Restart step 08 from the issue, starting every reviewer from the award from then on, as above. Earlier review findings and decision lines do not carry over; notes on the issue do. Nothing goes back to the owner.
 
 ## The steps
 

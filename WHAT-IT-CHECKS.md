@@ -12,7 +12,7 @@ Each line: what a check catches, then what it misses. CI runs the `npm` scripts 
 - `check:design`: a design record over 150 words, missing its date and issue line, `Decided:`, `Why:` or `Gave up:`, out of date order, or under a changed header; notes records over 100 words. Misses whether a record is true or worth keeping.
 - `check:evidence`: a PASS whose working-tree id differs, or whose cited lines do not exist. Misses the review's judgment.
 - `check:served` (step 12): a subagent served off its seat's model or effort. Misses the orchestrator's own seat.
-- `commit-msg`: a commit staging a non-`.md` file with no issue named (`(#N)`, closing keyword, `issue-N` branch). Misses whether the issue was reviewed. Local; `--no-verify` skips it.
+- `commit-msg`: a commit staging a non-`.md` file with no issue named (`(#N)`, closing keyword, `issue-N` branch). Misses whether the issue was reviewed. Prints a notes reminder on every commit, never blocking. Local; `--no-verify` skips it.
 - `pre-commit`: a child staging a shared path outside a sync branch. `--no-verify` skips it; CI does not back it.
 - `before-issue-create`: `gh issue create` lacking the `needs-issue-review` label or a body file opening with the owner-approved line. An agent can type that line itself. Sees only Bash.
 - `spawn-check`: an `Agent` call with no role tag, a model or effort off its seat, a reviewer in the background, or a reviewer on the session's own model family (read from the transcript). Misses `claude -p` and remote sessions; allows if `seats.json` or the transcript is unreadable. The tag is the agent's word.

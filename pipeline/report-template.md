@@ -32,7 +32,7 @@ Ask on first use: costs a screen every new user sees. 10%
 
 A price is what the option costs: tokens, files, time, or money. If you need a fact to name it, go and look; say whether you looked or asked.
 
-**Notes.** The defects `pipeline/steps/12-report.md` passes on. Say what breaks, whether it has ever done real damage (say plainly when the answer is no), and the options and prices as above.
+**Notes.** Only notes from the issue's `## Notes` heading that `pipeline/steps/12-report.md` passes on. Say what breaks, whether it has ever done real damage (say plainly when the answer is no), and the options and prices as above.
 
 ## Nothing on your own initiative
 

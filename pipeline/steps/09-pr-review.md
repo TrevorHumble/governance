@@ -19,7 +19,7 @@ A specialist does not loop. Fix what they raise yourself.
 
 Then start one fresh PR reviewer with `reviewing-prs`. Hand it the issue and a neutral summary, not your reasoning: `standards/reviewing.md` § "Independence". Put the specialists' blockers in its briefing; it re-checks each by looking at the code.
 
-Put the run's deferred notes in the briefing too, and ask for one ruling line per note: could it have been fixed in this run, yes or no, and why. Step 12 reads those lines.
+Start no review until the issue has a `## Notes` heading, even one saying "none". Put its notes in the briefing, and ask for one ruling line per note (`reviewing-prs`, "Notes on the issue"). Step 12 reads those lines.
 
 On a FAIL, fix every `blocker:` and answer every `question:`, then re-check as `standards/reviewing.md` § "Re-check rounds" says. A finding you contest goes to `refereeing`, once.
 

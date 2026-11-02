@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Fix it in the run; notes live on the issue
+
+2026-11-01, #159
+
+Decided: A builder fixes what it finds, in any file, unless the fix is over 70 lines or 5 files. Leftover notes go under `## Notes` on the issue. The PR reviewer rules on each note, and a note it can settle from the criteria or `NORTH-STAR.md` is a `blocker:`. Only kept notes reach the report. Every commit prints a reminder.
+
+Why: The owner said almost every run hands back five or six notes, each costing a full run, and notes with no run get lost (flatland#234).
+
+Gave up: The `Touches` line for fixes, and notes in the run note.
+
 ## Fork mode off, so reviewers start in front
 
 2026-11-01, #160

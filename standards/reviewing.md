@@ -39,7 +39,7 @@ Use no other severity words. When you are unsure something is wrong, ask a `ques
 
 ## A serious finding
 
-A `blocker:` says what breaks and when: the input, state, or sequence that triggers it, and the wrong result that follows. For example: "with exactly 10 units the discount is skipped, so the customer pays full price". If you cannot name both, it is not a blocker. Make it a `question:` or a `nitpick:`.
+A `blocker:` says what breaks and when: the input, state, or sequence that triggers it, and the wrong result that follows. For example: "with exactly 10 units the discount is skipped, so the customer pays full price". If you cannot name both, it is not a blocker. Make it a `question:` or a `nitpick:`. A ruling on an issue note is the exception: `reviewing-prs` says what it names.
 
 ## Re-check rounds
 
