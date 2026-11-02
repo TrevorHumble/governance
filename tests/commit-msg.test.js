@@ -102,6 +102,24 @@ maybeDescribe('.githooks/commit-msg', () => {
     expect(res.status).toBe(0);
   });
 
+  it.each([
+    ['a code commit', { 'app.js': 'console.log(1);\n' }, 'add app (#1)'],
+    ['a doc-only commit', { 'NOTES.md': 'notes\n' }, 'update notes'],
+  ])('shows the notes reminder on %s and does not block it', (_, files, message) => {
+    const res = tryCommit(dir, files, message);
+    expect(res.status).toBe(0);
+    expect(res.stderr).toContain(
+      'noticed anything? Fix it, or put it on the issue under ## Notes.'
+    );
+  });
+
+  it('shows the notes reminder on a blocked commit too, and the block still stands', () => {
+    const res = tryCommit(dir, { 'app.js': 'console.log(1);\n' }, 'add app');
+    expect(res.status).not.toBe(0);
+    expect(res.stderr).toContain('noticed anything?');
+    expect(res.stderr).toContain('BLOCKED');
+  });
+
   it('blocks a code file staged under docs/ even with no other files -- folder location does not exempt it', () => {
     const res = tryCommit(dir, { 'docs/evil.ps1': 'Write-Output 1\n' }, 'sneak in a script');
     expect(res.status).not.toBe(0);

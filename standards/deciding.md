@@ -44,6 +44,7 @@ Make at most three attempts on one idea. If it has failed three times, the idea 
 
 Do what the issue asks and touch the files it names.
 
-- A defect your own change caused is fixed in this change, wherever it lives.
-- A small fix in a file nobody else is working on is made, and recorded on the issue's `Touches` line and in the PR body.
+- A defect your own change caused, or anything the issue's criteria cover, is fixed in this change, wherever it lives.
+- Any other fix is made here, in any file, and named in the PR body, unless it is over 70 lines or 5 files. You apply the limit; the PR reviewer rules on it.
+- Anything left unfixed is a note on the issue (`reporting-a-defect`).
 - Do not improve things for their own sake.

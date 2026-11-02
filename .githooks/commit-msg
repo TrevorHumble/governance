@@ -35,6 +35,8 @@ fi
 # Anything not explicitly DOC (CODE, empty output, or PS error) -> enforce. Fail-closed.
 is_code="$("$_ps" -NoProfile -ExecutionPolicy Bypass -Command ". '$root/tools/issue-core.ps1'; if (Test-StagedHasCode) { 'CODE' } else { 'DOC' }" 2>/dev/null)" || is_code=""
 is_code="$(printf '%s' "$is_code" | tr -d '[:space:]')"
+# A reminder on every commit. It never changes the exit code.
+echo "commit-msg: noticed anything? Fix it, or put it on the issue under ## Notes." >&2
 if [ "$is_code" = "DOC" ]; then
   exit 0
 fi

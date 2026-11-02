@@ -2,7 +2,7 @@
 name: reviewing-prs
 description: Use when reviewing a pull request or a single commit's diff against its issue, to say whether the change keeps the issue's promises.
 metadata:
-  reads: 'standards/reviewing.md standards/edge-cases.md'
+  reads: 'standards/reviewing.md standards/edge-cases.md standards/deciding.md NORTH-STAR.md'
 ---
 
 # Reviewing a pull request
@@ -27,9 +27,13 @@ Find the rows of `standards/edge-cases.md` that fit the change's inputs and chec
 
 When the briefing carries a specialist's `blocker:`, re-check it as `standards/reviewing.md` says. Look at the code: a new test or a note saying "addressed" does not show the cause is gone. Design, security, and a repo's own lens are the specialists' fields; do not redo them.
 
+## Notes on the issue
+
+Rule on each note under the issue's `## Notes` from the criteria and `NORTH-STAR.md`. A note on how something is built, or one they settle, is a `blocker:` naming the note and, when one settles it, the settling line, unless you estimate the fix is over the limits in `standards/deciding.md`, "Stay in scope". Keep only the owner's calls (`writing-acceptance-criteria`, "Whose call") and those over the limits, one ruling line each saying which. The same limits judge a fix the PR body names outside the issue's files.
+
 ## Hold back
 
-A finding is an unmet criterion, an untested row that applies, or a defect in the changed lines that you can show with an input and a wrong result. Preferences, edge cases no applicable row names, speculation the diff cannot confirm, and missing context such as omitted imports or unchanged lines are not findings; leave them out. A clean PR gets `praise:` that names the criterion it meets and the evidence that proves it, and you say it is ready.
+A finding is an unmet criterion, an untested row that applies, a ruling on an issue note (even on unchanged lines), or a defect in the changed lines that you can show with an input and a wrong result. Preferences, edge cases no applicable row names, speculation the diff cannot confirm, and missing context such as omitted imports or unchanged lines are not findings; leave them out. A clean PR gets `praise:` that names the criterion it meets and the evidence that proves it, and you say it is ready.
 
 ## Your reply
 

@@ -7,7 +7,6 @@ metadata:
 
 # Reporting a defect
 
-Fix it only when `standards/deciding.md`, "Stay in scope", allows. Otherwise it is a note. File nothing: `pipeline/report-template.md`, "Nothing on your own initiative".
+Fix it when `standards/deciding.md`, "Stay in scope", allows, and name the fix in the PR body. Otherwise it is a note. File nothing: `pipeline/report-template.md`, "Nothing on your own initiative".
 
-- Record a fix you make in the issue's `Touches`, read and edited through `github-write`.
-- A note goes in your run note, `.run_state/<N>.md`, never outside the repo.
+- A note goes on the issue under `## Notes` (`github-write`), saying what breaks and where. A note anywhere else never reaches the owner.
