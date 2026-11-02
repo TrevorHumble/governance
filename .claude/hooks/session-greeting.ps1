@@ -1,8 +1,10 @@
 # session-greeting: a SessionStart hook. It adds a greeting the model reads before the first prompt,
-# plus warnings when something would override the seats in seats.json:
+# plus warnings when something would override the seats in seats.json or keep reviewers from starting:
 #   - the session's model is not the orchestrator seat (checked only when the
 #     input carries `model`; after /clear or a recovery it does not, and the greeting says so);
 #   - CLAUDE_CODE_EFFORT_LEVEL is set, or CLAUDE_CODE_SUBAGENT_MODEL_FORCE is 1;
+#   - CLAUDE_CODE_FORK_SUBAGENT is not 0 (fork mode is on by default, and while it is on the Agent
+#     tool may offer no run_in_background, so spawn-check refuses every reviewer);
 #   - a maxEffortLevel in settings is below a seat's effort;
 #   - .run_state/hard exists at the project root (a leftover marker would move later runs up).
 #   - it also turns the git hooks on (core.hooksPath, through tools/setup-hooks.ps1, since a fresh
@@ -31,6 +33,13 @@ function Get-LowestCap([string]$root) {
   return $lowest
 }
 
+# git's output, trimmed. Windows PowerShell 5.1 turns a native command's stderr into a terminating
+# error under 'Stop', even with 2>$null, so the preference is relaxed inside this function only.
+function Get-Git([string[]]$GitArgs) {
+  $ErrorActionPreference = 'Continue'
+  return "$(& git @GitArgs 2>$null)".Trim()
+}
+
 try {
   . (Join-Path $PSScriptRoot 'hook-core.ps1')
   $payload = (Read-Stdin) | ConvertFrom-Json
@@ -48,21 +57,21 @@ try {
       # Write core.hooksPath only when the project dir is itself the repo root (an enclosing repo's
       # config is never touched), the path is unset or already .githooks (a custom one is kept), and
       # .githooks/commit-msg exists. Otherwise skip and say why.
-      $top = "$(& git -C $root rev-parse --show-toplevel 2>$null)".Trim()
-      $prefix = "$(& git -C $root rev-parse --show-prefix 2>$null)".Trim()
+      $top = Get-Git @('-C', $root, 'rev-parse', '--show-toplevel')
+      $prefix = Get-Git @('-C', $root, 'rev-parse', '--show-prefix')
       $path = ''
       $why = ''
       if (-not $top -or $prefix) {
         $why = Get-Note 'session-greeting' 'githooks-elsewhere'
       } else {
-        $path = "$(& git -C $top config --get core.hooksPath 2>$null)".Trim()
+        $path = Get-Git @('-C', $top, 'config', '--get', 'core.hooksPath')
         if ($path -and $path -ne '.githooks') {
           $why = Get-Note 'session-greeting' 'githooks-kept'
         } elseif (-not (Test-Path -LiteralPath (Join-Path $top '.githooks/commit-msg') -PathType Leaf)) {
           $why = Get-Note 'session-greeting' 'githooks-missing'
         } elseif ($path -ne '.githooks') {
           $null = Set-HooksPath -RepoRoot $top
-          $path = "$(& git -C $top config --get core.hooksPath 2>$null)".Trim()
+          $path = Get-Git @('-C', $top, 'config', '--get', 'core.hooksPath')
         }
       }
       $state = @{}
@@ -97,6 +106,7 @@ try {
 
   if ($env:CLAUDE_CODE_EFFORT_LEVEL) { $lines += Fill (Get-Note 'session-greeting' 'env') @{ name = 'CLAUDE_CODE_EFFORT_LEVEL' } }
   if ($env:CLAUDE_CODE_SUBAGENT_MODEL_FORCE -eq '1') { $lines += Fill (Get-Note 'session-greeting' 'env') @{ name = 'CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1' } }
+  if ($env:CLAUDE_CODE_FORK_SUBAGENT -ne '0') { $lines += Get-Note 'session-greeting' 'fork' }
 
   try {
     if ($seats -and $root) {

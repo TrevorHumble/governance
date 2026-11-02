@@ -86,12 +86,14 @@ afterEach(() => {
 });
 
 // Returns the SessionStart additionalContext, or null when the hook printed nothing. The user
-// settings folder is a fresh empty one, so the real machine's settings never leak in.
+// settings folder is a fresh empty one, so the real machine's settings never leak in. Fork mode is
+// off unless a test says otherwise, so the other tests see no fork line.
 function run(input, { env = {}, project = root } = {}) {
   const childEnv = {
     ...process.env,
     CLAUDE_PROJECT_DIR: project,
     CLAUDE_CONFIG_DIR: config,
+    CLAUDE_CODE_FORK_SUBAGENT: '0',
     ...env,
   };
   for (const k of Object.keys(childEnv)) if (childEnv[k] === undefined) delete childEnv[k];
@@ -257,6 +259,21 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: settings that override the se
     expect(on).toContain(notes().env.replace('{name}', 'CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1'));
     const off = run(start('sonnet'), { env: { CLAUDE_CODE_SUBAGENT_MODEL_FORCE: '0' } });
     expect(off).toBe(armed());
+  });
+
+  it.each([
+    ['unset', undefined],
+    ['empty', ''],
+    ['1', '1'],
+  ])('warns that reviewers may not start in front when fork mode is %s', (_, value) => {
+    const out = run(start('sonnet'), { env: { CLAUDE_CODE_FORK_SUBAGENT: value } });
+    expect(out).toBe(`${armed()} ${notes().fork}`);
+  });
+
+  it('says nothing about fork mode when CLAUDE_CODE_FORK_SUBAGENT is 0', () => {
+    const out = run(start('sonnet'), { env: { CLAUDE_CODE_FORK_SUBAGENT: '0' } });
+    expect(out).toBe(armed());
+    expect(out).not.toContain('CLAUDE_CODE_FORK_SUBAGENT');
   });
 
   it.each([

@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Fork mode off, so reviewers start in front
+
+2026-11-01, #160
+
+Decided: `.claude/settings.json` sets `CLAUDE_CODE_FORK_SUBAGENT=0`, and the greeting warns when it is not `0`. The file stays each repo's own; children get the line in their move PR (#103).
+
+Why: The owner found #159's issue review blocked in the desktop app. Fork mode is on by default there, the Agent tool then offered no `run_in_background`, and `spawn-check` refuses a reviewer without `false`.
+
+Gave up: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, which removes `run_in_background` entirely, so every reviewer would be refused. Sharing `.claude/settings.json`, a change of structure.
+
 ## The main session builds
 
 2026-10-27, #155
