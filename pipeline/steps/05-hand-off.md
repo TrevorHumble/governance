@@ -24,7 +24,7 @@ A second look, while the owner is here. You judge it when you draft the message,
 
 ## The token change
 
-Work out the number before you write the message. `writing-issues` says what it means.
+In a child repo (`governanceHome` is not `self` in `repo-profile.json`), skip this: leave the Token change and Cut proposed lines out of the message. Otherwise, work out the number before you write the message. `writing-issues` says what it means.
 
 An approved cut or cap request becomes a Done-when line, so it gets checked like any other.
 
@@ -34,7 +34,7 @@ Send the message, then stop. Nothing is filed until the owner says yes.
 
 If the owner says no or asks for a change, revise and resend the whole message. Nothing is filed meanwhile.
 
-Ask a second time only if the measured token change differs a lot from the number you gave. A small difference needs no second ask.
+In the governance home, ask a second time only if the measured token change differs a lot from the number you gave. A small difference needs no second ask.
 
 ## When approved words change later
 
