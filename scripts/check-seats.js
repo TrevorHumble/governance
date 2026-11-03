@@ -1,8 +1,8 @@
 // scripts/check-seats.js
-// CI gate: seats.json holds every rule (a seat per role, known providers and efforts, models that
-// differ where independence needs it, agents, skills and lenses that name real files, no model ID
-// in shared markdown), and a PR is reported as inside or outside the configuration lane: only seat
-// values (with a before/after table for the owner), or only user-started skill files. The rules
+// CI gate: seats.json holds every rule (a seat per role, known providers and efforts, agents,
+// skills and lenses that name real files, no model ID in shared markdown), and a PR is reported as
+// inside or outside the configuration lane: only seat values (with a before/after table for the
+// owner), or only user-started skill files. The rules
 // live in check-seats-core.js; this file reads disk and git. The base comes from the budget gate's
 // handling of --base and CI events.
 //

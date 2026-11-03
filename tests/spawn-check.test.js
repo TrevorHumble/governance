@@ -262,71 +262,13 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: a reviewer on the session model', 
     return spawn(description, model, effort, { transcript_path: file });
   };
 
-  it('denies a reviewer whose seat model is the session latest model, and says what to do', () => {
-    const res = run(
-      withTranscript([turn('claude-opus-5-5')], '[code-reviewer] review', 'opus', 'medium')
-    );
-    expect(res.permissionDecision).toBe('deny');
-    expect(res.permissionDecisionReason).toContain('This session is running on opus');
-    expect(res.permissionDecisionReason).toContain('ask the owner to run /model sonnet');
-  });
-
-  it('reads the latest assistant message, not an earlier one', () => {
-    const later = [turn('claude-opus-5-5'), turn('claude-sonnet-5-5')];
-    expect(run(withTranscript(later, '[code-reviewer] review', 'opus', 'medium'))).toBeNull();
-    const earlier = [turn('claude-sonnet-5-5'), turn('claude-opus-5-5')];
+  it('allows a reviewer whose seat model is the one the session runs on', () => {
     expect(
-      run(withTranscript(earlier, '[code-reviewer] review', 'opus', 'medium')).permissionDecision
-    ).toBe('deny');
-  });
-
-  it('reads a transcript path that contains a space', () => {
-    const dir = fs.mkdtempSync(path.join(root, 'with space '));
-    const file = path.join(dir, 'session.jsonl');
-    fs.writeFileSync(file, turn('claude-opus-5-5') + '\n');
-    const res = run(spawn('[code-reviewer] review', 'opus', 'medium', { transcript_path: file }));
-    expect(res.permissionDecision).toBe('deny');
-    expect(res.permissionDecisionReason).toContain('This session is running on opus');
-  });
-
-  it('skips an assistant line with no model and a synthetic one, using the earlier real turn', () => {
-    const lines = [
-      turn('claude-opus-5-5'),
-      JSON.stringify({ type: 'assistant', message: { role: 'assistant' } }),
-      turn('<synthetic>'),
-    ];
-    const res = run(withTranscript(lines, '[code-reviewer] review', 'opus', 'medium'));
-    expect(res.permissionDecision).toBe('deny');
-    expect(res.permissionDecisionReason).toContain('This session is running on opus');
-  });
-
-  it('judges the hard award seat for a hard tag', () => {
-    const res = run(
-      withTranscript([turn('claude-fable-5-1')], '[code-reviewer hard] review', 'fable', 'medium')
-    );
-    expect(res.permissionDecision).toBe('deny');
-    expect(res.permissionDecisionReason).toContain('the model of the code-reviewer hard seat');
-  });
-
-  it('leaves a non-reviewer role alone', () => {
-    expect(
-      run(withTranscript([turn('claude-sonnet-5-5')], '[orchestrator] x', 'sonnet', 'medium'))
+      run(withTranscript([turn('claude-opus-5-5')], '[code-reviewer] review', 'opus', 'medium'))
     ).toBeNull();
-  });
-
-  it('allows when the transcript is missing, empty, unreadable as JSON, or not given', () => {
-    const base = spawn('[code-reviewer] review', 'opus', 'medium');
-    expect(run(base)).toBeNull();
-    expect(run({ ...base, transcript_path: path.join(root, 'no-such.jsonl') })).toBeNull();
-    expect(run(withTranscript([], '[code-reviewer] review', 'opus', 'medium'))).toBeNull();
     expect(
       run(
-        withTranscript(
-          ['not json {', '"type":"assistant"'],
-          '[code-reviewer] review',
-          'opus',
-          'medium'
-        )
+        withTranscript([turn('claude-fable-5-1')], '[code-reviewer hard] review', 'fable', 'medium')
       )
     ).toBeNull();
   });

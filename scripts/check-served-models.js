@@ -1,8 +1,7 @@
 // scripts/check-served-models.js
 // Post-run check: for each subagent of a session, the model that served it equals its seat's model
 // and the effort it was asked for equals its seat's effort. The rules live in
-// check-served-models-core.js; this file reads disk. The orchestrator's own seat is not checked:
-// its effort is recorded nowhere.
+// check-served-models-core.js; this file reads disk. Only subagents are checked.
 //
 //   node scripts/check-served-models.js <session dir> [--seats <seats.json>]
 //

@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## The owner picks the orchestrator's model
+
+2026-11-02, #168
+
+Decided: `seats.json` has no orchestrator seat, and nothing checks the session's model. Any reviewer, the referee included, may share the session's model. The issue and code reviewers stay on Opus and move to Fable on a hard run; the referee keeps Fable and moves to Opus.
+
+Why: The owner chooses the session's model in the app and said "same models can now review themselves". A rule that blocked a review over it only stopped work.
+
+Gave up: The check that a reviewer differs from the builder, and the greeting warning about the session's model.
+
 ## Fix it in the run; notes live on the issue
 
 2026-11-01, #159
@@ -28,7 +38,7 @@ Gave up: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, which removes `run_in_backgro
 
 Decided: The main session researches, drafts issues and builds by its skills, each loaded at its own step. The researcher, issue-writer and implementer agents are removed. Review stays with fresh agents. A hard run moves only the reviewers, and the referee moves to Opus.
 
-Why: The owner wanted less lost in hand-offs and each run cheaper. Black-box checking earns a separate agent; hand-off specialists fold into skills. The owner chose "only the reviewers move up". The referee must differ from the orchestrator and the reviewers.
+Why: The owner wanted less lost in hand-offs and each run cheaper. Black-box checking earns a separate agent; hand-off specialists fold into skills. The owner chose "only the reviewers move up". The referee must differ from the orchestrator and the reviewers. (Since #168, any reviewer may share the session's model.)
 
 Gave up: A separate builder, and the orchestrator's hard seat.
 

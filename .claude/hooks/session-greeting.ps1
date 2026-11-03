@@ -1,7 +1,5 @@
 # session-greeting: a SessionStart hook. It adds a greeting the model reads before the first prompt,
 # plus warnings when something would override the seats in seats.json or keep reviewers from starting:
-#   - the session's model is not the orchestrator seat (checked only when the
-#     input carries `model`; after /clear or a recovery it does not, and the greeting says so);
 #   - CLAUDE_CODE_EFFORT_LEVEL is set, or CLAUDE_CODE_SUBAGENT_MODEL_FORCE is 1;
 #   - CLAUDE_CODE_FORK_SUBAGENT is not 0 (fork mode is on by default, and while it is on the Agent
 #     tool may offer no run_in_background, so spawn-check refuses every reviewer);
@@ -90,20 +88,6 @@ try {
   $seats = Read-Seats $root
 
   # Each check stands alone: one that throws on an odd seats.json drops only itself.
-  try {
-    if ($seats) {
-      $orch = Get-Family $seats.roles.orchestrator.model
-      $session = Get-Family $payload.model
-      if (-not $orch) {
-        # No orchestrator seat to compare with.
-      } elseif (-not $session) {
-        $lines += Get-Note 'session-greeting' 'unchecked'
-      } elseif ($session -cne $orch) {
-        $lines += Fill (Get-Note 'session-greeting' 'model') @{ model = $payload.model; seats = $orch }
-      }
-    }
-  } catch { }
-
   if ($env:CLAUDE_CODE_EFFORT_LEVEL) { $lines += Fill (Get-Note 'session-greeting' 'env') @{ name = 'CLAUDE_CODE_EFFORT_LEVEL' } }
   if ($env:CLAUDE_CODE_SUBAGENT_MODEL_FORCE -eq '1') { $lines += Fill (Get-Note 'session-greeting' 'env') @{ name = 'CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1' } }
   if ($env:CLAUDE_CODE_FORK_SUBAGENT -ne '0') { $lines += Get-Note 'session-greeting' 'fork' }
