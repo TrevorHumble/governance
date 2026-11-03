@@ -19,7 +19,7 @@ You research, draft the issue, build the change, and keep the buildlog and your 
 3. Pass both on the spawn: `model` is the family word of the seat's model ID (the word after `claude-`), and `effort` is the seat's effort. Pass them every time. Start the `description` with the role tag: `[<role>]`, or `[<role> hard]` on an award. Spawn reviewers with `run_in_background: false`; several in one message still run in parallel.
 4. At run start, delete any leftover `.run_state/hard`, then judge. While a run is hard, keep it at the project root (not the worktree); delete it at the end.
 
-Your own seat is the session's.
+You run on whatever model the owner picked. The repo sets none.
 
 Keep going until the run reaches its report. Stop to ask only when you cannot go on without the owner, or before a risky step.
 

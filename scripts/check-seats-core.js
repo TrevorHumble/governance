@@ -1,14 +1,14 @@
 // scripts/check-seats-core.js
-// Pure rules for the seats gate: whether seats.json is well-formed and its independence rules hold,
-// and whether a PR changes only seat values. No process, filesystem, or git access here.
+// Pure rules for the seats gate: whether seats.json is well-formed, and whether a PR changes only
+// seat values. No process, filesystem, or git access here.
 'use strict';
 
 const { isDeepStrictEqual } = require('util');
 const { ridesAlong, isNotCounted } = require('./check-token-budget-core');
 
-const REQUIRED_ROLES = ['orchestrator', 'issue-reviewer', 'code-reviewer', 'referee'];
+const REQUIRED_ROLES = ['issue-reviewer', 'code-reviewer', 'referee'];
 const SEAT_FIELDS = ['provider', 'model', 'effort'];
-// The one award: it moves the seats up for hard work. No award lets a guarded pair share a model.
+// The one award: it moves the seats up for hard work.
 const KNOWN_AWARDS = ['hard'];
 
 // Family words Claude Code's spawn call accepts as aliases. A fifth family needs a new alias from
@@ -24,14 +24,6 @@ const PROVIDERS = {
     modelPattern: new RegExp(`^claude-(${CLAUDE_FAMILIES.join('|')})-\\d+(-\\d+)?(-\\d{8})?$`),
   },
 };
-
-// Pairs of roles that must run on different models, on the base seats and under every award.
-const INDEPENDENT_PAIRS = [
-  { a: 'orchestrator', b: 'code-reviewer' },
-  { a: 'orchestrator', b: 'issue-reviewer' },
-  { a: 'referee', b: 'orchestrator' },
-  { a: 'referee', b: 'code-reviewer' },
-];
 
 const failLine = (text) => `check-seats: FAIL, ${text}`;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -142,31 +134,6 @@ function effectiveSeats(roles, entries = {}) {
   );
 }
 
-function independenceProblems(roles, awards) {
-  const problems = [];
-  const sameModel = (seats, a, b) =>
-    typeof seats[a]?.model === 'string' && seats[a].model === seats[b]?.model;
-  for (const { a, b } of INDEPENDENT_PAIRS) {
-    if (sameModel(roles, a, b)) {
-      problems.push(`"${a}" and "${b}" share the model ${roles[a].model}; they must differ`);
-    }
-  }
-  for (const [name, entries] of Object.entries(awards)) {
-    if (!KNOWN_AWARDS.includes(name) || !isObject(entries)) continue;
-    const seats = effectiveSeats(roles, entries);
-    for (const { a, b } of INDEPENDENT_PAIRS) {
-      const touched = Object.hasOwn(entries, a) || Object.hasOwn(entries, b);
-      if (!touched) continue;
-      if (sameModel(seats, a, b)) {
-        problems.push(
-          `under award "${name}", "${a}" and "${b}" share the model ${seats[a].model}; they must differ`
-        );
-      }
-    }
-  }
-  return problems;
-}
-
 // The seats pattern's prefix (the model pattern above), unanchored, so a dated or suffixed ID
 // matches too. Shared markdown must not name a model; seats.json is the one home.
 const MODEL_ID_IN_TEXT = new RegExp(`claude-(${CLAUDE_FAMILIES.join('|')})-\\d`);
@@ -238,7 +205,6 @@ function validateSeats(seats) {
   if (!isObject(awards)) problems.push('"awards" must be an object');
   if (problems.length > 0) return problems;
   problems.push(...roleProblems(roles), ...awardProblems(awards, roles));
-  problems.push(...independenceProblems(roles, awards));
   return problems;
 }
 

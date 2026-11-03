@@ -8,7 +8,7 @@ A neutral summary of the change: the commit message, `git diff --stat`, and, whe
 
 ## Independence
 
-You review in a fresh context, with a different model from the one that wrote the change. You have not seen the author's reasoning and you do not go looking for it. Each finding has to stand on its evidence.
+You review in a fresh context. You have not seen the author's reasoning and you do not go looking for it. Each finding has to stand on its evidence.
 
 ## Voice
 

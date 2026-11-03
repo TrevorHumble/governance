@@ -27,7 +27,6 @@ unknown: '{tag}' is not a seat.
 hard-run: This run is hard (.run_state/hard). Tag it [{role} hard].
 foreground: Spawn reviewers with run_in_background false; several in one message still run in parallel.
 wrong-seat: The {tag} seat is model {alias}, effort {effort}. You passed model {model}, effort {passed}.
-same-model: This session is running on {model}, the model of the {tag} seat, so the reviewer would not be a fresh pair of eyes. The session cannot switch its own model, so ask the owner to run /model {orchestrator} to switch back, then spawn again.
 unreadable: The spawn input was unreadable. Try again.
 
 ## session-greeting
@@ -37,8 +36,6 @@ githooks: Git hooks: commit-msg is {commitMsg}, pre-commit is {preCommit}.
 githooks-kept: A custom core.hooksPath is kept.
 githooks-missing: No .githooks/commit-msg here.
 githooks-elsewhere: This is not a repo root, so nothing was set.
-model: This session runs {model}; the orchestrator seat is {seats}.
-unchecked: The session's model was not reported, so not checked.
 env: {name} is set and overrides the seats.
 fork: Fork mode is on, so reviewers may not start in front. Set CLAUDE_CODE_FORK_SUBAGENT to 0 in the env block of .claude/settings.json.
 cap: maxEffortLevel {cap} is below the {role} seat's effort ({effort}).

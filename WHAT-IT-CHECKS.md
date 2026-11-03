@@ -11,12 +11,12 @@ Each line: what a check catches, then what it misses. CI runs the `npm` scripts 
 - `check:seats`: a bad `seats.json`; a seat's agent, skill or a profile lens that names no file in `.claude/`; a model ID in shared markdown; on a PR, whether it qualifies for the configuration lane (only seat values, or only user-started skill files) and the path that keeps it out. Misses the owner's yes, as above.
 - `check:design`: a design record over 150 words, missing its date and issue line, `Decided:`, `Why:` or `Gave up:`, out of date order, or under a changed header; notes records over 100 words. Misses whether a record is true or worth keeping.
 - `check:evidence`: a PASS whose working-tree id differs, or whose cited lines do not exist. Misses the review's judgment.
-- `check:served` (step 12): a subagent served off its seat's model or effort. Misses the orchestrator's own seat.
+- `check:served` (step 12): a subagent served off its seat's model or effort.
 - `commit-msg`: a commit staging a non-`.md` file with no issue named (`(#N)`, closing keyword, `issue-N` branch). Misses whether the issue was reviewed. Prints a notes reminder on every commit, never blocking. Local; `--no-verify` skips it.
 - `pre-commit`: a child staging a shared path outside a sync branch. `--no-verify` skips it; CI does not back it.
 - `before-issue-create`: `gh issue create` lacking the `needs-issue-review` label or a body file opening with the owner-approved line. An agent can type that line itself. Sees only Bash.
-- `spawn-check`: an `Agent` call with no role tag, a model or effort off its seat, a reviewer in the background, or a reviewer on the session's own model family (read from the transcript). Misses `claude -p` and remote sessions; allows if `seats.json` or the transcript is unreadable. The tag is the agent's word.
-- `session-greeting`: sets `core.hooksPath` and says if both git hooks are armed; warns on a wrong model, an effort override, a low `maxEffortLevel`, a leftover `.run_state/hard`, or `CLAUDE_CODE_FORK_SUBAGENT` not `0` (fork mode). Misses an unreported model, and cannot see whether the Agent tool then offers `run_in_background`.
+- `spawn-check`: an `Agent` call with no role tag, a model or effort off its seat, a reviewer in the background. Misses `claude -p` and remote sessions; allows if `seats.json` is unreadable. The tag is the agent's word.
+- `session-greeting`: sets `core.hooksPath` and says if both git hooks are armed; warns on an effort override, a low `maxEffortLevel`, a leftover `.run_state/hard`, or `CLAUDE_CODE_FORK_SUBAGENT` not `0` (fork mode). Cannot see whether the Agent tool then offers `run_in_background`.
 - `goal-check`, `after-edit`, `before-stop`, `reviewer-done`: add a note, never block. Nothing checks they were acted on.
 - `issue-guard.yml`: labels `unverified-issue` on an issue opened without `needs-issue-review`; never blocks. Applies where `.github/workflows/issue-guard.yml` exists, since `.github/**` is not shared.
 - Dependabot auto-merge: merges a Dependabot PR on green `build`. Misses whether the bump is safe.

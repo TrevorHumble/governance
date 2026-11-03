@@ -16,7 +16,7 @@ const SCRIPT = path.join(HOOKS, 'session-greeting.ps1');
 
 const SEATS = {
   roles: {
-    orchestrator: { model: 'claude-sonnet-5-5', effort: 'medium' },
+    'issue-reviewer': { model: 'claude-opus-5-5', effort: 'medium' },
   },
   awards: {
     hard: {
@@ -126,8 +126,10 @@ const maybeDescribe = launcherMissing
   : describe;
 
 maybeDescribe('.claude/hooks/session-greeting.ps1: the greeting', () => {
-  it('is the hello note and the armed git hooks line when the model is the orchestrator seat', () => {
+  it('is the hello note and the armed git hooks line, whatever model the session runs', () => {
     expect(run(start('claude-sonnet-5-5'))).toBe(armed());
+    expect(run(start('claude-fable-5-1'))).toBe(armed());
+    expect(run(start(undefined, { source: 'clear' }))).toBe(armed());
   });
 
   it('accepts a short alias and a context-window suffix', () => {
@@ -225,27 +227,6 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: the git hooks', () => {
     expect(run(start('sonnet'), { project: own })).toBe(notes().hello);
     expect(hooksPath(own)).toBe('');
   });
-
-  it('keeps the model warning after the git hooks line', () => {
-    const out = run(start('claude-fable-5-1'));
-    expect(out.startsWith(armed())).toBe(true);
-    expect(out).toContain('claude-fable-5-1');
-  });
-});
-
-maybeDescribe('.claude/hooks/session-greeting.ps1: the session model', () => {
-  it('warns when the model is not the orchestrator seat', () => {
-    const out = run(start('claude-fable-5-1'));
-    expect(out).toContain(armed());
-    expect(out).toContain(
-      notes().model.replace('{model}', 'claude-fable-5-1').replace('{seats}', 'sonnet')
-    );
-  });
-
-  it('says it could not check when the input carries no model (after /clear or a recovery)', () => {
-    const out = run(start(undefined, { source: 'clear' }));
-    expect(out).toBe(`${armed()} ${notes().unchecked}`);
-  });
 });
 
 maybeDescribe('.claude/hooks/session-greeting.ps1: settings that override the seats', () => {
@@ -277,7 +258,7 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: settings that override the se
   });
 
   it.each([
-    ['low', 'orchestrator', 'medium'],
+    ['low', 'issue-reviewer', 'medium'],
     ['medium', 'code-reviewer hard', 'high'],
   ])('warns when maxEffortLevel %s is below a seat, naming %s', (cap, role, effort) => {
     fs.writeFileSync(
@@ -353,13 +334,7 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: an odd seats.json', () => {
     ).toBe(notes().hello);
   });
 
-  it('still checks the model against the orchestrator seat when there is no hard award', () => {
-    const seats = { roles: SEATS.roles };
-    const out = withSeats(seats, (own) => run(start('claude-fable-5-1'), { project: own }));
-    expect(out).toContain('the orchestrator seat is sonnet.');
-  });
-
-  it('prints the hello line when roles has no orchestrator, or the file is not an object', () => {
+  it('prints the hello line when roles is empty, or the file is not an object', () => {
     for (const seats of [{ roles: {} }, '[]', '"text"', '{ not json']) {
       expect(withSeats(seats, (own) => run(start('sonnet'), { project: own }))).toBe(notes().hello);
     }
