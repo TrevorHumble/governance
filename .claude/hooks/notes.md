@@ -14,7 +14,7 @@ You edited {path}, which docs describe. Check they still match the code.
 
 ## before-stop
 
-Before you stop: does your report say what changed, what you left alone, and what you disagree with?
+2 paragraphs or less is a message, 4 is an essay.
 
 ## reviewer-done
 
