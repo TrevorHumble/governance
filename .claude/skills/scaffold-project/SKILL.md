@@ -31,7 +31,7 @@ Use the full gh path (`gh` is not on PATH on this machine). PowerShell syntax on
 
 ## Failure fallbacks
 
-- **`gh repo create --template` fails** (template renamed/private/name collision): report the exact error. For a name collision, pick a new name with the user. If the template repo itself is gone, rebuild the pipeline by copying `agents/`, `standards/`, `tools/`, `.githooks/`, and `.claude/commands/build.md` from another of Trevor's pipeline repos (e.g. the wedding-scavenger-hunt repo); the global CLAUDE.md names this as the sanctioned fallback.
+- **`gh repo create --template` fails** (template renamed/private/name collision): report the exact error. For a name collision, pick a new name with the user. If the template repo itself is gone, copy the paths under `sharedPaths` in the governance repo's `governance-manifest.json` (TrevorHumble/governance) into the new repo, and write its own `repo-profile.json` with `governanceHome` and `syncIssue` (fields: the manifest's `repoProfileFields`; `AGENTS.md`, Parent and children). Later runs then keep the shared files current with `tools/governance-sync.ps1`.
 - **`setup.ps1` errors outright** (not just gate `[OFF]`): quote the error, do not loop. Missing prerequisite (git, node) → name it and stop.
 
 5. **Hand off in plain language:** the project is ready. Tell the user to (a) open `CLAUDE.md` and fill in the North Star, one sentence: who it's for and what it builds; (b) open the folder in Claude Code and say what to build. The orchestrator drives the rest.
