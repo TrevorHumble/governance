@@ -24,6 +24,9 @@ The entry is one line, in this shape:
 - YYYY-MM-DD - #N <summary> (PR #M). <evidence, recorded omissions, CI expectation>
 ```
 
+The date is the day the pull request merged, read in UTC (GitHub's `merged_at`), so every session
+agrees whatever its timezone.
+
 The parenthetical closes the summary clause; it does not end the entry. Carry what shipped, why,
 what review found, and what CI confirmed. A title-only stub is not an entry. `scripts/buildlog-glue-core.js` enforces a 200-character minimum on this line by default
 (`foldFragments`'s `minEntryLength` option, overridable only for a test fixture); a shorter line
