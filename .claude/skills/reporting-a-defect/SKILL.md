@@ -9,4 +9,4 @@ metadata:
 
 Fix it when `standards/deciding.md`, "Stay in scope", allows, and name the fix in the PR body. Otherwise it is a note. File nothing: `pipeline/report-template.md`, "Nothing on your own initiative".
 
-- A note goes on the issue under `## Notes` (`github-write`), saying what breaks and where. A note anywhere else never reaches the owner.
+- A note goes on the issue under `## Notes` (`github-write`), saying what breaks and where. A note anywhere else is lost. Step 12 says which notes reach the owner.

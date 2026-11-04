@@ -16,11 +16,9 @@ Agents pass the first test and fail the second. Short and useless is the common 
 
 Open with one line: `Moved up: no.` or `Moved up: yes, <why>`. The why is the part of the hard test that applied (`pipeline/PIPELINE.md`), at the start or mid-run. Every report carries it.
 
-Three parts, in this order. Leave out a part that has nothing in it.
+The calls the agents made are in the PR body, and the report does not repeat them. The report is two paragraphs or less, in plain words, and says nothing twice.
 
-**Decisions.** One line for every call the agents made inside the criteria, copied from your decision lines. Say what was decided and which way, in plain words. A case left alone gets a line too. The owner may skim these or not.
-
-**For you.** Anything only the owner can decide, and any change parked because it went over a cap while the owner was away. Name the question in a line, then price each option, with a percentage for how likely it is the right pick (they add up to 100):
+**For you.** Leave it out when nothing needs the owner. Anything only the owner can decide, and any change parked because it went over a cap while the owner was away. Name the question in a line, then price each option, with a percentage for how likely it is the right pick (they add up to 100):
 
 ```
 Should shared lists be public by default?
@@ -32,8 +30,6 @@ Ask on first use: costs a screen every new user sees. 10%
 
 A price is what the option costs: tokens, files, time, or money. If you need a fact to name it, go and look; say whether you looked or asked.
 
-**Notes.** Only notes from the issue's `## Notes` heading that `pipeline/steps/12-report.md` passes on. Say what breaks, whether it has ever done real damage (say plainly when the answer is no), and the options and prices as above.
-
 ## Nothing on your own initiative
 
-The report is where the owner learns of a note. Do not file an issue, label, or PR about it on your own initiative; the owner decides whether it becomes work. The pipeline's own calls, such as the `hard` label, the labels at step 07, and the PR at step 11, are not this.
+A note stays on the issue unless step 12 sends it up. Do not file an issue, label, or PR about it on your own initiative; the owner decides whether it becomes work. The pipeline's own calls, such as labels and the PR, are not this.

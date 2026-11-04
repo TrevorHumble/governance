@@ -30,7 +30,7 @@ An approved cut or cap request becomes a Done-when line, so it gets checked like
 
 ## After you send
 
-Send the message, then stop. Nothing is filed until the owner says yes.
+Send the message, then stop. Nothing is filed until the owner says yes. Only the word "approve", or a plain yes to "Ok to file?", counts. Praise is not approval. After it, run to the merged PR with no check-ins, except an owner call a later step names.
 
 If the owner says no or asks for a change, revise and resend the whole message. Nothing is filed meanwhile.
 
