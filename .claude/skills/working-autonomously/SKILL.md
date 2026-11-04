@@ -19,4 +19,4 @@ Owner's calls are marked as the `implementing` skill says. When the owner is awa
 
 ## One report
 
-End with one report, in the template's form: a line for each decision, then "For you", then notes. What you may file on your own is set in the template's "Nothing on your own initiative". A defect outside the issue is fixed when `standards/deciding.md`, "Stay in scope", allows it; otherwise it is a note on the issue (`reporting-a-defect`).
+End with one report, in the template's form: "For you" if anything needs the owner. A defect outside the issue is fixed when `standards/deciding.md`, "Stay in scope", allows it; otherwise it is a note on the issue (`reporting-a-defect`); step 12 says which notes reach the owner.

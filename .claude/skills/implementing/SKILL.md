@@ -22,13 +22,13 @@ Read every prior-art path the issue names, and reuse what is there. Before you c
 
 Technical calls inside the criteria are yours (`standards/deciding.md`, "Decide from the goals"). Would a typical user expect it to work? Then build it: a slug that mangles punctuation is a bug, not a follow-up.
 
-The owner's calls are the ones in `writing-acceptance-criteria`, "Whose call". Build the behavior the criteria state, add a line starting `Owner's call:` that names the question, and keep going. The report carries it to the owner.
+The owner's calls are the ones in `writing-acceptance-criteria`, "Whose call". Build the behavior the criteria state, add a line starting `Owner's call:` that names the question, and keep going. The report carries only these to the owner.
 
 ## Write it down
 
-Review and commit come after the build, not inside it. Before you call the build done, write these down, so shipping and the report can copy them as written:
+Review and commit come after the build, not inside it. Before you call the build done, write these down, so shipping can copy them as written:
 
 - In your run note (`.run_state/<N>.md`): what I changed, then one line under it for each decision you made inside the criteria and each case inside the issue you left alone, every `Owner's call:` line included.
 - On the issue, under `## Notes` (`reporting-a-defect`): what you left unfixed outside the criteria, and why, or "none".
 
-Anything you disagree with goes straight into the report. Say it plainly there.
+A call you doubt is yours to settle. Make it and say why in the PR body.

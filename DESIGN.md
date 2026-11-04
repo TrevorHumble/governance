@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Sessions own the build; only the experience goes to the owner
+
+2026-11-03, #167
+
+Decided: The rules say the session owns every technical call and fix, in any file. A file the owner approved is locked for its look and workflow only. Only owner calls reach the report, which is two paragraphs or less. Decision lines and omissions stay in the PR body. After the word "approve", the run goes to the merged PR with no check-ins.
+
+Why: The owner's flatland runs kept handing back one-word fixes and docstrings as new issues, because writing a leftover up never broke a rule and fixing it might.
+
+Gave up: The report's Decisions and Notes parts, and the "disagree" line.
+
 ## The owner picks the orchestrator's model
 
 2026-11-02, #168
