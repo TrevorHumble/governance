@@ -36,10 +36,10 @@ Then stop. No fix menu, no "let me know". He asks what he wants to ask; answer e
 
 ## Filing
 
-When he says file it ("file it away", "ledger it", "log that"), write one line to a file and post it as a comment on the ledger, issue #LEDGER in `TrevorHumble/governance`, by `github-write`:
+When he says file it ("file it away", "ledger it", "log that"), write one line to a file and post it as a comment on the ledger, issue #175 in `TrevorHumble/governance`, by `github-write`:
 
 ```
-gh api repos/TrevorHumble/governance/issues/LEDGER/comments -F body=@<file>
+gh api repos/TrevorHumble/governance/issues/175/comments -F body=@<file>
 ```
 
 The line:
