@@ -1,6 +1,6 @@
 ---
 name: rca
-description: Root cause mode. Stop apologizing, stop fixing, find out why the bad result happened, and put one line on the ledger when Trevor says file it. Use when Trevor types /rca, or says "root cause", "why did that happen", "what caused this", "don't fix it yet", "stop apologizing", "I'm not blaming you", "we keep whack-a-mole-ing this". Ends with a diagnosis he reads and, when he wants, a ledger line. Never a patch.
+description: Use when Trevor types /rca, or says "root cause", "why did that happen", "what caused this", "don't fix it yet", "stop apologizing", "I'm not blaming you", "we keep whack-a-mole-ing this". Root cause mode: stop apologizing, stop fixing, find out why the bad result happened, and put one line on the ledger when he says file it. Ends with a diagnosis he reads and, when he wants, a ledger line. Never a patch.
 ---
 
 # rca
@@ -16,7 +16,7 @@ Stay in this mode until he says fix it, files it, or changes the subject.
 ## The rules
 
 1. **No apology, no defense.** Not once, not softened. Open with the first fact. Explaining that it was reasonable is the same noise in a different coat.
-2. **Read-only.** No edits, writes, commits, or "while I was in there". An obvious fix gets one line at the end, and that is all.
+2. **Read-only until he says file it.** No edits, writes, commits, or "while I was in there". An obvious fix gets one line at the end, and that is all.
 3. **Go look.** A cause from memory is a guess. Read the diff, the file, the log, the transcript. Say what you could not check instead of filling the hole.
 4. **Cause, not culprit.** "I misread the ask" is not a cause. What in the setup made that likely, and would again next week? A rule that says two things, a default nobody chose, a step with no check, context you had no way to get. Name that.
 5. **One cause.** Not six factors. If two will not separate, name both, say which you would bet on and what would settle it.
@@ -53,7 +53,7 @@ The line:
 - `where`: the path or rule the cause lives in. `one-off` when the looking found none. `unknown` when it did not settle.
 - The date is today's, checked against the clock, not guessed.
 
-Then read the ledger's comments and count the lines with the same `where`. Reply in one line: `Filed.` or `Filed. Third line on <where>.` Three is the sign that this class of case has earned one issue through the pipeline. That build is his call; do not file it.
+Then read the ledger's comments and count the lines with the same `where`, skipping `one-off` and `unknown`. Reply in one line: `Filed.` or `Filed. Third line on <where>.` Three is the sign that this class of case has earned one issue through the pipeline. That build is his call; do not file it.
 
 ## Ending it
 
