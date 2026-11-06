@@ -1,6 +1,7 @@
 # hook-core: the logic the hooks in this folder share, dot-sourced by each of them. It holds
 # reading stdin, reading a section (and a key) from notes.md, filling placeholders, the model family
-# word, the project root, the role tag, and reading seats.json. A hook that cannot load this file
+# word, the project root, the role tag, reading seats.json, and splitting a command into words and a
+# gh api call into its parts. A hook that cannot load this file
 # does nothing (or, for a deny, falls back to its one generic line); it never crashes the session.
 $HOOK_DIR = $PSScriptRoot
 $ROLE_TAG = '^\s*\[([a-z][a-z0-9-]*)(?:\s+(hard))?\]'
@@ -73,6 +74,58 @@ function Get-HardAwards($seats) {
   $awards = $seats.awards
   if ($null -eq $awards -or -not $awards.PSObject.Properties['hard']) { return $null }
   return $awards.hard
+}
+
+# The words after $from up to the next unquoted ; | & or newline, and (unless $wide) also a ) or a
+# backtick, which usually end a substitution. $wide reads past those, to see a call whose endpoint is
+# itself a substitution.
+function Get-SegmentWords([string]$text, [int]$from, [bool]$wide = $false) {
+  $quote = ''
+  $i = $from
+  for (; $i -lt $text.Length; $i++) {
+    $c = [string]$text[$i]
+    if ($quote) {
+      if ($c -eq '\' -and $quote -eq '"') { $i++ } elseif ($c -eq $quote) { $quote = '' }
+    } elseif ($c -eq '\') {
+      $i++
+    } elseif ($c -eq '"' -or $c -eq "'") {
+      $quote = $c
+    } elseif ($c -in ';', '|', '&', "`n") {
+      break
+    } elseif (-not $wide -and $c -in ')', '`') {
+      break
+    }
+  }
+  $segment = $text.Substring($from, [Math]::Min($i, $text.Length) - $from)
+  $words = [regex]::Matches($segment, '(?:\\.|"[^"]*"|''[^'']*''|[^\s"''\\])+')
+  # The leading comma keeps a one-word result an array; PowerShell would unroll it to a string.
+  return , @($words | ForEach-Object { $_.Value -replace '\\(["''])', '$1' -replace '["'']', '' })
+}
+
+# Flags of gh api that take a value, so a word after one is not read as a field flag.
+$API_VALUE_FLAGS = @('-H', '--header', '-q', '--jq', '-t', '--template', '--hostname', '--cache',
+  '-p', '--preview', '-X', '--method')
+
+# Splits the words of one gh api call into its positional words (the endpoint), its field words
+# (-f, -F, --field, --raw-field, each with the raw text after the flag), and whether it has --input.
+function Read-ApiCall([string[]]$words) {
+  $call = @{ Positionals = @(); Fields = @(); Input = $false }
+  for ($i = 0; $i -lt $words.Count; $i++) {
+    $w = $words[$i]
+    if ($w -ceq '--') { if ($i + 1 -lt $words.Count) { $call.Positionals += $words[($i + 1)..($words.Count - 1)] }; break }
+    $name = $null; $val = $null
+    if ($w.StartsWith('--')) { $name, $val = $w -split '=', 2 }
+    elseif ($w -cmatch '^-[A-Za-z]') {
+      $name = $w.Substring(0, 2)
+      if ($w.Length -gt 2) { $val = $w.Substring(2); if ($val.StartsWith('=')) { $val = $val.Substring(1) } }
+    } else { $call.Positionals += $w; continue }
+    if ($name -ceq '--input') { $call.Input = $true; if ($null -eq $val) { $i++ }; continue }
+    if ($API_VALUE_FLAGS -ccontains $name) { if ($null -eq $val) { $i++ }; continue }
+    if ($name -cnotin '-f', '-F', '--field', '--raw-field') { continue }
+    if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
+    $call.Fields += , @{ Typed = ($name -ceq '-F' -or $name -ceq '--field'); Text = $val }
+  }
+  return $call
 }
 
 # The roles whose agent is "reviewer", read from seats.json (no list kept here).

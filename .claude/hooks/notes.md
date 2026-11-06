@@ -4,6 +4,10 @@
 
 This command names issue creation, so it is judged as a filing: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>, where the file's first line is '{line}'. The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
 
+## edit-gate
+
+Nothing changes until the owner starts the work. {what} Ask him to type /build, or /buildlog, /rca, /realign or /resume. Reading and read-only commands still run.
+
 ## goal-check
 
 The owner's answer stands. Before the next question, check the goals and standards/deciding.md first.
@@ -31,7 +35,7 @@ unreadable: The spawn input was unreadable. Try again.
 
 ## session-greeting
 
-hello: Hooks here nudge; only issue filing and agent spawns are denied. Seats: seats.json.
+hello: Hooks here nudge; only issue filing, agent spawns, and edits and non-read-only commands before the owner types /build are denied. Seats: seats.json.
 githooks: Git hooks: commit-msg is {commitMsg}, pre-commit is {preCommit}.
 githooks-kept: A custom core.hooksPath is kept.
 githooks-missing: No .githooks/commit-msg here.

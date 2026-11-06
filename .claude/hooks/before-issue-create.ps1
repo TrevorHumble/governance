@@ -44,32 +44,6 @@ $ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?
 $VALUE_FLAGS = @('--body', '-b', '--body-file', '-F', '--label', '-l', '--title', '-t', '--assignee', '-a',
   '--milestone', '-m', '--project', '-p', '--repo', '-R', '--template', '-T', '--recover')
 
-# The words after $from up to the next unquoted ; | & or newline, and (unless $wide) also a ) or a
-# backtick, which usually end a substitution. $wide reads past those, to see a call whose endpoint is
-# itself a substitution.
-function Get-SegmentWords([string]$text, [int]$from, [bool]$wide = $false) {
-  $quote = ''
-  $i = $from
-  for (; $i -lt $text.Length; $i++) {
-    $c = [string]$text[$i]
-    if ($quote) {
-      if ($c -eq '\' -and $quote -eq '"') { $i++ } elseif ($c -eq $quote) { $quote = '' }
-    } elseif ($c -eq '\') {
-      $i++
-    } elseif ($c -eq '"' -or $c -eq "'") {
-      $quote = $c
-    } elseif ($c -in ';', '|', '&', "`n") {
-      break
-    } elseif (-not $wide -and $c -in ')', '`') {
-      break
-    }
-  }
-  $segment = $text.Substring($from, [Math]::Min($i, $text.Length) - $from)
-  $words = [regex]::Matches($segment, '(?:\\.|"[^"]*"|''[^'']*''|[^\s"''\\])+')
-  # The leading comma keeps a one-word result an array; PowerShell would unroll it to a string.
-  return , @($words | ForEach-Object { $_.Value -replace '\\(["''])', '$1' -replace '["'']', '' })
-}
-
 function Get-CreateFacts([string[]]$words) {
   $facts = @{ Inline = $false; Labels = @(); File = $null }
   for ($i = 0; $i -lt $words.Count; $i++) {
@@ -86,32 +60,6 @@ function Get-CreateFacts([string[]]$words) {
     elseif ($name -ceq '--body-file' -or $name -ceq '-F') { $facts.File = $val }
   }
   return $facts
-}
-
-# Flags of gh api that take a value, so a word after one is not read as a field flag.
-$API_VALUE_FLAGS = @('-H', '--header', '-q', '--jq', '-t', '--template', '--hostname', '--cache',
-  '-p', '--preview', '-X', '--method')
-
-# Splits the words of one gh api call into its positional words (the endpoint), its field words
-# (-f, -F, --field, --raw-field, each with the raw text after the flag), and whether it has --input.
-function Read-ApiCall([string[]]$words) {
-  $call = @{ Positionals = @(); Fields = @(); Input = $false }
-  for ($i = 0; $i -lt $words.Count; $i++) {
-    $w = $words[$i]
-    if ($w -ceq '--') { if ($i + 1 -lt $words.Count) { $call.Positionals += $words[($i + 1)..($words.Count - 1)] }; break }
-    $name = $null; $val = $null
-    if ($w.StartsWith('--')) { $name, $val = $w -split '=', 2 }
-    elseif ($w -cmatch '^-[A-Za-z]') {
-      $name = $w.Substring(0, 2)
-      if ($w.Length -gt 2) { $val = $w.Substring(2); if ($val.StartsWith('=')) { $val = $val.Substring(1) } }
-    } else { $call.Positionals += $w; continue }
-    if ($name -ceq '--input') { $call.Input = $true; if ($null -eq $val) { $i++ }; continue }
-    if ($API_VALUE_FLAGS -ccontains $name) { if ($null -eq $val) { $i++ }; continue }
-    if ($name -cnotin '-f', '-F', '--field', '--raw-field') { continue }
-    if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
-    $call.Fields += , @{ Typed = ($name -ceq '-F' -or $name -ceq '--field'); Text = $val }
-  }
-  return $call
 }
 
 # A word the hook cannot read as written: it holds a variable, a command substitution or backticks,
@@ -186,6 +134,12 @@ try {
   $payload = $reader.ReadToEnd() | ConvertFrom-Json
   $text = $payload.tool_input.command
   if ($text -isnot [string]) { exit 0 }
+  # The command reading lives in hook-core.ps1, so without it a command that names a create or a
+  # gh api call is denied unread.
+  if (-not $coreLoaded) {
+    if ($text -match $CREATE -or $text -match $API) { Write-Deny 'the hook could not load hook-core.ps1 to read it' }
+    exit 0
+  }
   if ($text.Length -gt $MAX_TEXT) { Write-Deny "its text is longer than $MAX_TEXT characters, too long to check"; exit 0 }
 
   $creates = @([regex]::Matches($text, $CREATE))

@@ -54,6 +54,15 @@ describe('.claude/settings.json hook wiring', () => {
     expect(wiringProblems(settings, onDisk)).toEqual(NONE);
   });
 
+  it('gates exactly the five tools that change files with edit-gate', () => {
+    const entry = settings.hooks.PreToolUse.find((g) =>
+      (g.hooks || []).some((h) => String(h.command).includes('edit-gate.ps1'))
+    );
+    expect(entry.matcher.split('|').sort()).toEqual(
+      ['Bash', 'Edit', 'NotebookEdit', 'PowerShell', 'Write'].sort()
+    );
+  });
+
   it('finds a hook file that is wired twice', () => {
     const p = wiringProblems(wiring('a.ps1', 'a.ps1'), ['a.ps1', LIBRARY]);
     expect(p.notOnce).toEqual(['a.ps1']);
