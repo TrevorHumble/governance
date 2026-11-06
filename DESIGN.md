@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Edits wait for the owner's typed command
+
+2026-11-05, #179
+
+Decided: A third hook blocks, replacing "only two block" (#99). `edit-gate` refuses edits and non-read-only commands until the owner types `/build`, `/buildlog`, `/rca`, `/realign` or `/resume`. Only a typed command unlocks, so the model's own Skill call cannot. `/goal-writer` goes through the build.
+
+Why: Sessions kept turning the owner's statements into unrequested edits. A note did not stop it; a block does.
+
+Gave up: Hooks that only nudge, and unlocking from the model's own Skill call.
+
 ## Sessions own the build; only the experience goes to the owner
 
 2026-11-03, #167

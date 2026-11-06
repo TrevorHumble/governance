@@ -39,6 +39,17 @@
         ]
       },
       {
+        "matcher": "Edit|Write|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/edit-gate.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Agent",
         "hooks": [
           {
@@ -80,6 +91,19 @@
           {
             "type": "command",
             "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/before-stop.ps1\"",
+            "shell": "powershell",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "^(build|buildlog|rca|realign|resume)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/unlock-edits.ps1\"",
             "shell": "powershell",
             "timeout": 10
           }

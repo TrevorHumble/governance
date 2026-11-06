@@ -42,6 +42,8 @@ When he says file it ("file it away", "ledger it", "log that"), write one line t
 gh api repos/TrevorHumble/governance/issues/175/comments -F body=@<file>
 ```
 
+If edit-gate refuses the post, ask him to type `/rca`, then file.
+
 The line:
 
 ```
