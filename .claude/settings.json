@@ -85,12 +85,12 @@
         ]
       }
     ],
-    "Stop": [
+    "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/before-stop.ps1\"",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/before-reply.ps1\"",
             "shell": "powershell",
             "timeout": 10
           }

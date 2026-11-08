@@ -1,19 +1,5 @@
-# before-stop: a Stop hook. It adds a note the model reads before it ends its turn. It never blocks.
-# The note continues the conversation once; when Claude Code is already continuing because of a stop
-# hook (stop_hook_active), it prints nothing, so the session can end. Any problem prints nothing.
-$ErrorActionPreference = 'Stop'
-
-try {
-  . (Join-Path $PSScriptRoot 'hook-core.ps1')
-  $payload = (Read-Stdin) | ConvertFrom-Json
-  if ($null -eq $payload) { exit 0 }
-  # Anything but a plain false counts as active: a note that cannot end the session is worse than none.
-  if ("$($payload.stop_hook_active)" -ne '' -and "$($payload.stop_hook_active)" -ne 'False') { exit 0 }
-  $note = Get-Note 'before-stop'
-  if (-not $note) { exit 0 }
-  $out = [ordered]@{ hookSpecificOutput = [ordered]@{ hookEventName = 'Stop'; additionalContext = $note } }
-  Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
-  exit 0
-} catch {
-  exit 0
-}
+# before-stop: an empty stub. The length note moved to before-reply.ps1 (#181), because a note added
+# at Stop comes back as a new turn and draws a second reply. A child's .claude/settings.json does not
+# sync, so a child may still wire this file to Stop; it reads nothing, prints nothing, and exits 0.
+# Once no child wires it, put it on the manifest's retired list.
+exit 0
