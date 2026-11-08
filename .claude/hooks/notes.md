@@ -16,7 +16,7 @@ The owner's answer stands. Before the next question, check the goals and standar
 
 You edited {path}, which docs describe. Check they still match the code.
 
-## before-stop
+## before-reply
 
 2 paragraphs or less is a message, 4 is an essay.
 

@@ -9,6 +9,8 @@ const path = require('path');
 const REPO = path.join(__dirname, '..');
 const HOOK_DIR = path.join(REPO, '.claude', 'hooks');
 const LIBRARY = 'hook-core.ps1';
+// Kept on disk but wired nowhere here: an empty stub for children still wired to it (#181).
+const STUBS = ['before-stop.ps1'];
 
 // Every hook command in a settings object, whatever its event and matcher.
 function commands(settings) {
@@ -31,7 +33,9 @@ function named(command) {
 function wiringProblems(settings, filesOnDisk) {
   const cmds = commands(settings);
   const wired = cmds.flatMap(named);
-  const hookFiles = filesOnDisk.filter((f) => f.endsWith('.ps1') && f !== LIBRARY);
+  const hookFiles = filesOnDisk.filter(
+    (f) => f.endsWith('.ps1') && f !== LIBRARY && !STUBS.includes(f)
+  );
   return {
     unnamed: cmds.filter((c) => named(c).length !== 1),
     library: wired.filter((w) => w === LIBRARY),
