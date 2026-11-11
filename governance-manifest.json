@@ -292,6 +292,7 @@
   "sharedPaths": [
     ".claude/agents/**",
     ".claude/hooks/after-edit.ps1",
+    ".claude/hooks/approve.ps1",
     ".claude/hooks/before-issue-create.ps1",
     ".claude/hooks/before-reply.ps1",
     ".claude/hooks/before-stop.ps1",
@@ -303,6 +304,7 @@
     ".claude/hooks/session-greeting.ps1",
     ".claude/hooks/spawn-check.ps1",
     ".claude/hooks/unlock-edits.ps1",
+    ".claude/skills/approve/**",
     ".claude/skills/baby/**",
     ".claude/skills/build/**",
     ".claude/skills/buildlog/**",
@@ -399,6 +401,7 @@
   "classes": {
     ".claude/agents/**": "content",
     ".claude/hooks/after-edit.ps1": "content",
+    ".claude/hooks/approve.ps1": "content",
     ".claude/hooks/before-issue-create.ps1": "content",
     ".claude/hooks/before-reply.ps1": "content",
     ".claude/hooks/before-stop.ps1": "content",
@@ -410,6 +413,7 @@
     ".claude/hooks/session-greeting.ps1": "content",
     ".claude/hooks/spawn-check.ps1": "content",
     ".claude/hooks/unlock-edits.ps1": "content",
+    ".claude/skills/approve/**": "content",
     ".claude/skills/baby/**": "content",
     ".claude/skills/build/**": "content",
     ".claude/skills/buildlog/**": "content",

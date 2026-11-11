@@ -11,7 +11,10 @@ const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'before-issue-create.ps1');
 const LABEL = 'needs-issue-review';
-const LINE = 'Owner-approved: yes';
+const APPROVED = 'owner-approved';
+// A neutral first line, and the approval claim a body may not open with.
+const LINE = 'Story';
+const CLAIM = 'Owner-approved: yes';
 
 let dir;
 
@@ -19,8 +22,9 @@ beforeAll(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'before-issue-create-'));
   fs.writeFileSync(path.join(dir, 'ok.md'), `${LINE}\r\nBody\r\n`);
   fs.writeFileSync(path.join(dir, 'bom.md'), `\uFEFF${LINE}\nBody\n`);
-  fs.writeFileSync(path.join(dir, 'bad.md'), 'Body only\n');
-  fs.writeFileSync(path.join(dir, 'late.md'), `Top\n${LINE}\n`);
+  fs.writeFileSync(path.join(dir, 'bad.md'), `${CLAIM}\r\nBody\r\n`);
+  fs.writeFileSync(path.join(dir, 'bomclaim.md'), `\uFEFFowner-approved: no\nBody\n`);
+  fs.writeFileSync(path.join(dir, 'late.md'), `Top\n${CLAIM}\n`);
   fs.writeFileSync(path.join(dir, 'big.md'), `${LINE}\n${'x'.repeat(3 * 1024 * 1024)}`);
   fs.mkdirSync(path.join(dir, 'sub'));
 });
@@ -79,14 +83,26 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the one accepted form', ()
     );
   });
 
-  it('denies a missing label, a wrong label, a missing line, and says which', () => {
+  it('denies a missing label, a wrong label, an approval claim, and says which', () => {
     const noLabel = run(create('--body-file ok.md'));
     expect(noLabel.decision).toBe('deny');
     expect(noLabel.reason).toContain(`no ${LABEL} label`);
     expect(run(create(`--label bug --body-file ok.md`)).decision).toBe('deny');
-    const noLine = run(create(`--label ${LABEL} --body-file bad.md`));
-    expect(noLine.decision).toBe('deny');
-    expect(noLine.reason).toContain("first line of 'bad.md' is not 'Owner-approved: yes'");
+    const claim = run(create(`--label ${LABEL} --body-file bad.md`));
+    expect(claim.decision).toBe('deny');
+    expect(claim.reason).toContain("first line of 'bad.md' claims the owner's approval");
+  });
+
+  it('denies a filing that carries owner-approved, however the label is written', () => {
+    for (const flags of [
+      `--label ${LABEL} --label ${APPROVED} --body-file ok.md`,
+      `--label ${LABEL},${APPROVED} --body-file ok.md`,
+      `-l ${LABEL} -l Owner-Approved -F ok.md`,
+    ]) {
+      const res = run(create(flags));
+      expect(res.decision).toBe('deny');
+      expect(res.reason).toContain(`it files with the ${APPROVED} label`);
+    }
   });
 
   it('denies a missing body file, a directory, and a body from stdin', () => {
@@ -114,7 +130,7 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the one accepted form', ()
     const res = run(create(`--label ${LABEL} --body "${LINE}"`));
     expect(res.event).toBe('PreToolUse');
     expect(res.reason).toContain(`gh issue create --label ${LABEL} --body-file <file>`);
-    expect(res.reason).toContain("owner's yes comes first");
+    expect(res.reason).toContain(`Only the owner's typed /approve adds ${APPROVED}`);
   });
 });
 
@@ -128,13 +144,13 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the reason text', () => {
     return m[1].trim().replace(/\s*\r?\n\s*/g, ' ');
   };
 
-  it('is the notes.md text, with the reason, label, and first line filled in', () => {
+  it('is the notes.md text, with the reason and both labels filled in', () => {
     const res = run(create(`--label ${LABEL} --body "${LINE}"`));
     expect(res.reason).toBe(
       `before-issue-create: ${noteText()
         .replace('{why}', 'its body is inline')
         .replaceAll('{label}', LABEL)
-        .replace('{line}', LINE)}`
+        .replaceAll('{approved}', APPROVED)}`
     );
   });
 
@@ -169,9 +185,9 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the reason text', () => {
   it('does not fill a placeholder twice: a reason holding {label} stays as written', () => {
     // The body-file name lands in the reason through $why; a name that reads like a placeholder
     // must not be filled in a second time.
-    const res = run(create(`--label ${LABEL} --body-file {line}.md`));
-    expect(res.reason).toContain("the body file '{line}.md' is missing");
-    expect(res.reason).not.toContain("'Owner-approved: yes'.md");
+    const res = run(create(`--label ${LABEL} --body-file {approved}.md`));
+    expect(res.reason).toContain("the body file '{approved}.md' is missing");
+    expect(res.reason).not.toContain(`'${APPROVED}'.md`);
   });
 });
 
@@ -323,7 +339,7 @@ maybeDescribe(
         run('gh api -X POST repos/o/r/issues -f title=T').reason,
       ];
       for (const r of reasons) {
-        expect(r).toContain('This command names issue creation, so it is judged as a filing:');
+        expect(r).toContain('This command was judged as a filing or a label add:');
         expect(r).not.toContain('this call files an issue');
       }
     });
@@ -386,9 +402,10 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: gh api reads its own call'
 maybeDescribe('.claude/hooks/before-issue-create.ps1: the body file', () => {
   const withFile = (f) => create(`--label ${LABEL} --body-file ${f}`);
 
-  it('requires the line to be the first line, with CRLF and a BOM allowed', () => {
+  it('judges only the first line for a claim, in any case, with CRLF and a BOM', () => {
     expect(decisions([withFile('ok.md'), withFile('bom.md')])).toEqual(['allow', 'allow']);
-    expect(run(withFile('late.md')).decision).toBe('deny');
+    expect(run(withFile('late.md')).decision).toBe('allow');
+    expect(decisions([withFile('bad.md'), withFile('bomclaim.md')])).toEqual(['deny', 'deny']);
   });
 
   it('reads no more than 1 MB of a large file', () => {
@@ -581,11 +598,11 @@ maybeDescribe(
     const api = (fields, head = 'gh api repos/{owner}/{repo}/issues') => `${head} ${fields}`;
     const ok = `-f title=T -F body=@ok.md -f 'labels[]=${LABEL}'`;
 
-    it('passes the REST command the cloud session uses', () => {
-      expect(
-        run(api(`-f title=T -F body=@ok.md -f 'labels[]=${LABEL}' -f 'labels[]=owner-approved'`))
-          .decision
-      ).toBe('allow');
+    it('passes the REST command the cloud session uses, and denies it with owner-approved', () => {
+      expect(run(api(`-f title=T -F body=@ok.md -f 'labels[]=${LABEL}'`)).decision).toBe('allow');
+      const res = run(api(`${ok} -f 'labels[]=${APPROVED}'`));
+      expect(res.decision).toBe('deny');
+      expect(res.reason).toContain(APPROVED);
     });
 
     it('passes the other ways to write the same fields', () => {
@@ -626,9 +643,9 @@ maybeDescribe(
       }
     });
 
-    it('denies a body file whose first line is wrong, missing, or not a regular file', () => {
+    it('denies a body file that claims approval, is missing, or is not a regular file', () => {
       const bad = run(api(`-f title=T -F body=@bad.md -f 'labels[]=${LABEL}'`));
-      expect(bad.reason).toContain("first line of 'bad.md' is not 'Owner-approved: yes'");
+      expect(bad.reason).toContain("first line of 'bad.md' claims the owner's approval");
       const gone = run(api(`-f title=T -F body=@nope.md -f 'labels[]=${LABEL}'`));
       expect(gone.reason).toContain('nope.md');
       expect(run(api(`-f title=T -F body=@sub -f 'labels[]=${LABEL}'`)).decision).toBe('deny');
@@ -760,3 +777,64 @@ maybeDescribe(
     });
   }
 );
+
+maybeDescribe('.claude/hooks/before-issue-create.ps1: adding owner-approved', () => {
+  it('denies every add of the label an agent could type', () => {
+    for (const cmd of [
+      `gh issue edit 5 --add-label ${APPROVED}`,
+      `gh issue edit 5 -R o/r --add-label bug,${APPROVED}`,
+      `gh issue edit 5 --add-label=${APPROVED}`,
+      `& "C:\\Program Files\\GitHub CLI\\gh.exe" issue edit 5 --add-label ${APPROVED}`,
+      `gh api repos/o/r/issues/5/labels -f 'labels[]=${APPROVED}'`,
+      `gh api -X PUT repos/o/r/issues/5/labels -f 'labels[]=${APPROVED}'`,
+      `gh api -X PATCH repos/o/r/issues/5 -f 'labels[]=${APPROVED}'`,
+      `gh api graphql -f query='mutation { addLabelsToLabelable(input: {labelIds: ["${APPROVED}"]}) { clientMutationId } }'`,
+    ]) {
+      const res = run(cmd);
+      expect(res.decision, cmd).toBe('deny');
+      expect(res.reason, cmd).toContain(APPROVED);
+    }
+  });
+
+  it('allows removing it, reading it, and adding other labels', () => {
+    expect(
+      decisions([
+        `gh issue edit 5 --remove-label ${APPROVED}`,
+        `gh api -X DELETE repos/o/r/issues/5/labels/${APPROVED}`,
+        `gh issue list --label ${APPROVED}`,
+        `gh search issues --owner o --label ${APPROVED} --state open`,
+        `gh api 'repos/o/r/issues?labels=${APPROVED}'`,
+        `gh issue edit 5 --add-label hard`,
+        `gh api repos/o/r/issues/5/labels -f 'labels[]=hard'`,
+      ])
+    ).toEqual(Array(7).fill('allow'));
+  });
+});
+
+maybeDescribe('.claude/hooks/before-issue-create.ps1: running the approve hook', () => {
+  it('denies a command that runs or names approve.ps1 outside git', () => {
+    for (const cmd of [
+      `echo '{}' | powershell -NoProfile -File .claude/hooks/approve.ps1`,
+      `pwsh -File "$env:CLAUDE_PROJECT_DIR/.claude/hooks/approve.ps1"`,
+      `& ".claude\\hooks\\Approve.ps1"`,
+      `git status && cat .claude/hooks/approve.ps1`,
+      `git log -1 $(powershell -NoProfile -File .claude/hooks/approve.ps1 < fake.json)`,
+      `git -c alias.a='!sh -c "pwsh -File .claude/hooks/approve.ps1 < f.json"' a`,
+      'git log `pwsh -File .claude/hooks/approve.ps1`',
+    ]) {
+      const res = run(cmd);
+      expect(res.decision, cmd).toBe('deny');
+      expect(res.reason, cmd).toContain('approve.ps1');
+    }
+  });
+
+  it('allows git commands that name it, and other hooks', () => {
+    expect(
+      decisions([
+        'git add .claude/hooks/approve.ps1',
+        'git diff origin/main -- .claude/hooks/approve.ps1',
+        'pwsh -File .claude/hooks/unlock-edits.ps1',
+      ])
+    ).toEqual(['allow', 'allow', 'allow']);
+  });
+});

@@ -2,7 +2,7 @@
 
 ## before-issue-create
 
-This command names issue creation, so it is judged as a filing: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>, where the file's first line is '{line}'. The owner's yes comes first: send the hand-off (pipeline/steps/05-hand-off.md) and wait for it. Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
+This command was judged as a filing or a label add: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>. Only the owner's typed /approve adds {approved}: file without it, add the issue to waiting.json, and ask (pipeline/steps/05-hand-off.md). Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
 
 ## edit-gate
 
@@ -32,10 +32,12 @@ hard-run: This run is hard (.run_state/hard). Tag it [{role} hard].
 foreground: Spawn reviewers with run_in_background false; several in one message still run in parallel.
 wrong-seat: The {tag} seat is model {alias}, effort {effort}. You passed model {model}, effort {passed}.
 unreadable: The spawn input was unreadable. Try again.
+no-issue: Name the one issue as #<N>, or <owner>/<name>#<N>, in the description.
+not-approved: Issue #{number} is not approved{why}. It needs the owner's typed /approve first.
 
 ## session-greeting
 
-hello: Hooks here nudge; only issue filing, agent spawns, and edits and non-read-only commands before the owner types /build are denied. Seats: seats.json.
+hello: Hooks here nudge; only issue filing, adding owner-approved, agent spawns, and edits and non-read-only commands before the owner types /build are denied. Seats: seats.json.
 githooks: Git hooks: commit-msg is {commitMsg}, pre-commit is {preCommit}.
 githooks-kept: A custom core.hooksPath is kept.
 githooks-missing: No .githooks/commit-msg here.

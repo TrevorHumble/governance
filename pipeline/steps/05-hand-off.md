@@ -1,19 +1,19 @@
 # 05-hand-off
 
-You are about to ask for the owner's time, so make it a short ask. Send one message and wait.
+You are about to ask for the owner's time, so make it a short ask. File the draft, send one message, and wait.
 
 ## What the message holds
 
 Read the `writing-issues`, `writing-user-stories`, and `writing-acceptance-criteria` skills now, and draft it with them. Send, in this order and in plain words:
 
 ```
-Title: ...
+#<N> Title: ...
 Story: As ..., I want ..., so that ...
 Done when:
 1. ...
 Hard: yes or no, and why
 Token change: a number, or "none". Cut proposed: none, what and why, or a request to raise the cap.
-Ok to file?
+Type /approve to approve.
 ```
 
 Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it.
@@ -28,16 +28,26 @@ In a child repo (`governanceHome` is not `self` in `repo-profile.json`), skip th
 
 An approved cut or cap request becomes a Done-when line, so it gets checked like any other.
 
+## File, then send
+
+If `pipeline/steps/09-pr-review.md` calls for the architecture specialist, run it (`reviewing-architecture`, on the `code-reviewer` seat) on the plan first. Its briefing carries the plan, a neutral summary of the components it adds or changes, the repo's top-level listing (`git ls-tree --name-only HEAD`), and the `DESIGN.md` records the change touches, quoted, if the file is present. Put their notes in the body under "Specialist notes". Fix any `blocker:` there before you file.
+
+```
+gh issue create --title "<title>" --body-file <file> --label needs-issue-review
+```
+
+A hard issue is filed with `--label hard` as well. The body carries the `Hard:` line as you wrote it; write `Hard: no (owner)` only when the owner said "not hard" themselves. Never file with `owner-approved` or start the body with an approval line: the `before-issue-create` hook refuses both (`WHAT-IT-CHECKS.md`).
+
+Then add `{"repo": "<owner>/<name>", "number": <N>, "title": "<title>"}` to `.run_state/waiting.json` under the project root, not the worktree, and send the message.
+
 ## After you send
 
-Send the message, then stop. Nothing is filed until the owner says yes. Only the word "approve", or a plain yes to "Ok to file?", counts. Praise is not approval. After it, run to the merged PR with no check-ins, except an owner call a later step names.
+Stop. A chat yes, "ok to file", "approve" and praise do not approve. Only the owner's typed /approve does: its hook adds `owner-approved` to every waiting issue. Then step 06.
 
-If the owner says no or asks for a change, revise and resend the whole message. Nothing is filed meanwhile.
+If the owner asks for a change, edit the issue body and resend the whole message.
 
 In the governance home, ask a second time only if the measured token change differs a lot from the number you gave. A small difference needs no second ask.
 
 ## When approved words change later
 
-If a criterion changes after the owner said yes, the changed criteria go back to the owner and to one reviewer on the `issue-reviewer` seat. The build does not rely on them until the owner has said yes and the reviewer has passed them.
-
-The yes is recorded at step 06.
+If a criterion changes after the owner's /approve, remove the label (`gh issue edit <N> --remove-label owner-approved`), add the issue back to `waiting.json`, and resend the whole message. The changed criteria then go to one reviewer on the `issue-reviewer` seat, which cannot start until the owner has typed /approve again.

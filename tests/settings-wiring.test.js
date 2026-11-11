@@ -67,6 +67,17 @@ describe('.claude/settings.json hook wiring', () => {
     );
   });
 
+  it('runs approve.ps1 only on /approve, and judges filings on Bash and PowerShell', () => {
+    const approve = settings.hooks.UserPromptExpansion.find((g) =>
+      (g.hooks || []).some((h) => /hooks\/approve\.ps1/.test(String(h.command)))
+    );
+    expect(approve.matcher).toBe('^approve$');
+    const filing = settings.hooks.PreToolUse.find((g) =>
+      (g.hooks || []).some((h) => String(h.command).includes('before-issue-create.ps1'))
+    );
+    expect(filing.matcher.split('|').sort()).toEqual(['Bash', 'PowerShell']);
+  });
+
   it('finds a hook file that is wired twice', () => {
     const p = wiringProblems(wiring('a.ps1', 'a.ps1'), ['a.ps1', LIBRARY]);
     expect(p.notOnce).toEqual(['a.ps1']);
