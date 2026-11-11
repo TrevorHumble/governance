@@ -1,18 +1,23 @@
-# before-issue-create: a reminder, not a guarantee: an agent can type the Owner-approved line.
+# before-issue-create: a reminder, not a guarantee. It judges filings and adds of the owner-approved
+# label, on Bash and PowerShell. Only the approve hook, fired by the owner's typed /approve, adds that
+# label: a filing that carries it or whose body's first line starts with Owner-approved: is denied,
+# and so is a gh issue edit --add-label naming it or a gh api call naming it that writes (anything
+# but a plain read or a DELETE), and any command that names approve.ps1 outside a git command. A
+# label held in a variable, or approve.ps1 run from another program, is not seen.
 # It fails closed: text cannot be reliably told from a command, so any command text that reads like
 # a create is judged as one, mentions included.
 # Covered, and judged the same way: gh issue create, and a gh api POST to repos/<o>/<r>/issues (the
 # only way to file in a cloud session, where gh issue create is refused). Either passes only with
 # the needs-issue-review label (for gh api: -f/-F/--field/--raw-field 'labels[]=...') and a body from
-# a regular file whose first line is Owner-approved: yes (for gh api: -F or --field body=@<file>).
+# a regular file (for gh api: -F or --field body=@<file>).
 # An inline body, a missing label, a second create in the same command, a body from stdin or
 # --input, and anything it cannot parse are denied. For gh api that includes a field word it cannot
 # read (no =, a variable, a command substitution, backticks, $'...' quoting), a second body key of
 # any spelling, and an endpoint built from a variable when the call sends any field. A ?query or
 # #fragment on the endpoint is ignored when it is matched.
-# Not covered: a loop that runs one create several times, a cd earlier in the same command, gh api
-# graphql, curl or other HTTP clients, gh aliases, and non-Bash tools (such as a GitHub connector's
-# issue tool) that this hook never sees. Also not covered: a command longer than 10000 characters
+# Not covered: a loop that runs one create several times, a cd earlier in the same command, a create
+# through gh api graphql, curl or other HTTP clients, gh aliases, and tools other than Bash and
+# PowerShell (such as a GitHub connector's issue tool) that this hook never sees. Also not covered: a command longer than 10000 characters
 # or naming gh more than 12 times is denied unread (a cap on the work the hook does), and a
 # --body-file that is not a regular file (a pipe, a device) is denied unopened, so a legitimate use
 # of either has to be split or rewritten. For gh api, only the fields -f/-F/--field/--raw-field set
@@ -23,7 +28,11 @@
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
-$FIRST_LINE = 'Owner-approved: yes'
+$APPROVED = 'owner-approved'
+# A body may not claim the owner's approval; only the approve hook records it, as a label. Agents
+# once typed this line to file at all (#175), and a stale reader could still trust it.
+$CLAIM = '^Owner-approved:'
+$RUNS_APPROVE = '(?<![\w-])approve\.ps1'
 $MAX_READ = 1MB
 # Caps on the work done, so a pathological command cannot stall the hook past its timeout.
 $MAX_TEXT = 10000
@@ -37,6 +46,7 @@ try { . (Join-Path $PSScriptRoot 'hook-core.ps1'); $coreLoaded = $true } catch {
 $GH = '(?<![\w.-])(?i:gh(?:\.exe)?)["'']?(?:\s|\\\r?\n)+'
 $CREATE = $GH + 'issue(?:\s|\\\r?\n)+(?:(?:-R|--repo)(?:=|\s+)(?:"[^"]*"|''[^'']*''|\S+)\s+)?(?:create|new)(?![\w-])'
 $API = $GH + 'api(?=\s)'
+$EDIT = $GH + 'issue(?:\s|\\\r?\n)+(?:(?:-R|--repo)(?:=|\s+)(?:"[^"]*"|''[^'']*''|\S+)\s+)?edit(?![\w-])'
 # Matched after any ?query or #fragment is cut off the word.
 $ISSUES_ENDPOINT = '^(?:https?://[^/]+(?:/api/v3)?)?/?repos/[^/]+/[^/]+/issues/?$'
 
@@ -106,7 +116,7 @@ function Test-IssuesApiPost([string[]]$words) {
 function Get-Reason($why) {
   $note = if ($coreLoaded) { Get-Note 'before-issue-create' } else { $null }
   if (-not $note) { return $FALLBACK }
-  return Fill $note @{ why = $why; label = $LABEL; line = $FIRST_LINE }
+  return Fill $note @{ why = $why; label = $LABEL; approved = $APPROVED }
 }
 
 # A regular file, after following a link. A pipe or a device is not, and opening one can block.
@@ -137,7 +147,7 @@ try {
   # The command reading lives in hook-core.ps1, so without it a command that names a create or a
   # gh api call is denied unread.
   if (-not $coreLoaded) {
-    if ($text -match $CREATE -or $text -match $API) { Write-Deny 'the hook could not load hook-core.ps1 to read it' }
+    if ($text -match $CREATE -or $text -match $API -or $text -match $EDIT -or $text -imatch $RUNS_APPROVE) { Write-Deny 'the hook could not load hook-core.ps1 to read it' }
     exit 0
   }
   if ($text.Length -gt $MAX_TEXT) { Write-Deny "its text is longer than $MAX_TEXT characters, too long to check"; exit 0 }
@@ -158,6 +168,42 @@ try {
       }
     }
   }
+  # The approve hook runs on the owner's typed /approve, never from a shell. A command that names
+  # it is denied unless that part of the command is a plain git command (add, diff): one with no
+  # substitution, redirect, history expansion or -c, any of which could still start the script.
+  foreach ($seg in ($text -split '[;&|\r\n]')) {
+    $plainGit = $seg.Trim() -cmatch '^git\s' -and $seg -notmatch '[$`()<>!]' -and $seg -cnotmatch '\s-c(\s|$)'
+    if ($seg -imatch $RUNS_APPROVE -and -not $plainGit) {
+      Write-Deny "it names approve.ps1, which only the owner's typed /approve runs"; exit 0
+    }
+  }
+
+  # Only the approve hook adds owner-approved. A gh issue edit that adds it, or a gh api call that
+  # names it and is not a plain read or a DELETE (a labels POST or PUT, an issue PATCH, graphql),
+  # is denied. Removing the label stays allowed.
+  foreach ($m in [regex]::Matches($text, $EDIT)) {
+    $words = Get-SegmentWords $text ($m.Index + $m.Length)
+    for ($i = 0; $i -lt $words.Count; $i++) {
+      $name, $val = $words[$i] -split '=', 2
+      if ($name -cne '--add-label') { continue }
+      if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
+      if (@($val -split ',' | ForEach-Object { $_.Trim() }) -icontains $APPROVED) {
+        Write-Deny "it adds the $APPROVED label"; exit 0
+      }
+    }
+  }
+  foreach ($words in $apiCalls) {
+    if (-not ($words | Where-Object { $_ -imatch [regex]::Escape($APPROVED) })) { continue }
+    $call = Read-ApiCall $words
+    $method = $null
+    for ($i = 0; $i -lt $words.Count; $i++) {
+      if ($words[$i] -cmatch '^(?:-X|--method=?)(.*)$') { $method = if ($Matches[1]) { $Matches[1] } else { $words[++$i] } }
+    }
+    $sends = $call.Fields.Count -gt 0 -or $call.Input
+    $read = ($method -ieq 'GET' -or $method -ieq 'DELETE') -or (-not $method -and -not $sends)
+    if (-not $read) { Write-Deny "it names the $APPROVED label in a gh api call that writes"; exit 0 }
+  }
+
   $apiPosts = @(); $apiPostWords = $null
   foreach ($words in $apiCalls) { if (Test-IssuesApiPost $words) { $apiPosts += 1; $apiPostWords = $words } }
   if ($creates.Count + $apiPosts.Count -eq 0) { exit 0 }
@@ -173,6 +219,7 @@ try {
   }
   if ($facts.Inline) { Write-Deny 'its body is inline'; exit 0 }
   if ($facts.Labels -cnotcontains $LABEL) { Write-Deny "it has no $LABEL label"; exit 0 }
+  if ($facts.Labels -icontains $APPROVED) { Write-Deny "it files with the $APPROVED label"; exit 0 }
   if (-not $facts.File -or $facts.File -eq '-') { Write-Deny 'its body does not come from a file (stdin cannot be read here)'; exit 0 }
 
   $path = $facts.File -replace '^~(?=[/\\]|$)', $HOME
@@ -188,8 +235,8 @@ try {
     $count = $stream.Read($buffer, 0, $buffer.Length)
   } finally { $stream.Dispose() }
   $head = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $count).TrimStart([char]0xFEFF)
-  if (($head -split "`n", 2)[0].TrimEnd("`r") -cne $FIRST_LINE) {
-    Write-Deny "the first line of '$($facts.File)' is not '$FIRST_LINE'"
+  if (($head -split "`n", 2)[0].TrimEnd("`r") -imatch $CLAIM) {
+    Write-Deny "the first line of '$($facts.File)' claims the owner's approval"
   }
   exit 0
 } catch {

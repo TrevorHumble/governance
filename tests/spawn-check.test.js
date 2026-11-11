@@ -369,3 +369,116 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: project root and failure modes', (
     }
   });
 });
+
+maybeDescribe('.claude/hooks/spawn-check.ps1: the approval gate on the issue review', () => {
+  let gated;
+  const stubWith = (body) => {
+    const stub = path.join(gated, 'gh-stub.ps1');
+    fs.writeFileSync(stub, body);
+    process.env.GOVERNANCE_GH = stub;
+  };
+  const review = (description = '[issue-reviewer] review issue #42') =>
+    run(spawn(description, 'opus', 'medium'), { project: gated });
+
+  beforeAll(() => {
+    gated = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-gate-'));
+    fs.writeFileSync(path.join(gated, 'seats.json'), JSON.stringify(SEATS));
+    fs.mkdirSync(path.join(gated, '.claude'));
+    fs.writeFileSync(
+      path.join(gated, '.claude', 'settings.json'),
+      JSON.stringify({
+        hooks: { UserPromptExpansion: [{ hooks: [{ command: '.claude/hooks/approve.ps1' }] }] },
+      })
+    );
+    spawnSync('git', ['init', '-q', gated]);
+    spawnSync('git', ['-C', gated, 'remote', 'add', 'origin', 'https://github.com/o/r.git']);
+  });
+  afterEach(() => delete process.env.GOVERNANCE_GH);
+  afterAll(() => fs.rmSync(gated, { recursive: true, force: true }));
+
+  it('lets an approved issue through, reading its labels from the origin repo', () => {
+    stubWith(
+      "if (($args -join ' ') -cne 'api repos/o/r/issues/42 --jq .labels[].name') { exit 1 }\n" +
+        "Write-Output 'bug'\nWrite-Output 'owner-approved'\n"
+    );
+    expect(review()).toBeNull();
+  });
+
+  it('denies an issue without the label, and says it needs /approve', () => {
+    stubWith("Write-Output 'needs-issue-review'\n");
+    const out = review();
+    expect(out.permissionDecision).toBe('deny');
+    expect(out.permissionDecisionReason).toContain('#42 is not approved');
+    expect(out.permissionDecisionReason).toContain('/approve');
+  });
+
+  it('denies a spawn that names no issue', () => {
+    stubWith("Write-Output 'owner-approved'\n");
+    expect(review('[issue-reviewer] review the issue').permissionDecisionReason).toContain('#<N>');
+  });
+
+  it('denies when the lookup fails or runs past 5 seconds', () => {
+    stubWith('exit 1\n');
+    expect(review().permissionDecisionReason).toContain('could not be read');
+    stubWith("Start-Sleep -Seconds 8\nWrite-Output 'owner-approved'\n");
+    const started = Date.now();
+    expect(review().permissionDecision).toBe('deny');
+    expect(Date.now() - started).toBeLessThan(8000);
+  });
+
+  it('does not gate other roles, or a repo whose settings do not wire approve.ps1', () => {
+    stubWith('exit 1\n');
+    expect(
+      run(spawn('[code-reviewer] review #42', 'opus', 'medium'), { project: gated })
+    ).toBeNull();
+    expect(run(spawn('[issue-reviewer] review #42', 'opus', 'medium'))).toBeNull();
+  });
+});
+
+maybeDescribe('.claude/hooks/spawn-check.ps1: which issue the gate reads', () => {
+  let gated;
+  beforeAll(() => {
+    gated = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-which-'));
+    fs.writeFileSync(path.join(gated, 'seats.json'), JSON.stringify(SEATS));
+    fs.mkdirSync(path.join(gated, '.claude'));
+    fs.writeFileSync(path.join(gated, '.claude', 'settings.json'), '"hooks/approve.ps1"');
+    spawnSync('git', ['init', '-q', gated]);
+    const stub = path.join(gated, 'gh-stub.ps1');
+    // Approved only when the call is exactly the expected one for o/r#42 or x/y#7.
+    fs.writeFileSync(
+      stub,
+      "$a = $args -join ' '\n" +
+        "if ($a -ceq 'api repos/o/r/issues/42 --jq .labels[].name' -or $a -ceq 'api repos/x/y/issues/7 --jq .labels[].name') { Write-Output 'owner-approved'; exit 0 }\n" +
+        "Write-Output 'owner-approved'\nexit 3\n"
+    );
+    process.env.GOVERNANCE_GH = stub;
+  });
+  afterAll(() => {
+    delete process.env.GOVERNANCE_GH;
+    fs.rmSync(gated, { recursive: true, force: true });
+  });
+  const review = (d) => run(spawn(d, 'opus', 'medium'), { project: gated });
+  const setOrigin = (url) => {
+    spawnSync('git', ['-C', gated, 'remote', 'remove', 'origin']);
+    spawnSync('git', ['-C', gated, 'remote', 'add', 'origin', url]);
+  };
+
+  it('reads an owner/name#N from the description over the origin repo', () => {
+    setOrigin('https://github.com/a/b.git');
+    expect(review('[issue-reviewer] review x/y#7')).toBeNull();
+    expect(review('[issue-reviewer] review #7').permissionDecision).toBe('deny');
+  });
+
+  it('denies a description that names two issues', () => {
+    setOrigin('https://github.com/o/r.git');
+    expect(review('[issue-reviewer] after #12, review #42').permissionDecisionReason).toContain(
+      'one issue'
+    );
+    expect(review('[issue-reviewer] review #42, #42 again')).toBeNull();
+  });
+
+  it('denies an origin that would add words to the gh command line', () => {
+    setOrigin('https://github.com/o/r --jq "\\"owner-approved\\"" -H "x:');
+    expect(review('[issue-reviewer] review #42').permissionDecision).toBe('deny');
+  });
+});

@@ -28,7 +28,7 @@
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
@@ -106,6 +106,17 @@
             "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/unlock-edits.ps1\"",
             "shell": "powershell",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "^approve$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR/.claude/hooks/approve.ps1\"",
+            "shell": "powershell",
+            "timeout": 120
           }
         ]
       }
