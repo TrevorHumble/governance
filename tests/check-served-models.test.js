@@ -14,7 +14,26 @@ const { main } = require('../scripts/check-served-models');
 const { roleTag, seatFor, servedModels, checkSpawn, run } = core;
 
 const FIXTURE_SESSION = path.join(__dirname, 'fixtures', 'served-models', 'session');
-const SEATS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'seats.json'), 'utf8'));
+// A fixed seats object, so the cases keep their meaning when the shipped seats change. The CLI gets
+// it as a file through --seats; without --seats it would read the shipped seats.json.
+const SEATS = {
+  roles: {
+    'issue-reviewer': { provider: 'anthropic', model: 'claude-opus-5-5', effort: 'medium' },
+    'code-reviewer': { provider: 'anthropic', model: 'claude-opus-5-5', effort: 'medium' },
+    referee: { provider: 'anthropic', model: 'claude-fable-5-1', effort: 'medium' },
+  },
+  awards: {
+    hard: {
+      'issue-reviewer': { provider: 'anthropic', model: 'claude-fable-5-1', effort: 'medium' },
+      'code-reviewer': { provider: 'anthropic', model: 'claude-fable-5-1', effort: 'medium' },
+      referee: { provider: 'anthropic', model: 'claude-opus-5-5', effort: 'high' },
+    },
+  },
+};
+const SEATS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'served-models-seats-'));
+const SEATS_FILE = path.join(SEATS_DIR, 'seats.json');
+fs.writeFileSync(SEATS_FILE, JSON.stringify(SEATS));
+afterAll(() => fs.rmSync(SEATS_DIR, { recursive: true, force: true }));
 
 const turn = (model) =>
   JSON.stringify({ type: 'assistant', message: { role: 'assistant', model } });
@@ -212,7 +231,7 @@ describe('run', () => {
 
 describe('the CLI on real transcripts', () => {
   it('reports the real, untagged spawns as untagged and exits 1', () => {
-    const { lines, exitCode } = main({ argv: [FIXTURE_SESSION] });
+    const { lines, exitCode } = main({ argv: [FIXTURE_SESSION, '--seats', SEATS_FILE] });
     expect(exitCode).toBe(1);
     const untagged = lines.filter((l) => l.startsWith('check-served-models: untagged, '));
     expect(untagged).toHaveLength(3);
@@ -222,7 +241,7 @@ describe('the CLI on real transcripts', () => {
   });
 
   it('accepts the subagents folder itself', () => {
-    const r = main({ argv: [path.join(FIXTURE_SESSION, 'subagents')] });
+    const r = main({ argv: [path.join(FIXTURE_SESSION, 'subagents'), '--seats', SEATS_FILE] });
     expect(r.lines.at(-1)).toContain('3 subagent(s)');
   });
 
@@ -246,7 +265,7 @@ describe('the CLI on real transcripts', () => {
       retag('a328c05dadefa7e08', '[issue-reviewer] seat ratchet');
       retag('a1442c218df15290d', '[referee hard] x');
       retag('a7fa399433d9ecf6e', '[code-reviewer] x');
-      const r = main({ argv: [dir] });
+      const r = main({ argv: [dir, '--seats', SEATS_FILE] });
       expect(r.exitCode).toBe(1);
       // issue-reviewer: effort high was asked against a medium seat.
       expect(
@@ -269,11 +288,13 @@ describe('the CLI on real transcripts', () => {
   });
 
   it('fails plainly on a missing directory, a directory with no metas, and a bad seats file', () => {
-    expect(main({ argv: ['/no/such/dir'] }).exitCode).toBe(1);
-    expect(main({ argv: [] }).lines[0]).toContain('usage');
+    expect(main({ argv: ['/no/such/dir', '--seats', SEATS_FILE] }).exitCode).toBe(1);
+    expect(main({ argv: ['--seats', SEATS_FILE] }).lines[0]).toContain('usage');
     const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'served-models-empty-'));
     try {
-      expect(main({ argv: [empty] }).lines[0]).toContain('no agent-*.meta.json');
+      expect(main({ argv: [empty, '--seats', SEATS_FILE] }).lines[0]).toContain(
+        'no agent-*.meta.json'
+      );
       const r = main({ argv: [FIXTURE_SESSION, '--seats', path.join(empty, 'missing.json')] });
       expect(r.lines[0]).toContain('cannot read');
     } finally {
