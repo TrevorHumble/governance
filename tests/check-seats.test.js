@@ -895,29 +895,11 @@ describe('the CLI on temp git repos', () => {
 });
 
 describe('the shipped seats.json', () => {
-  const shipped = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'seats.json'), 'utf8'));
+  // Read through the shared helper, never pinned: a seats-only change must need no test change.
+  const { SHIPPED_SEATS: shipped } = require('./shipped-seats');
 
   it('passes every rule', () => {
     expect(validateSeats(shipped)).toEqual([]);
-  });
-
-  it('seats each role as the owner set on 2026-10-22', () => {
-    const table = Object.fromEntries(
-      Object.entries(shipped.roles).map(([r, s]) => [r, [s.provider, s.model, s.effort]])
-    );
-    expect(table).toEqual({
-      'issue-reviewer': ['anthropic', 'claude-opus-5-5', 'medium'],
-      'code-reviewer': ['anthropic', 'claude-opus-5-5', 'medium'],
-      referee: ['anthropic', 'claude-fable-5-1', 'medium'],
-    });
-    const entry = (model, effort) => ({ provider: 'anthropic', model, effort });
-    expect(shipped.awards).toEqual({
-      hard: {
-        'issue-reviewer': entry('claude-fable-5-1', 'medium'),
-        'code-reviewer': entry('claude-fable-5-1', 'medium'),
-        referee: entry('claude-opus-5-5', 'high'),
-      },
-    });
   });
 
   it('names real files and carries no model ID in shared markdown', () => {

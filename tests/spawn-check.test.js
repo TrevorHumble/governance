@@ -11,7 +11,7 @@ const { PS, launcherMissing, skipTitle } = require('./ps-launcher');
 
 const HOOKS = path.join(__dirname, '..', '.claude', 'hooks');
 const SCRIPT = path.join(HOOKS, 'spawn-check.ps1');
-const REAL_SEATS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'seats.json'), 'utf8'));
+const { SHIPPED_SEATS: REAL_SEATS } = require('./shipped-seats');
 
 // A fixed seats file, so the cases do not move when the shipped seats change.
 const SEATS = {
@@ -96,7 +96,7 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: a spawn that matches its seat', ()
   it('matches every seat and award in the shipped seats.json', () => {
     const real = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-real-'));
     try {
-      fs.copyFileSync(path.join(__dirname, '..', 'seats.json'), path.join(real, 'seats.json'));
+      fs.writeFileSync(path.join(real, 'seats.json'), JSON.stringify(REAL_SEATS));
       for (const [name, seat] of Object.entries(REAL_SEATS.roles)) {
         const alias = seat.model.split('-')[1];
         expect(run(spawn(`[${name}] x`, alias, seat.effort), { project: real })).toBeNull();
