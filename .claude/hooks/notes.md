@@ -2,7 +2,7 @@
 
 ## before-issue-create
 
-This command was judged as a filing or a label add: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>. Only the owner's typed /approve adds {approved}: file without it, add the issue to waiting.json, and ask (pipeline/steps/05-hand-off.md). Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
+This command was judged as a filing or a label add: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>. File without {approved}, send the hand-off ending "Approve?", and after the owner's approve run gh issue edit <N> --add-label {approved}, alone (pipeline/steps/05-hand-off.md). Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
 
 ## edit-gate
 
@@ -33,7 +33,7 @@ foreground: Spawn reviewers with run_in_background false; several in one message
 wrong-seat: The {tag} seat is model {alias}, effort {effort}. You passed model {model}, effort {passed}.
 unreadable: The spawn input was unreadable. Try again.
 no-issue: Name the one issue as #<N>, or <owner>/<name>#<N>, in the description.
-not-approved: Issue #{number} is not approved{why}. It needs the owner's typed /approve first.
+not-approved: Issue #{number} is not approved{why}. It needs the owner's approve first (pipeline/steps/05-hand-off.md).
 
 ## session-greeting
 

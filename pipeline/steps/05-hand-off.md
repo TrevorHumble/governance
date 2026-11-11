@@ -13,8 +13,10 @@ Done when:
 1. ...
 Hard: yes or no, and why
 Token change: a number, or "none". Cut proposed: none, what and why, or a request to raise the cap.
-Type /approve to approve.
+Approve?
 ```
+
+The first line must start `#<N> Title:` and the message must end `Approve?`: that is how the hook knows what the owner's yes covers. Several issues in one hand-off each get their own `#<N> Title:` line.
 
 Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it.
 
@@ -38,11 +40,11 @@ gh issue create --title "<title>" --body-file <file> --label needs-issue-review
 
 A hard issue is filed with `--label hard` as well. The body carries the `Hard:` line as you wrote it; write `Hard: no (owner)` only when the owner said "not hard" themselves. Never file with `owner-approved` or start the body with an approval line: the `before-issue-create` hook refuses both (`WHAT-IT-CHECKS.md`).
 
-Then add `{"repo": "<owner>/<name>", "number": <N>, "title": "<title>"}` to `.run_state/waiting.json` under the project root, not the worktree, and send the message.
+Then send the message.
 
 ## After you send
 
-Stop. A chat yes, "ok to file", "approve" and praise do not approve. Only the owner's typed /approve does: its hook adds `owner-approved` to every waiting issue. Then step 06.
+Stop. Only a reply that is "approve" (or a near spelling) approves; "ok to file", a question and praise do not. After it, run `gh issue edit <N> --add-label owner-approved` once per issue in the hand-off, alone in its command. The `before-issue-create` hook checks the reply and shows the owner one `Approved:` line per issue; say nothing more about it. If the hook refuses, ask again. Then step 06.
 
 If the owner asks for a change, edit the issue body and resend the whole message.
 
@@ -50,4 +52,4 @@ In the governance home, ask a second time only if the measured token change diff
 
 ## When approved words change later
 
-If a criterion changes after the owner's /approve, remove the label (`gh issue edit <N> --remove-label owner-approved`), add the issue back to `waiting.json`, and resend the whole message. The changed criteria then go to one reviewer on the `issue-reviewer` seat, which cannot start until the owner has typed /approve again.
+If a criterion changes after the owner's approve, remove the label (`gh issue edit <N> --remove-label owner-approved`) and resend the whole message. The changed criteria then go to one reviewer on the `issue-reviewer` seat, which cannot start until the owner has approved again.

@@ -130,7 +130,7 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the one accepted form', ()
     const res = run(create(`--label ${LABEL} --body "${LINE}"`));
     expect(res.event).toBe('PreToolUse');
     expect(res.reason).toContain(`gh issue create --label ${LABEL} --body-file <file>`);
-    expect(res.reason).toContain(`Only the owner's typed /approve adds ${APPROVED}`);
+    expect(res.reason).toContain(`File without ${APPROVED}, send the hand-off ending "Approve?"`);
   });
 });
 
@@ -811,30 +811,130 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: adding owner-approved', ()
   });
 });
 
-maybeDescribe('.claude/hooks/before-issue-create.ps1: running the approve hook', () => {
-  it('denies a command that runs or names approve.ps1 outside git', () => {
-    for (const cmd of [
-      `echo '{}' | powershell -NoProfile -File .claude/hooks/approve.ps1`,
-      `pwsh -File "$env:CLAUDE_PROJECT_DIR/.claude/hooks/approve.ps1"`,
-      `& ".claude\\hooks\\Approve.ps1"`,
-      `git status && cat .claude/hooks/approve.ps1`,
-      `git log -1 $(powershell -NoProfile -File .claude/hooks/approve.ps1 < fake.json)`,
-      `git -c alias.a='!sh -c "pwsh -File .claude/hooks/approve.ps1 < f.json"' a`,
-      'git log `pwsh -File .claude/hooks/approve.ps1`',
+maybeDescribe('.claude/hooks/before-issue-create.ps1: the owner says approve', () => {
+  let repo;
+  let n = 0;
+  const human = (text) => ({
+    type: 'user',
+    uuid: `h-${++n}`,
+    origin: { kind: 'human' },
+    message: { role: 'user', content: text },
+  });
+  const said = (text) => ({
+    type: 'assistant',
+    message: { role: 'assistant', content: [{ type: 'text', text }] },
+  });
+  const toolResult = () => ({
+    type: 'user',
+    message: { role: 'user', content: [{ type: 'tool_result', content: 'ok' }] },
+  });
+  const HANDOFF = '#5 Title: Fix it\nStory: As the owner...\nDone when:\n1. x\nApprove?';
+  const tag = (n2 = 5, r = '') => `gh issue edit ${n2}${r} --add-label ${APPROVED}`;
+
+  // Runs the hook on a tag add with a chat log made of the given entries.
+  function runLog(command, entries, extra = {}) {
+    const log = path.join(repo, `log-${++n}.jsonl`);
+    fs.writeFileSync(log, entries.map((e) => JSON.stringify(e)).join('\n') + '\n');
+    const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', SCRIPT], {
+      input: JSON.stringify({ tool_input: { command }, cwd: repo, transcript_path: log, ...extra }),
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: repo, GOVERNANCE_GH: path.join(repo, 'gh.ps1') },
+    });
+    expect(r.status).toBe(0);
+    const out = JSON.parse((r.stdout || '').trim());
+    return {
+      decision: out.hookSpecificOutput.permissionDecision,
+      shown: out.systemMessage,
+      reason: out.hookSpecificOutput.permissionDecisionReason,
+    };
+  }
+
+  beforeAll(() => {
+    repo = fs.mkdtempSync(path.join(os.tmpdir(), 'before-issue-create-yes-'));
+    spawnSync('git', ['init', '-q', repo]);
+    spawnSync('git', ['-C', repo, 'remote', 'add', 'origin', 'https://github.com/o/r.git']);
+    fs.writeFileSync(path.join(repo, 'gh.ps1'), "Write-Output 'Fix it'\n");
+  });
+  afterAll(() => fs.rmSync(repo, { recursive: true, force: true }));
+  beforeEach(() => fs.rmSync(path.join(repo, '.run_state'), { recursive: true, force: true }));
+
+  it('allows the tag after a typed approve of a hand-off that names it, and shows the line', () => {
+    for (const word of [
+      'approve',
+      'Approved.',
+      'approval',
+      'aprove',
+      'appprove',
+      'yes approve',
+      'ok approved!',
     ]) {
-      const res = run(cmd);
-      expect(res.decision, cmd).toBe('deny');
-      expect(res.reason, cmd).toContain('approve.ps1');
+      fs.rmSync(path.join(repo, '.run_state'), { recursive: true, force: true });
+      const res = runLog(tag(), [human('go'), said(HANDOFF), human(word)]);
+      expect(res.decision, word).toBe('allow');
+      expect(res.shown, word).toBe('Approved: o/r#5 Fix it');
     }
   });
 
-  it('allows git commands that name it, and other hooks', () => {
+  it('refuses anything that is not a plain approve, and says so on screen', () => {
+    for (const word of [
+      'approve?',
+      'improve',
+      'prove',
+      'reprove',
+      'unapproved',
+      'dont approve',
+      'not approved',
+      'approve it now please',
+      'looks good',
+      'yes',
+    ]) {
+      const res = runLog(tag(), [human('go'), said(HANDOFF), human(word)]);
+      expect(res.decision, word).toBe('deny');
+      expect(res.shown, word).toContain('Not approved: o/r#5.');
+    }
+  });
+
+  it('covers only issues with a header line in the hand-off answered', () => {
+    const body = '#5 Title: Fix it\nThis replaces #6 and #7.\nApprove?';
+    expect(runLog(tag(6), [human('go'), said(body), human('approve')]).decision).toBe('deny');
+    const two = '#5 Title: Fix it\n...\n#8 Title: Other\n...\nApprove?';
+    expect(runLog(tag(8), [human('go'), said(two), human('approve')]).decision).toBe('allow');
+    const other = 'o/x#5 Title: Elsewhere\nApprove?';
+    expect(runLog(tag(5), [human('go'), said(other), human('approve')]).decision).toBe('deny');
+    expect(runLog(tag(5, ' -R o/x'), [human('go'), said(other), human('approve')]).decision).toBe(
+      'allow'
+    );
+  });
+
+  it('refuses a message that did not end in Approve?, and an old hand-off', () => {
     expect(
-      decisions([
-        'git add .claude/hooks/approve.ps1',
-        'git diff origin/main -- .claude/hooks/approve.ps1',
-        'pwsh -File .claude/hooks/unlock-edits.ps1',
-      ])
-    ).toEqual(['allow', 'allow', 'allow']);
+      runLog(tag(), [human('go'), said('#5 Title: Fix it\nMerge it?'), human('approve')]).decision
+    ).toBe('deny');
+    const old = [human('go'), said(HANDOFF), human('wait'), said('Sure.'), human('approve')];
+    expect(runLog(tag(), old).decision).toBe('deny');
+  });
+
+  it('tags each issue once per approve, and reads past tool results', () => {
+    const entries = [human('go'), said(HANDOFF), human('approve'), toolResult()];
+    expect(runLog(tag(), entries).decision).toBe('allow');
+    const again = runLog(tag(), entries);
+    expect(again.decision).toBe('deny');
+    expect(again.shown).toContain('Already tagged');
+  });
+
+  it('refuses a subagent, a missing log, two issues, and a second label in one command', () => {
+    const entries = [human('go'), said(HANDOFF), human('approve')];
+    expect(runLog(tag(), entries, { agent_id: 'a1' }).decision).toBe('deny');
+    expect(
+      runLog(tag(), entries, { transcript_path: path.join(repo, 'none.jsonl') }).decision
+    ).toBe('deny');
+    expect(runLog(`gh issue edit 5 6 --add-label ${APPROVED}`, entries).decision).toBe('deny');
+    expect(runLog(`gh issue edit 5 --add-label hard,${APPROVED}`, entries).decision).toBe('deny');
+    expect(runLog(`${tag()} && ${tag()}`, entries).decision).toBe('deny');
+  });
+
+  it('denies a shell command that names a chat log, and allows other commands', () => {
+    expect(run('cat ~/.claude/projects/x/abc.jsonl').decision).toBe('deny');
+    expect(run('git status').decision).toBe('allow');
   });
 });

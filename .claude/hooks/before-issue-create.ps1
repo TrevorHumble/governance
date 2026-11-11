@@ -1,9 +1,12 @@
 # before-issue-create: a reminder, not a guarantee. It judges filings and adds of the owner-approved
-# label, on Bash and PowerShell. Only the approve hook, fired by the owner's typed /approve, adds that
-# label: a filing that carries it or whose body's first line starts with Owner-approved: is denied,
-# and so is a gh issue edit --add-label naming it or a gh api call naming it that writes (anything
-# but a plain read or a DELETE), and any command that names approve.ps1 outside a git command. A
-# label held in a variable, or approve.ps1 run from another program, is not seen.
+# label, on Bash and PowerShell. The label goes on only as gh issue edit <N> [-R owner/name]
+# --add-label owner-approved, alone, when the owner's last typed message (read from the chat log at
+# transcript_path) is an approve and the hand-off it answers has a "#<N> Title:" header for that
+# issue (Test-OwnerYes); the owner then sees "Approved: <repo>#<N> <title>", written here. A filing
+# that carries the label or whose body's first line starts with Owner-approved: is denied, and so
+# is any other add (a gh api write naming it, graphql, two issues), and a shell command naming a
+# chat log under .claude/projects. A label held in a variable, a chat log written with the Write
+# tool, and the log lagging the conversation (denied with "try again") are not covered.
 # It fails closed: text cannot be reliably told from a command, so any command text that reads like
 # a create is judged as one, mentions included.
 # Covered, and judged the same way: gh issue create, and a gh api POST to repos/<o>/<r>/issues (the
@@ -32,7 +35,7 @@ $APPROVED = 'owner-approved'
 # A body may not claim the owner's approval; only the approve hook records it, as a label. Agents
 # once typed this line to file at all (#175), and a stale reader could still trust it.
 $CLAIM = '^Owner-approved:'
-$RUNS_APPROVE = '(?<![\w-])approve\.ps1'
+$TRANSCRIPT = '\.claude[\\/]+projects[\\/][^\s"'']*\.jsonl'
 $MAX_READ = 1MB
 # Caps on the work done, so a pathological command cannot stall the hook past its timeout.
 $MAX_TEXT = 10000
@@ -132,11 +135,136 @@ function Test-RegularFile([string]$path) {
   return ($LASTEXITCODE -eq 0)
 }
 
-function Write-Deny($why) {
+function Write-Deny($why, $shown = $null) {
   $out = [ordered]@{ hookSpecificOutput = [ordered]@{
       hookEventName = 'PreToolUse'; permissionDecision = 'deny'
       permissionDecisionReason = "before-issue-create: $(Get-Reason $why)" } }
+  if ($shown) { $out.systemMessage = $shown }
   Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
+}
+
+# Allows the tag add and puts one line on the owner's screen, written here, not by the model.
+function Write-Allow([string]$shown) {
+  $out = [ordered]@{ systemMessage = $shown; hookSpecificOutput = [ordered]@{
+      hookEventName = 'PreToolUse'; permissionDecision = 'allow' } }
+  Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
+}
+
+function Get-Gh {
+  if ($env:GOVERNANCE_GH) { return $env:GOVERNANCE_GH }
+  $cmd = Get-Command gh -ErrorAction SilentlyContinue
+  if ($cmd) { return $cmd.Source }
+  return 'C:\Program Files\GitHub CLI\gh.exe'
+}
+
+# owner/name of the origin remote of the folder, or $null.
+function Get-OriginRepo($cwd) {
+  if ($cwd -isnot [string]) { return $null }
+  # Windows PowerShell 5.1 throws on a native command's stderr under Stop, so read it under Continue.
+  $ErrorActionPreference = 'Continue'
+  $url = (& git -C $cwd remote get-url origin 2>$null | Select-Object -First 1)
+  if ([string]$url -match 'github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$') { return "$($Matches[1])/$($Matches[2])" }
+  return $null
+}
+
+# The issue's title, read with gh in at most 5 seconds, or '' when it cannot be read.
+function Get-IssueTitle([string]$repo, [string]$number) {
+  try {
+    $gh = Get-Gh
+    $info = New-Object System.Diagnostics.ProcessStartInfo
+    $ghArgs = "api repos/$repo/issues/$number --jq .title"
+    if ($gh -like '*.ps1') {
+      $info.FileName = (Get-Process -Id $PID).Path
+      $info.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$gh`" $ghArgs"
+    } else { $info.FileName = $gh; $info.Arguments = $ghArgs }
+    $info.UseShellExecute = $false; $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true
+    $proc = [System.Diagnostics.Process]::Start($info)
+    $out = $proc.StandardOutput.ReadToEndAsync()
+    if (-not $proc.WaitForExit(5000)) { try { $proc.Kill() } catch { }; return '' }
+    if ($proc.ExitCode -ne 0) { return '' }
+    return ($out.Result -replace '\s+', ' ').Trim()
+  } catch { return '' }
+}
+
+function Get-Distance([string]$a, [string]$b) {
+  # Two rows of the edit-distance table; Windows PowerShell 5.1 cannot parse a 2D index.
+  $prev = @(0..$b.Length)
+  for ($i = 1; $i -le $a.Length; $i++) {
+    $cur = @($i) + @(1..$b.Length | ForEach-Object { 0 })
+    for ($j = 1; $j -le $b.Length; $j++) {
+      $cost = if ($a[$i - 1] -ceq $b[$j - 1]) { 0 } else { 1 }
+      $cur[$j] = [Math]::Min([Math]::Min($prev[$j] + 1, $cur[$j - 1] + 1), $prev[$j - 1] + $cost)
+    }
+    $prev = $cur
+  }
+  return $prev[$b.Length]
+}
+
+# Whether a typed message is a plain yes: one word starting with a, within two letters of approve,
+# approved or approval, optionally after yes, ok or okay. Any ? fails (a question is not a yes).
+function Test-ApproveWords([string]$message) {
+  if ($message -match '\?') { return $false }
+  $words = @(($message.ToLowerInvariant() -replace '[.!]', ' ').Trim() -split '\s+' | Where-Object { $_ })
+  if ($words.Count -eq 2 -and @('yes', 'ok', 'okay') -ccontains $words[0]) { $words = @($words[1]) }
+  if ($words.Count -ne 1) { return $false }
+  $w = $words[0]
+  if ($w -cnotmatch '^a[a-z]*$') { return $false }
+  foreach ($target in 'approve', 'approved', 'approval') { if ((Get-Distance $w $target) -le 2) { return $true } }
+  return $false
+}
+
+# The text of a transcript entry's message: a plain string, or its text blocks joined.
+function Get-EntryText($entry) {
+  $c = $entry.message.content
+  if ($c -is [string]) { return $c }
+  return (@($c | Where-Object { $_.type -ceq 'text' } | ForEach-Object { [string]$_.text }) -join "`n")
+}
+
+# The owner's yes for one issue. @{ Ok; Title } or @{ Ok = $false; Why; Short }. The yes is the last
+# typed message in the chat log (origin.kind human); what it covers is the hand-off it answers: the
+# assistant text since the typed message before it, which must end with "Approve?" and hold a
+# header line "#<N> Title:" (or "owner/name#<N> Title:") for this issue. Each issue is tagged once
+# per yes (.run_state/approvals.log). A subagent never approves.
+function Test-OwnerYes($payload, [string]$repo, [string]$number) {
+  $no = { param($why, $short) @{ Ok = $false; Why = $why; Short = $short } }
+  if ($payload.PSObject.Properties['agent_id'] -and $payload.agent_id) { return & $no 'a subagent cannot approve' 'Only the main session tags, after your approve.' }
+  if ($repo -cnotmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { return & $no 'its repo could not be read as owner/name' 'Its repo could not be read.' }
+  $path = $payload.transcript_path
+  if ($path -isnot [string] -or -not (Test-Path -LiteralPath $path -PathType Leaf)) { return & $no 'the chat log could not be read; try again' 'The chat log could not be read yet.' }
+  $entries = @()
+  foreach ($line in [System.IO.File]::ReadAllLines($path)) {
+    if (-not $line.Trim()) { continue }
+    try { $entries += , ($line | ConvertFrom-Json) } catch { }
+  }
+  $human = @()
+  for ($i = 0; $i -lt $entries.Count; $i++) {
+    $e = $entries[$i]
+    if ($e.type -ceq 'user' -and $e.PSObject.Properties['origin'] -and $e.origin.kind -ceq 'human') { $human += $i }
+  }
+  if ($human.Count -eq 0) { return & $no 'no typed message from the owner is in the chat log yet; try again' 'No message from you is in the log yet.' }
+  $last = $human[-1]
+  if (-not (Test-ApproveWords (Get-EntryText $entries[$last]))) { return & $no 'the owner''s last message is not an approve' 'Your last message was not an approve.' }
+  $from = if ($human.Count -gt 1) { $human[-2] + 1 } else { 0 }
+  $texts = @()
+  for ($i = $from; $i -lt $last; $i++) {
+    if ($entries[$i].type -ceq 'assistant') { $t = Get-EntryText $entries[$i]; if ($t.Trim()) { $texts += $t } }
+  }
+  if ($texts.Count -eq 0 -or $texts[-1].TrimEnd() -cnotmatch 'Approve\?$') { return & $no 'the message the owner answered is not a hand-off ending in "Approve?"' 'The message you answered did not ask Approve?.' }
+  $origin = Get-OriginRepo $payload.cwd
+  $named = $false
+  foreach ($m in [regex]::Matches(($texts -join "`n"), '(?m)^\s*(?:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+))?#([0-9]+) Title:')) {
+    $r = if ($m.Groups[1].Value) { $m.Groups[1].Value } else { $origin }
+    if ($m.Groups[2].Value -ceq $number -and $r -ceq $repo) { $named = $true }
+  }
+  if (-not $named) { return & $no "the hand-off the owner answered has no header line for $repo#$number" 'That issue was not in the hand-off you answered.' }
+  $root = if ($env:CLAUDE_PROJECT_DIR) { $env:CLAUDE_PROJECT_DIR } else { $payload.cwd }
+  $dir = Join-Path $root '.run_state'
+  New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  $log = Join-Path $dir 'approvals.log'
+  $key = "$($entries[$last].uuid) $repo#$number"
+  if ((Test-Path -LiteralPath $log) -and (@(Get-Content -LiteralPath $log) -ccontains $key)) { return & $no 'this yes already tagged that issue' 'Already tagged on this approve.' }
+  Add-Content -LiteralPath $log -Value $key -Encoding utf8
+  return @{ Ok = $true; Title = (Get-IssueTitle $repo $number) }
 }
 
 try {
@@ -147,7 +275,7 @@ try {
   # The command reading lives in hook-core.ps1, so without it a command that names a create or a
   # gh api call is denied unread.
   if (-not $coreLoaded) {
-    if ($text -match $CREATE -or $text -match $API -or $text -match $EDIT -or $text -imatch $RUNS_APPROVE) { Write-Deny 'the hook could not load hook-core.ps1 to read it' }
+    if ($text -match $CREATE -or $text -match $API -or $text -match $EDIT -or $text -imatch $TRANSCRIPT) { Write-Deny 'the hook could not load hook-core.ps1 to read it' }
     exit 0
   }
   if ($text.Length -gt $MAX_TEXT) { Write-Deny "its text is longer than $MAX_TEXT characters, too long to check"; exit 0 }
@@ -168,29 +296,41 @@ try {
       }
     }
   }
-  # The approve hook runs on the owner's typed /approve, never from a shell. A command that names
-  # it is denied unless that part of the command is a plain git command (add, diff): one with no
-  # substitution, redirect, history expansion or -c, any of which could still start the script.
-  foreach ($seg in ($text -split '[;&|\r\n]')) {
-    $plainGit = $seg.Trim() -cmatch '^git\s' -and $seg -notmatch '[$`()<>!]' -and $seg -cnotmatch '\s-c(\s|$)'
-    if ($seg -imatch $RUNS_APPROVE -and -not $plainGit) {
-      Write-Deny "it names approve.ps1, which only the owner's typed /approve runs"; exit 0
-    }
-  }
+  # The chat log is the record of the owner's yes, so a shell command that names it is denied.
+  if ($text -imatch $TRANSCRIPT) { Write-Deny 'it names a chat log under .claude/projects, which holds the record of the owner''s yes'; exit 0 }
 
-  # Only the approve hook adds owner-approved. A gh issue edit that adds it, or a gh api call that
-  # names it and is not a plain read or a DELETE (a labels POST or PUT, an issue PATCH, graphql),
-  # is denied. Removing the label stays allowed.
-  foreach ($m in [regex]::Matches($text, $EDIT)) {
+  # owner-approved goes on in one way only: gh issue edit <N> [-R owner/name] --add-label
+  # owner-approved, alone in its command, right after the owner's typed approve of a hand-off that
+  # named <N> (Test-OwnerYes). Every other add (a second label with it, two issues, a gh api write
+  # that names it, graphql) is denied. Removing the label stays allowed.
+  $edits = @([regex]::Matches($text, $EDIT))
+  foreach ($m in $edits) {
     $words = Get-SegmentWords $text ($m.Index + $m.Length)
+    $adds = $false; $labels = @(); $numbers = @(); $repo = $null
     for ($i = 0; $i -lt $words.Count; $i++) {
       $name, $val = $words[$i] -split '=', 2
-      if ($name -cne '--add-label') { continue }
-      if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
-      if (@($val -split ',' | ForEach-Object { $_.Trim() }) -icontains $APPROVED) {
-        Write-Deny "it adds the $APPROVED label"; exit 0
-      }
+      if ($name -ceq '--add-label') {
+        if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
+        $labels += @($val -split ',' | ForEach-Object { $_.Trim() })
+      } elseif ($name -ceq '-R' -or $name -ceq '--repo') {
+        if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
+        $repo = $val
+      } elseif ($words[$i] -cmatch '^[0-9]+$') { $numbers += $words[$i] }
     }
+    if ($labels -inotcontains $APPROVED) { continue }
+    if ($edits.Count -gt 1 -or $numbers.Count -ne 1 -or $labels.Count -ne 1) {
+      Write-Deny "it adds the $APPROVED label with something else in the same command; add it alone, one issue per command"; exit 0
+    }
+    # Unlike the rest of this hook, the tag path fails closed: an exception never approves.
+    try {
+      if (-not $repo) { $repo = Get-OriginRepo $payload.cwd }
+      $verdict = Test-OwnerYes $payload $repo $numbers[0]
+    } catch {
+      $verdict = @{ Ok = $false; Why = 'the approval check failed'; Short = 'The check failed; ask again.' }
+    }
+    if ($verdict.Ok) { Write-Allow "Approved: $repo#$($numbers[0]) $($verdict.Title)".TrimEnd() }
+    else { Write-Deny $verdict.Why "Not approved: $repo#$($numbers[0]). $($verdict.Short)" }
+    exit 0
   }
   foreach ($words in $apiCalls) {
     if (-not ($words | Where-Object { $_ -imatch [regex]::Escape($APPROVED) })) { continue }

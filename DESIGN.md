@@ -2,15 +2,15 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
-## Only the owner's typed /approve approves
+## Say approve, and only the hand-off answered is approved
 
-2026-11-10, #184
+2026-11-11, #188, replacing #184
 
-Decided: Issues are filed unapproved. The hook behind the owner's typed `/approve` adds `owner-approved` to every waiting issue; `before-issue-create` refuses any other add. `spawn-check` also gates the issue review on that label, where `approve.ps1` is wired. `/approve` does not unlock edits.
+Decided: Issues are filed unapproved. The owner replies "approve" to a hand-off. When an agent then tags an issue, `before-issue-create` reads the chat log: the owner's last typed message must be an approve, and the hand-off it answers must have a `#<N> Title:` line for that issue. The hook shows the owner the result itself. `spawn-check` gates the issue review on the tag.
 
-Why: "Ok to file" was read as approval, and agents typed the approval line to file at all (#175).
+Why: #184's `/approve` took a growing waiting list and approved 11 issues the owner never saw (#175).
 
-Gave up: A chat yes as approval, and the `Owner-approved: yes` body line.
+Gave up: `/approve`, the waiting list, and the `Owner-approved: yes` body line.
 
 ## Edits wait for the owner's typed command
 
