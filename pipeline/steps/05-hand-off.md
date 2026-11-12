@@ -16,7 +16,7 @@ Token change: a number, or "none". Cut proposed: none, what and why, or a reques
 Approve?
 ```
 
-The first line must start `#<N> Title:` and the message must end `Approve?`: that is how the hook knows what the owner's yes covers. Several issues in one hand-off each get their own `#<N> Title:` line.
+The first line must start `#<N> Title:` (or `owner/name#<N> Title:` for an issue in another repo) and the message must end `Approve?`: that is how the hook knows what the owner's yes covers. Several issues in one hand-off each get their own `#<N> Title:` line.
 
 Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it.
 
@@ -44,7 +44,7 @@ Then send the message.
 
 ## After you send
 
-Stop. Only a reply that is "approve" (or a near spelling) approves; "ok to file", a question and praise do not. After it, run `gh issue edit <N> --add-label owner-approved` once per issue in the hand-off, alone in its command. The `before-issue-create` hook checks the reply and shows the owner one `Approved:` line per issue; say nothing more about it. If the hook refuses, ask again. Then step 06.
+Stop. Only a reply that is "approve" (or a near spelling) approves; "ok to file", a question and praise do not. After it, run `gh issue edit <N> -R owner/name --add-label owner-approved` once per issue in the hand-off, as the whole command, with the issue's own repo. The `before-issue-create` hook checks the reply and shows the owner one `Approved:` line per issue; say nothing more about it. If the hook refuses, ask again. Then step 06.
 
 If the owner asks for a change, edit the issue body and resend the whole message.
 

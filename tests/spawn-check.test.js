@@ -404,7 +404,7 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: the approval gate on the issue rev
     expect(review()).toBeNull();
   });
 
-  it('denies an issue without the label, and says it needs the owner's approve', () => {
+  it("denies an issue without the label, and says it needs the owner's approve", () => {
     stubWith("Write-Output 'needs-issue-review'\n");
     const out = review();
     expect(out.permissionDecision).toBe('deny');

@@ -829,7 +829,7 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the owner says approve', (
     message: { role: 'user', content: [{ type: 'tool_result', content: 'ok' }] },
   });
   const HANDOFF = '#5 Title: Fix it\nStory: As the owner...\nDone when:\n1. x\nApprove?';
-  const tag = (n2 = 5, r = '') => `gh issue edit ${n2}${r} --add-label ${APPROVED}`;
+  const tag = (n2 = 5, r = 'o/r') => `gh issue edit ${n2} -R ${r} --add-label ${APPROVED}`;
 
   // Runs the hook on a tag add with a chat log made of the given entries.
   function runLog(command, entries, extra = {}) {
@@ -867,6 +867,8 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the owner says approve', (
       'appprove',
       'yes approve',
       'ok approved!',
+      'Yes, approve',
+      '  approve  ',
     ]) {
       fs.rmSync(path.join(repo, '.run_state'), { recursive: true, force: true });
       const res = runLog(tag(), [human('go'), said(HANDOFF), human(word)]);
@@ -901,7 +903,7 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the owner says approve', (
     expect(runLog(tag(8), [human('go'), said(two), human('approve')]).decision).toBe('allow');
     const other = 'o/x#5 Title: Elsewhere\nApprove?';
     expect(runLog(tag(5), [human('go'), said(other), human('approve')]).decision).toBe('deny');
-    expect(runLog(tag(5, ' -R o/x'), [human('go'), said(other), human('approve')]).decision).toBe(
+    expect(runLog(tag(5, 'o/x'), [human('go'), said(other), human('approve')]).decision).toBe(
       'allow'
     );
   });
@@ -931,6 +933,45 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the owner says approve', (
     expect(runLog(`gh issue edit 5 6 --add-label ${APPROVED}`, entries).decision).toBe('deny');
     expect(runLog(`gh issue edit 5 --add-label hard,${APPROVED}`, entries).decision).toBe('deny');
     expect(runLog(`${tag()} && ${tag()}`, entries).decision).toBe('deny');
+  });
+
+  it('allows the tag only as the whole command, with its repo named', () => {
+    const entries = [human('go'), said(HANDOFF), human('approve')];
+    const exe = `& "C:\\Program Files\\GitHub CLI\\gh.exe" issue edit 5 -R o/r --add-label ${APPROVED}`;
+    expect(runLog(exe, entries).decision).toBe('allow');
+    for (const cmd of [
+      `gh issue edit 5 --add-label ${APPROVED}`,
+      `gh issue edit 5 -Ro/x --add-label ${APPROVED}`,
+      `${tag()}; gh api repos/o/r/issues/6/labels -f 'labels[]=${APPROVED}'`,
+      `${tag()} && gh issue create --label ${APPROVED} --body x`,
+      `${tag()}\nrm -rf x`,
+      `cd ../x && ${tag()}`,
+      `GH_REPO=o/x ${tag()}`,
+      `& "$(evil)gh.exe" issue edit 5 -R o/r --add-label ${APPROVED}`,
+    ]) {
+      fs.rmSync(path.join(repo, '.run_state'), { recursive: true, force: true });
+      expect(runLog(cmd, entries).decision, cmd).toBe('deny');
+    }
+  });
+
+  it('reads a typed message given as text blocks, and refuses an empty one', () => {
+    const blocks = {
+      ...human('x'),
+      message: { role: 'user', content: [{ type: 'text', text: 'approve' }] },
+    };
+    expect(runLog(tag(), [human('go'), said(HANDOFF), blocks]).decision).toBe('allow');
+    expect(runLog(tag(), [human('go'), said(HANDOFF), human('')]).decision).toBe('deny');
+  });
+
+  it('denies a chat log named with backslashes', () => {
+    expect(run('type C:\\Users\\x\\.claude\\projects\\p\\abc.jsonl').decision).toBe('deny');
+  });
+
+  it('skips a subagent turn in the chat log', () => {
+    const side = { ...said('#9 Title: Sneaky\nApprove?'), isSidechain: true };
+    const entries = [human('go'), said(HANDOFF), side, human('approve')];
+    expect(runLog(tag(9), entries).decision).toBe('deny');
+    expect(runLog(tag(5), entries).decision).toBe('allow');
   });
 
   it('denies a shell command that names a chat log, and allows other commands', () => {

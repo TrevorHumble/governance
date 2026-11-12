@@ -1,6 +1,6 @@
 # before-issue-create: a reminder, not a guarantee. It judges filings and adds of the owner-approved
-# label, on Bash and PowerShell. The label goes on only as gh issue edit <N> [-R owner/name]
-# --add-label owner-approved, alone, when the owner's last typed message (read from the chat log at
+# label, on Bash and PowerShell. The label goes on only as gh issue edit <N> -R owner/name
+# --add-label owner-approved, as the whole command, when the owner's last typed message (read from the chat log at
 # transcript_path) is an approve and the hand-off it answers has a "#<N> Title:" header for that
 # issue (Test-OwnerYes); the owner then sees "Approved: <repo>#<N> <title>", written here. A filing
 # that carries the label or whose body's first line starts with Owner-approved: is denied, and so
@@ -32,10 +32,15 @@ $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
 $APPROVED = 'owner-approved'
-# A body may not claim the owner's approval; only the approve hook records it, as a label. Agents
-# once typed this line to file at all (#175), and a stale reader could still trust it.
+# A body may not claim the owner's approval; it is recorded only as the label, through the tag
+# path below. Agents once typed this line to file at all (#175), and a stale reader could still
+# trust it.
 $CLAIM = '^Owner-approved:'
 $TRANSCRIPT = '\.claude[\\/]+projects[\\/][^\s"'']*\.jsonl'
+# The one command that adds owner-approved, as the whole command: gh (bare, or a quoted or & path to
+# gh.exe whose characters cannot expand), issue edit <N> -R owner/name --add-label owner-approved.
+$GH_PATH = '[A-Za-z]:[\\/][A-Za-z0-9 ()\\/._-]*(?i:gh\.exe)'
+$TAG_ONLY = '\A[ \t]*(?:&[ \t]*)?(?:(?i:gh(?:\.exe)?)|"' + $GH_PATH + '"|''' + $GH_PATH + ''')[ \t]+issue[ \t]+edit[ \t]+([0-9]+)[ \t]+(?:-R|--repo)[ \t]+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)[ \t]+--add-label[ \t]+(?:owner-approved|"owner-approved"|''owner-approved'')[ \t]*(?:\r?\n)?\z'
 $MAX_READ = 1MB
 # Caps on the work done, so a pathological command cannot stall the hook past its timeout.
 $MAX_TEXT = 10000
@@ -204,7 +209,7 @@ function Get-Distance([string]$a, [string]$b) {
 # approved or approval, optionally after yes, ok or okay. Any ? fails (a question is not a yes).
 function Test-ApproveWords([string]$message) {
   if ($message -match '\?') { return $false }
-  $words = @(($message.ToLowerInvariant() -replace '[.!]', ' ').Trim() -split '\s+' | Where-Object { $_ })
+  $words = @(($message.ToLowerInvariant() -replace '[.,!]', ' ').Trim() -split '\s+' | Where-Object { $_ })
   if ($words.Count -eq 2 -and @('yes', 'ok', 'okay') -ccontains $words[0]) { $words = @($words[1]) }
   if ($words.Count -ne 1) { return $false }
   $w = $words[0]
@@ -231,11 +236,21 @@ function Test-OwnerYes($payload, [string]$repo, [string]$number) {
   if ($repo -cnotmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { return & $no 'its repo could not be read as owner/name' 'Its repo could not be read.' }
   $path = $payload.transcript_path
   if ($path -isnot [string] -or -not (Test-Path -LiteralPath $path -PathType Leaf)) { return & $no 'the chat log could not be read; try again' 'The chat log could not be read yet.' }
-  $entries = @()
-  foreach ($line in [System.IO.File]::ReadAllLines($path)) {
-    if (-not $line.Trim()) { continue }
-    try { $entries += , ($line | ConvertFrom-Json) } catch { }
+  # Only the tail is parsed, back to the second-last typed message, so a long log stays fast. A
+  # subagent's turns (isSidechain) are not the main chat and are skipped.
+  $lines = [System.IO.File]::ReadAllLines($path)
+  $list = New-Object System.Collections.Generic.List[object]
+  $seen = 0
+  for ($k = $lines.Count - 1; $k -ge 0 -and $seen -lt 2; $k--) {
+    # Only typed messages and assistant text matter, so other lines (tool output) are never parsed.
+    $raw = $lines[$k]
+    if ($raw.Contains('"isSidechain":true') -or -not ($raw.Contains('"kind":"human"') -or $raw.Contains('"type":"assistant"'))) { continue }
+    try { $e = $raw | ConvertFrom-Json } catch { continue }
+    if ($e.PSObject.Properties['isSidechain'] -and $e.isSidechain) { continue }
+    $list.Insert(0, $e)
+    if ($e.type -ceq 'user' -and $e.PSObject.Properties['origin'] -and $e.origin.kind -ceq 'human') { $seen++ }
   }
+  $entries = $list.ToArray()
   $human = @()
   for ($i = 0; $i -lt $entries.Count; $i++) {
     $e = $entries[$i]
@@ -299,37 +314,33 @@ try {
   # The chat log is the record of the owner's yes, so a shell command that names it is denied.
   if ($text -imatch $TRANSCRIPT) { Write-Deny 'it names a chat log under .claude/projects, which holds the record of the owner''s yes'; exit 0 }
 
-  # owner-approved goes on in one way only: gh issue edit <N> [-R owner/name] --add-label
-  # owner-approved, alone in its command, right after the owner's typed approve of a hand-off that
+  # owner-approved goes on in one way only: gh issue edit <N> -R owner/name --add-label
+  # owner-approved, as the whole command, right after the owner's typed approve of a hand-off that
   # named <N> (Test-OwnerYes). Every other add (a second label with it, two issues, a gh api write
   # that names it, graphql) is denied. Removing the label stays allowed.
-  $edits = @([regex]::Matches($text, $EDIT))
-  foreach ($m in $edits) {
+  # The allow covers the whole command, so the tag command must be the whole command (nothing
+  # chained before or after it), and must name its repo, so the repo checked is the repo gh writes.
+  foreach ($m in @([regex]::Matches($text, $EDIT))) {
     $words = Get-SegmentWords $text ($m.Index + $m.Length)
-    $adds = $false; $labels = @(); $numbers = @(); $repo = $null
+    $labels = @()
     for ($i = 0; $i -lt $words.Count; $i++) {
       $name, $val = $words[$i] -split '=', 2
       if ($name -ceq '--add-label') {
         if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
         $labels += @($val -split ',' | ForEach-Object { $_.Trim() })
-      } elseif ($name -ceq '-R' -or $name -ceq '--repo') {
-        if ($null -eq $val) { $val = if ($i + 1 -lt $words.Count) { $words[++$i] } else { '' } }
-        $repo = $val
-      } elseif ($words[$i] -cmatch '^[0-9]+$') { $numbers += $words[$i] }
+      }
     }
     if ($labels -inotcontains $APPROVED) { continue }
-    if ($edits.Count -gt 1 -or $numbers.Count -ne 1 -or $labels.Count -ne 1) {
-      Write-Deny "it adds the $APPROVED label with something else in the same command; add it alone, one issue per command"; exit 0
+    $tag = [regex]::Match($text, $TAG_ONLY)
+    if (-not $tag.Success) {
+      Write-Deny "it adds the $APPROVED label in another shape; the whole command must be gh issue edit <N> -R owner/name --add-label $APPROVED, nothing else"; exit 0
     }
+    $number = $tag.Groups[1].Value; $repo = $tag.Groups[2].Value
     # Unlike the rest of this hook, the tag path fails closed: an exception never approves.
-    try {
-      if (-not $repo) { $repo = Get-OriginRepo $payload.cwd }
-      $verdict = Test-OwnerYes $payload $repo $numbers[0]
-    } catch {
-      $verdict = @{ Ok = $false; Why = 'the approval check failed'; Short = 'The check failed; ask again.' }
-    }
-    if ($verdict.Ok) { Write-Allow "Approved: $repo#$($numbers[0]) $($verdict.Title)".TrimEnd() }
-    else { Write-Deny $verdict.Why "Not approved: $repo#$($numbers[0]). $($verdict.Short)" }
+    try { $verdict = Test-OwnerYes $payload $repo $number }
+    catch { $verdict = @{ Ok = $false; Why = 'the approval check failed'; Short = 'The check failed; ask again.' } }
+    if ($verdict.Ok) { Write-Allow "Approved: $repo#$number $($verdict.Title)".TrimEnd() }
+    else { Write-Deny $verdict.Why "Not approved: $repo#$number. $($verdict.Short)" }
     exit 0
   }
   foreach ($words in $apiCalls) {

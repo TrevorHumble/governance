@@ -2,7 +2,7 @@
 
 ## before-issue-create
 
-This command was judged as a filing or a label add: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>. File without {approved}, send the hand-off ending "Approve?", and after the owner's approve run gh issue edit <N> --add-label {approved}, alone (pipeline/steps/05-hand-off.md). Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
+This command was judged as a filing or a label add: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>. File without {approved}, send the hand-off ending "Approve?", and after the owner's approve run gh issue edit <N> -R owner/name --add-label {approved} as the whole command (pipeline/steps/05-hand-off.md). Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
 
 ## edit-gate
 
