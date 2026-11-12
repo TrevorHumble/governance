@@ -67,11 +67,8 @@ describe('.claude/settings.json hook wiring', () => {
     );
   });
 
-  it('runs approve.ps1 only on /approve, and judges filings on Bash and PowerShell', () => {
-    const approve = settings.hooks.UserPromptExpansion.find((g) =>
-      (g.hooks || []).some((h) => /hooks\/approve\.ps1/.test(String(h.command)))
-    );
-    expect(approve.matcher).toBe('^approve$');
+  it('judges filings and the approval tag on Bash and PowerShell, with no /approve hook', () => {
+    expect(JSON.stringify(settings)).not.toMatch(/approve\.ps1|\^approve\$/);
     const filing = settings.hooks.PreToolUse.find((g) =>
       (g.hooks || []).some((h) => String(h.command).includes('before-issue-create.ps1'))
     );

@@ -1,6 +1,14 @@
 {
   "retired": [
     {
+      "path": ".claude/hooks/approve.ps1",
+      "sha256": "94ecc2d902d45a9bc0884ee89218490874c3db39ee183b3d8127a5281aadc33a"
+    },
+    {
+      "path": ".claude/skills/approve/SKILL.md",
+      "sha256": "004e364440bda747b595bd2181093ab2bda695a2e804064fc670fb414f91d391"
+    },
+    {
       "path": ".agents/hooks.json",
       "sha256": "5d62430cd890d5cb7827bbb99c863d8d3bd2063d5876f2d3942888f2887efe10"
     },
@@ -292,7 +300,6 @@
   "sharedPaths": [
     ".claude/agents/**",
     ".claude/hooks/after-edit.ps1",
-    ".claude/hooks/approve.ps1",
     ".claude/hooks/before-issue-create.ps1",
     ".claude/hooks/before-reply.ps1",
     ".claude/hooks/before-stop.ps1",
@@ -304,7 +311,6 @@
     ".claude/hooks/session-greeting.ps1",
     ".claude/hooks/spawn-check.ps1",
     ".claude/hooks/unlock-edits.ps1",
-    ".claude/skills/approve/**",
     ".claude/skills/baby/**",
     ".claude/skills/build/**",
     ".claude/skills/buildlog/**",
@@ -401,7 +407,6 @@
   "classes": {
     ".claude/agents/**": "content",
     ".claude/hooks/after-edit.ps1": "content",
-    ".claude/hooks/approve.ps1": "content",
     ".claude/hooks/before-issue-create.ps1": "content",
     ".claude/hooks/before-reply.ps1": "content",
     ".claude/hooks/before-stop.ps1": "content",
@@ -413,7 +418,6 @@
     ".claude/hooks/session-greeting.ps1": "content",
     ".claude/hooks/spawn-check.ps1": "content",
     ".claude/hooks/unlock-edits.ps1": "content",
-    ".claude/skills/approve/**": "content",
     ".claude/skills/baby/**": "content",
     ".claude/skills/build/**": "content",
     ".claude/skills/buildlog/**": "content",

@@ -387,7 +387,7 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: the approval gate on the issue rev
     fs.writeFileSync(
       path.join(gated, '.claude', 'settings.json'),
       JSON.stringify({
-        hooks: { UserPromptExpansion: [{ hooks: [{ command: '.claude/hooks/approve.ps1' }] }] },
+        hooks: { PreToolUse: [{ hooks: [{ command: '.claude/hooks/before-issue-create.ps1' }] }] },
       })
     );
     spawnSync('git', ['init', '-q', gated]);
@@ -404,12 +404,12 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: the approval gate on the issue rev
     expect(review()).toBeNull();
   });
 
-  it('denies an issue without the label, and says it needs /approve', () => {
+  it("denies an issue without the label, and says it needs the owner's approve", () => {
     stubWith("Write-Output 'needs-issue-review'\n");
     const out = review();
     expect(out.permissionDecision).toBe('deny');
     expect(out.permissionDecisionReason).toContain('#42 is not approved');
-    expect(out.permissionDecisionReason).toContain('/approve');
+    expect(out.permissionDecisionReason).toContain("owner's approve");
   });
 
   it('denies a spawn that names no issue', () => {
@@ -426,7 +426,7 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: the approval gate on the issue rev
     expect(Date.now() - started).toBeLessThan(8000);
   });
 
-  it('does not gate other roles, or a repo whose settings do not wire approve.ps1', () => {
+  it('does not gate other roles, or a repo whose settings do not wire before-issue-create.ps1', () => {
     stubWith('exit 1\n');
     expect(
       run(spawn('[code-reviewer] review #42', 'opus', 'medium'), { project: gated })
@@ -441,7 +441,10 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: which issue the gate reads', () =>
     gated = fs.mkdtempSync(path.join(os.tmpdir(), 'spawn-check-which-'));
     fs.writeFileSync(path.join(gated, 'seats.json'), JSON.stringify(SEATS));
     fs.mkdirSync(path.join(gated, '.claude'));
-    fs.writeFileSync(path.join(gated, '.claude', 'settings.json'), '"hooks/approve.ps1"');
+    fs.writeFileSync(
+      path.join(gated, '.claude', 'settings.json'),
+      '"hooks/before-issue-create.ps1"'
+    );
     spawnSync('git', ['init', '-q', gated]);
     const stub = path.join(gated, 'gh-stub.ps1');
     // Approved only when the call is exactly the expected one for o/r#42 or x/y#7.

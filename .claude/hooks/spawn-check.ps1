@@ -4,7 +4,7 @@
 # without hard while .run_state/hard exists for a role the award covers, and a reviewer role (a role
 # whose agent is "reviewer" in seats.json) unless run_in_background is exactly false, so that
 # reviewer-done can fire when the reviewer returns. A reviewer may share the session's model.
-# It is also the approval gate: where .claude/settings.json wires approve.ps1, an issue-reviewer
+# It is also the approval gate: where .claude/settings.json wires before-issue-create.ps1, an issue-reviewer
 # spawn must name its issue as #<N>, and is denied unless that issue carries owner-approved (read
 # with gh api, 5 seconds at most; a failed or slow read denies). A repo without that wiring is not
 # gated.
@@ -27,7 +27,8 @@ function Write-Deny([string[]]$keys, [hashtable]$values = @{}) {
   Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
 }
 
-# The approval gate: in a repo whose settings wire approve.ps1, an issue-reviewer spawn names its
+# The approval gate: in a repo whose settings wire before-issue-create.ps1 (which guards the
+# label), an issue-reviewer spawn names its
 # issue as #<N>, and that issue carries owner-approved. $null passes; otherwise the note key and
 # values to deny with. A missing number, a lookup that fails or takes over 5 seconds, or any
 # exception here denies.
@@ -35,7 +36,7 @@ function Test-ApprovalGate([string]$root, $description) {
   try {
     $settings = Join-Path $root '.claude/settings.json'
     if (-not (Test-Path -LiteralPath $settings -PathType Leaf)) { return $null }
-    if ((Get-Content -LiteralPath $settings -Raw) -notmatch 'hooks/approve\.ps1') { return $null }
+    if ((Get-Content -LiteralPath $settings -Raw) -notmatch 'hooks/before-issue-create\.ps1') { return $null }
     # One issue per review: #N, or owner/name#N for an issue in another repo.
     $named = @([regex]::Matches([string]$description, '(?:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+))?#([0-9]+)') |
         ForEach-Object { "$($_.Groups[1].Value)#$($_.Groups[2].Value)" } | Select-Object -Unique)

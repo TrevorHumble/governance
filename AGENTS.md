@@ -32,7 +32,7 @@ Own your side the way he owns his. You make the technical calls and fix what you
 ## Labels
 
 - `needs-issue-review`: every issue is born with it. Clear it when the issue review passes.
-- `owner-approved`: added only by the hook behind the owner's typed /approve. No agent adds it.
+- `owner-approved`: added right after the owner replies "approve" to a hand-off naming the issue; the `before-issue-create` hook refuses it otherwise.
 - `hard`: the run uses the `hard` award in `seats.json`.
 - `unverified-issue`: set by CI, never by an agent (`WHAT-IT-CHECKS.md`).
 
