@@ -23,7 +23,7 @@
     },
     "referee": {
       "provider": "anthropic",
-      "model": "claude-fable-5-1",
+      "model": "claude-fable-5-2",
       "effort": "medium",
       "agent": "reviewer",
       "skills": ["refereeing"]
@@ -33,12 +33,12 @@
     "hard": {
       "issue-reviewer": {
         "provider": "anthropic",
-        "model": "claude-fable-5-1",
+        "model": "claude-fable-5-2",
         "effort": "medium"
       },
       "code-reviewer": {
         "provider": "anthropic",
-        "model": "claude-fable-5-1",
+        "model": "claude-fable-5-2",
         "effort": "medium"
       },
       "referee": {
