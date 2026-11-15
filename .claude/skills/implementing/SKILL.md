@@ -28,7 +28,7 @@ The owner's calls are the ones in `writing-acceptance-criteria`, "Whose call". B
 
 Review and commit come after the build, not inside it. Before you call the build done, write these down, so shipping can copy them as written:
 
-- In your run note (`.run_state/<N>.md`): what I changed, then one line under it for each decision you made inside the criteria and each case inside the issue you left alone, every `Owner's call:` line included.
+- Under `## Decisions` in your run note (`.run_state/<N>.md`): what I changed, then one line under it for each decision you made inside the criteria and each case inside the issue you left alone, every `Owner's call:` line included.
 - On the issue, under `## Notes` (`reporting-a-defect`): what you left unfixed outside the criteria, and why, or "none".
 
 A call you doubt is yours to settle. Make it and say why in the PR body.

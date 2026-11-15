@@ -12,7 +12,7 @@ Set these in the child's `repo-profile.json`:
 - `governanceRef`: the tag or branch to pull. Without it, sync pulls the default branch.
 - `syncIssue`: the number of the child's standing issue for governance syncs.
 
-Then run `tools/governance-sync.ps1` at build start. `tools/setup-hooks.ps1` turns on the git hooks in a fresh clone.
+Each build runs `tools/governance-sync.ps1` through `tools/start-run.ps1` at its start (`pipeline/steps/01-isolate.md`). `tools/setup-hooks.ps1` turns on the git hooks in a fresh clone.
 
 ## Commands
 
