@@ -40,6 +40,8 @@ gh issue create --title "<title>" --body-file <file> --label needs-issue-review
 
 A hard issue is filed with `--label hard` as well. The body carries the `Hard:` line as you wrote it; write `Hard: no (owner)` only when the owner said "not hard" themselves. Never file with `owner-approved` or start the body with an approval line: the `before-issue-create` hook refuses both (`WHAT-IT-CHECKS.md`).
 
+Once the issue has its number (the first one filed, if there are several), rename the session as step 01 says, unless step 01 already did.
+
 Then send the message.
 
 ## After you send
