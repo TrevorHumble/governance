@@ -1,6 +1,6 @@
 # 05-hand-off
 
-You are about to ask for the owner's time, so make it a short ask. File the draft, send one message, and wait.
+You are about to ask for the owner's time, so make it a short ask. Write the draft into the run's issue, send one message, and wait.
 
 ## What the message holds
 
@@ -30,17 +30,23 @@ In a child repo (`governanceHome` is not `self` in `repo-profile.json`), skip th
 
 An approved cut or cap request becomes a Done-when line, so it gets checked like any other.
 
-## File, then send
+## Write, then send
 
-If `pipeline/steps/09-pr-review.md` calls for the architecture specialist, run it (`reviewing-architecture`, on the `code-reviewer` seat) on the plan first. Its briefing carries the plan, a neutral summary of the components it adds or changes, the repo's top-level listing (`git ls-tree --name-only HEAD`), and the `DESIGN.md` records the change touches, quoted, if the file is present. Put their notes in the body under "Specialist notes". Fix any `blocker:` there before you file.
+If `pipeline/steps/09-pr-review.md` calls for the architecture specialist, run it (`reviewing-architecture`, on the `code-reviewer` seat) on the plan first. Its briefing carries the plan, a neutral summary of the components it adds or changes, the repo's top-level listing (`git ls-tree --name-only HEAD`), and the `DESIGN.md` records the change touches, quoted, if the file is present. Put their notes in the body under "Specialist notes". Fix any `blocker:` there before you write it.
+
+The run's issue exists from step 01. A placeholder gets the draft's title and body whole; a backlog issue keeps its text, and you change only your lines (`github-write`):
+
+```
+gh issue edit <N> --title "<title>" --body-file <file>
+```
+
+An extra issue in the same hand-off is filed new:
 
 ```
 gh issue create --title "<title>" --body-file <file> --label needs-issue-review
 ```
 
-A hard issue is filed with `--label hard` as well. The body carries the `Hard:` line as you wrote it; write `Hard: no (owner)` only when the owner said "not hard" themselves. Never file with `owner-approved` or start the body with an approval line: the `before-issue-create` hook refuses both (`WHAT-IT-CHECKS.md`).
-
-Once the issue has its number (the first one filed, if there are several), rename the session as step 01 says, unless step 01 already did.
+A hard issue gets the `hard` label as well. The body carries the `Hard:` line as you wrote it; write `Hard: no (owner)` only when the owner said "not hard" themselves. Never add `owner-approved` or start the body with an approval line. The `before-issue-create` hook refuses both on a new filing, not on an edit (`WHAT-IT-CHECKS.md`).
 
 Then send the message.
 
