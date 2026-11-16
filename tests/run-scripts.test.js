@@ -29,11 +29,14 @@ function write(dir, rel, content) {
 //   pulls?...state=closed -> STUB_MERGED_PR or nothing; pulls POST -> 77;
 //   check-runs -> STUB_CHECKS, one tab-separated line per run: name, status, conclusion, url
 //   (default: build, completed, success); STUB_CHECKS_FIRST, when set, answers the first call only;
+//   each argument of the latest check-runs call goes on its own line in gh-checkargs.txt;
+//   commits/<sha>/status -> STUB_STATUSES or nothing, one line per status: context, state, url;
 //   pulls/<n> head sha -> STUB_HEAD_SHA, else the local HEAD; anything else -> ok.
 function makeGh(dir) {
   const stub = path.join(dir, 'gh-stub.ps1');
   const log = path.join(dir, 'gh-log.txt').replace(/'/g, "''");
   const count = path.join(dir, 'gh-checks-count.txt').replace(/'/g, "''");
+  const checkArgs = path.join(dir, 'gh-checkargs.txt').replace(/'/g, "''");
   fs.writeFileSync(
     stub,
     [
@@ -41,7 +44,8 @@ function makeGh(dir) {
       `Add-Content -LiteralPath '${log}' -Value ($a -join ' ')`,
       '$all = $a -join " "',
       "if ($all -match '^api repos/\\{owner\\}/\\{repo\\}/pulls/\\d+ --jq') { if ($env:STUB_HEAD_SHA) { Write-Output $env:STUB_HEAD_SHA } else { git rev-parse HEAD }; exit 0 }",
-      `if ($all -match 'check-runs') { $n = 0; if (Test-Path -LiteralPath '${count}') { $n = [int](Get-Content -LiteralPath '${count}') }; Set-Content -LiteralPath '${count}' -Value ($n + 1); if ($n -eq 0 -and $env:STUB_CHECKS_FIRST) { Write-Output $env:STUB_CHECKS_FIRST } elseif ($env:STUB_CHECKS) { Write-Output $env:STUB_CHECKS } else { Write-Output "build\`tcompleted\`tsuccess\`thttps://ci/1" }; exit 0 }`,
+      `if ($all -match 'check-runs') { Set-Content -LiteralPath '${checkArgs}' -Value $a; $n = 0; if (Test-Path -LiteralPath '${count}') { $n = [int](Get-Content -LiteralPath '${count}') }; Set-Content -LiteralPath '${count}' -Value ($n + 1); if ($n -eq 0 -and $env:STUB_CHECKS_FIRST) { Write-Output $env:STUB_CHECKS_FIRST } elseif ($env:STUB_CHECKS) { Write-Output $env:STUB_CHECKS } else { Write-Output "build\`tcompleted\`tsuccess\`thttps://ci/1" }; exit 0 }`,
+      "if ($all -match '/commits/\\w+/status') { if ($env:STUB_STATUSES) { Write-Output $env:STUB_STATUSES }; exit 0 }",
       "if ($all -match 'pulls\\?head=.*state=open') { if ($env:STUB_OPEN_PR) { Write-Output $env:STUB_OPEN_PR }; exit 0 }",
       "if ($all -match 'pulls\\?head=.*state=closed') { if ($env:STUB_MERGED_PR) { Write-Output $env:STUB_MERGED_PR }; exit 0 }",
       "if ($all -match '^api repos/\\{owner\\}/\\{repo\\}/pulls -f head=') { Write-Output '77'; exit 0 }",
@@ -268,6 +272,61 @@ describe.skipIf(launcherMissing)(launcherMissing ? skipTitle('run-scripts') : 's
     expect(r.err).toContain('the core check finished failure');
     expect(r.err).toContain('https://ci/7');
     expect(ghLog(repo)).not.toContain('/merge');
+  });
+
+  // The fake gh is a PowerShell script, so a call to it never goes through native argument
+  // passing and 5.1 never splits it here. Asserting the filter's shape catches it under either shell.
+  it('reads checks with a --jq filter Windows PowerShell 5.1 passes to gh whole', () => {
+    const repo = shipRepo();
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP);
+    expect(r.code, r.err).toBe(0);
+    const file = path.join(repo.root, 'gh-checkargs.txt');
+    const argv = fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean);
+    expect(argv).toHaveLength(4);
+    expect(argv[0]).toBe('api');
+    expect(argv[1]).toMatch(/\/check-runs/);
+    expect(argv[2]).toBe('--jq');
+    expect(argv[3]).not.toMatch(/["\s]/);
+  });
+
+  it('a skipped or neutral required check counts as green', () => {
+    const repo = shipRepo(undefined, { ciCheckNames: ['build', 'core', 'lint'] });
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP, {
+      STUB_CHECKS: [
+        BUILD_GREEN,
+        'core\tcompleted\tskipped\thttps://ci/2',
+        'lint\tcompleted\tneutral\thttps://ci/3',
+      ].join('\n'),
+    });
+    expect(r.code, r.err).toBe(0);
+    expect(ghLog(repo)).toContain('/merge');
+  });
+
+  it('a required check reported as a commit status is waited on, then counted', () => {
+    const profile = { ciCheckNames: ['build', 'deploy-preview'] };
+    const pending = shipRepo(undefined, profile);
+    const r = run(pending, pending.clone, 'ship.ps1', [...SHIP, '-TimeoutMinutes', '0'], {
+      STUB_STATUSES: 'deploy-preview\tpending\thttps://ci/4',
+    });
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('not green after 0 minutes: deploy-preview');
+    expect(ghLog(pending)).not.toContain('/merge');
+
+    const red = shipRepo(undefined, profile);
+    const f = run(red, red.clone, 'ship.ps1', SHIP, {
+      STUB_STATUSES: 'deploy-preview\terror\thttps://ci/5',
+    });
+    expect(f.code).toBe(1);
+    expect(f.err).toContain('the deploy-preview check finished error');
+    expect(f.err).toContain('https://ci/5');
+    expect(ghLog(red)).not.toContain('/merge');
+
+    const green = shipRepo(undefined, profile);
+    const g = run(green, green.clone, 'ship.ps1', SHIP, {
+      STUB_STATUSES: 'deploy-preview\tsuccess\thttps://ci/6',
+    });
+    expect(g.code, g.err).toBe(0);
+    expect(ghLog(green)).toContain('/merge');
   });
 
   it('a red check that is not in ciCheckNames does not stop the merge', () => {
