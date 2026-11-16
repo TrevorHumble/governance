@@ -6,9 +6,10 @@
 #   ship.ps1 -Lane -Merge                                         # after the owner's yes in chat
 #
 # A build: copies the run note's "## Decisions" section into the PR body, pushes, opens the PR (or
-# reuses the open one), writes and checks buildlog/<N>-<PR>.md, waits for the `build` check run on
-# the head commit to finish green, squash-merges, and closes the issue. Red stops it and names the
-# check; run it again after the fix and it picks up where it stopped.
+# reuses the open one), writes and checks buildlog/<N>-<PR>.md, waits for every required check
+# (ciCheckNames in repo-profile.json) on the head commit to finish green, squash-merges, and closes
+# the issue. Red stops it and names the check; run it again after the fix and it picks up where it
+# stopped.
 #
 # The lane: no decision lines, no buildlog fragment, never closes an issue (the standing #111 stays
 # open), and merges only on the separate -Lane -Merge run. -Issue there only adds an "Issue: #N"
@@ -49,6 +50,8 @@ try {
 }
 
 $defaultBranch = Get-RepoProfileValue -Field 'defaultBranch'
+# The checks a merge waits for. GitHub refuses a merge while a required one is still running.
+$requiredChecks = @(Get-RepoProfileValue -Field 'ciCheckNames' -Default @('build'))
 $branch = "$(& git rev-parse --abbrev-ref HEAD 2>$null)".Trim()
 if (-not $branch -or $branch -eq 'HEAD') { Stop-Ship 'not on a branch.' }
 if ($branch -eq $defaultBranch) { Stop-Ship "on $defaultBranch. Ship from the run's own branch." }
@@ -59,12 +62,12 @@ $pollSeconds = 20
 $pinSeconds = 3
 if ($env:SHIP_POLL_SECONDS) { $pollSeconds = [int]$env:SHIP_POLL_SECONDS; $pinSeconds = $pollSeconds }
 
-# Calls gh, returns trimmed stdout, stops the ship on a non-zero exit.
+# Calls gh, returns trimmed stdout with its lines kept apart, stops the ship on a non-zero exit.
 function Invoke-Gh {
   param([string]$What, [string[]]$GhArgs)
   $out = & $gh @GhArgs 2>&1
   if ($LASTEXITCODE -ne 0) { Stop-Ship "$What failed: $("$out".Trim())" }
-  return "$out".Trim()
+  return (@($out | ForEach-Object { "$_" }) -join "`n").Trim()
 }
 
 function Get-OpenPr {
@@ -73,22 +76,25 @@ function Get-OpenPr {
   return 0
 }
 
-# Waits for every `build` check run on the commit to finish. Returns only when all are green.
+# Waits for every required check on the commit. Returns only when each has a run and all its runs
+# finished green. A check with no run yet counts as still waiting.
 function Wait-Green([string]$Sha) {
   $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
   while ($true) {
-    $runs = Invoke-Gh 'reading checks' @('api', "repos/{owner}/{repo}/commits/$Sha/check-runs", '--jq', '.check_runs[] | select(.name == "build") | [.status, (.conclusion // ""), .html_url] | join(" ")')
-    $lines = @("$runs" -split "`r?`n" | Where-Object { $_.Trim() })
-    if ($lines.Count -gt 0) {
-      $red = @($lines | Where-Object { $_ -match '^completed ' -and $_ -notmatch '^completed success ' })
-      if ($red.Count -gt 0) {
-        $parts = $red[0] -split ' '
-        Stop-Ship "the build check finished $($parts[1]) on $($Sha.Substring(0, 7)): $($parts[2]). Nothing was merged. Fix the cause, commit, and run ship again."
-      }
-      $pending = @($lines | Where-Object { $_ -notmatch '^completed ' })
-      if ($pending.Count -eq 0) { return }
+    $out = Invoke-Gh 'reading checks' @('api', "repos/{owner}/{repo}/commits/$Sha/check-runs?per_page=100", '--jq', '.check_runs[] | [.name, .status, (.conclusion // ""), .html_url] | @tsv')
+    $runs = @("$out" -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object {
+        $f = $_ -split "`t"
+        if ($requiredChecks -contains $f[0]) { [PSCustomObject]@{ Name = $f[0]; Status = $f[1]; Conclusion = $f[2]; Url = $f[3] } }
+      })
+    $red = @($runs | Where-Object { $_.Status -eq 'completed' -and $_.Conclusion -ne 'success' })
+    if ($red.Count -gt 0) {
+      Stop-Ship "the $($red[0].Name) check finished $($red[0].Conclusion) on $($Sha.Substring(0, 7)): $($red[0].Url). Nothing was merged. Fix the cause, commit, and run ship again."
     }
-    if ((Get-Date) -gt $deadline) { Stop-Ship "the build check was not green after $TimeoutMinutes minutes. Nothing was merged. Run ship again to keep waiting." }
+    $running = @($runs | Where-Object { $_.Status -ne 'completed' } | ForEach-Object { $_.Name })
+    $seen = @($runs | ForEach-Object { $_.Name })
+    $waiting = @($requiredChecks | Where-Object { $running -contains $_ -or $seen -notcontains $_ })
+    if ($waiting.Count -eq 0) { return }
+    if ((Get-Date) -gt $deadline) { Stop-Ship "not green after $TimeoutMinutes minutes: $($waiting -join ', '). Nothing was merged. Run ship again to keep waiting." }
     Start-Sleep -Seconds $pollSeconds
   }
 }
@@ -212,7 +218,7 @@ if (-not $Lane) {
 
 # ---- Green, then merge ------------------------------------------------------
 $sha = Get-PinnedHead $pr
-Write-Output 'checks: waiting for build to go green'
+Write-Output "checks: waiting for $($requiredChecks -join ', ') to go green"
 Wait-Green $sha
 Write-Output 'checks: green'
 

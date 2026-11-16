@@ -26,6 +26,8 @@ Where the change can fail, one criterion says what fails or is refused, and what
 
 Three to six criteria. Add no design the owner did not ask for (approval records, retries, offline, duplicates) unless the story needs it. Before adding a case, check whether a criterion already covers it; two that say the same thing become one.
 
+Never fence the diff ("touches only this file"). Say what the user sees stays the same; a fence blocks the fixes `standards/deciding.md`, "Stay in scope", asks for.
+
 ## Whose call
 
-The owner decides what users experience, workflows, taste, whether to build a feature, and anything that spends money, publishes, deletes the owner's data, or cannot be undone, and any rule cut or cap raise `AGENTS.md` reserves. Write those from the owner's words. A changed criterion follows the hand-off step. Everything else is yours to decide and never reaches the owner.
+The owner decides what users experience, workflows, taste, whether to build a feature, whether a `Found:` criterion stays (`writing-issues`), and anything that spends money, publishes, deletes the owner's data, or cannot be undone, and any rule cut or cap raise `AGENTS.md` reserves. Write those from the owner's words. A changed criterion follows the hand-off step. Everything else is yours to decide and never reaches the owner.

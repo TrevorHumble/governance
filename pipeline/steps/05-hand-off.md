@@ -18,7 +18,7 @@ Approve?
 
 The first line must start `#<N> Title:` (or `owner/name#<N> Title:` for an issue in another repo) and the message must end `Approve?`: that is how the hook knows what the owner's yes covers. Several issues in one hand-off each get their own `#<N> Title:` line.
 
-Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it.
+Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it. A criterion starting `Found:` (`writing-issues`) keeps that word in the message, so the owner sees it was not their ask.
 
 ## Is it hard?
 
