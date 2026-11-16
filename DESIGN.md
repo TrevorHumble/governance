@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Found work is settled in its own issue
+
+2026-11-16, #197
+
+Decided: A small thing found beside a goal joins the issue in hand. Research writes it down, and it rides as a criterion starting `Found:` when it is the owner's call or a fix over the "Stay in scope" limit; the owner strikes it or approves it with the rest. A criterion may not fence the diff. `ship` waits for every check in `ciCheckNames`.
+
+Why: Two Flatland runs passed three small finds on to new issues, and each new issue pays for a full review (#175).
+
+Gave up: Fewer reviewers on a small issue. `NORTH-STAR.md` says review runs every time.
+
 ## Say approve, and only the hand-off answered is approved
 
 2026-11-11, #188, replacing #184

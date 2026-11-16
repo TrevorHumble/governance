@@ -18,7 +18,7 @@ If the repo answers it, stop there. Do not go to the web to confirm it.
 
 - Findings, each with its source: `file:line` or the URL.
 - What you did not find. "Nothing exists for this" is a finding; name the closest pieces and say what each really is.
-- Nothing else. Answer the question you set yourself: no extra behaviors you happened to notice, no list of what a test does not cover, unless the question asked.
+- Nothing else. Answer the question you set yourself: no extra behaviors you happened to notice, no list of what a test does not cover, unless the question asked. One exception: a small thing beside the goal that is the owner's call, or a defect, gets one line, for `writing-issues`, "Found on the way".
 
 ## No decisions yet
 

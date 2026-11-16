@@ -18,4 +18,4 @@ Claude Code cloud sessions refuse `gh issue`, `gh pr` and GraphQL with a 403. Do
 - Merge: `gh api -X PUT repos/{owner}/{repo}/pulls/<M>/merge -f merge_method=squash`.
 - Close an issue: `gh api -X PATCH repos/{owner}/{repo}/issues/<N> -f state=closed -f state_reason=completed`.
 
-Shipping: `tools/ship.ps1` makes these calls through REST and merges only once the `build` check run on the head SHA is green (`pipeline/steps/11-ship.md`).
+Shipping: `tools/ship.ps1` makes these calls through REST and merges only once every required check on the head SHA is green (`pipeline/steps/11-ship.md`).

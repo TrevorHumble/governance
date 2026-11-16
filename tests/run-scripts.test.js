@@ -27,11 +27,13 @@ function write(dir, rel, content) {
 // The fake gh. Every call is logged as one line of its arguments. Answers:
 //   issues POST -> STUB_ISSUE (default 501); pulls?...state=open -> STUB_OPEN_PR or nothing;
 //   pulls?...state=closed -> STUB_MERGED_PR or nothing; pulls POST -> 77;
-//   check-runs -> STUB_CHECKS (default "completed success https://ci/1");
+//   check-runs -> STUB_CHECKS, one tab-separated line per run: name, status, conclusion, url
+//   (default: build, completed, success); STUB_CHECKS_FIRST, when set, answers the first call only;
 //   pulls/<n> head sha -> STUB_HEAD_SHA, else the local HEAD; anything else -> ok.
 function makeGh(dir) {
   const stub = path.join(dir, 'gh-stub.ps1');
   const log = path.join(dir, 'gh-log.txt').replace(/'/g, "''");
+  const count = path.join(dir, 'gh-checks-count.txt').replace(/'/g, "''");
   fs.writeFileSync(
     stub,
     [
@@ -39,7 +41,7 @@ function makeGh(dir) {
       `Add-Content -LiteralPath '${log}' -Value ($a -join ' ')`,
       '$all = $a -join " "',
       "if ($all -match '^api repos/\\{owner\\}/\\{repo\\}/pulls/\\d+ --jq') { if ($env:STUB_HEAD_SHA) { Write-Output $env:STUB_HEAD_SHA } else { git rev-parse HEAD }; exit 0 }",
-      "if ($all -match 'check-runs') { if ($env:STUB_CHECKS) { Write-Output $env:STUB_CHECKS } else { Write-Output 'completed success https://ci/1' }; exit 0 }",
+      `if ($all -match 'check-runs') { $n = 0; if (Test-Path -LiteralPath '${count}') { $n = [int](Get-Content -LiteralPath '${count}') }; Set-Content -LiteralPath '${count}' -Value ($n + 1); if ($n -eq 0 -and $env:STUB_CHECKS_FIRST) { Write-Output $env:STUB_CHECKS_FIRST } elseif ($env:STUB_CHECKS) { Write-Output $env:STUB_CHECKS } else { Write-Output "build\`tcompleted\`tsuccess\`thttps://ci/1" }; exit 0 }`,
       "if ($all -match 'pulls\\?head=.*state=open') { if ($env:STUB_OPEN_PR) { Write-Output $env:STUB_OPEN_PR }; exit 0 }",
       "if ($all -match 'pulls\\?head=.*state=closed') { if ($env:STUB_MERGED_PR) { Write-Output $env:STUB_MERGED_PR }; exit 0 }",
       "if ($all -match '^api repos/\\{owner\\}/\\{repo\\}/pulls -f head=') { Write-Output '77'; exit 0 }",
@@ -219,7 +221,7 @@ describe.skipIf(launcherMissing)(launcherMissing ? skipTitle('run-scripts') : 's
   it('stops on red CI, names the check, and merges nothing', () => {
     const repo = shipRepo();
     const r = run(repo, repo.clone, 'ship.ps1', SHIP, {
-      STUB_CHECKS: 'completed failure https://ci/9',
+      STUB_CHECKS: 'build\tcompleted\tfailure\thttps://ci/9',
     });
     expect(r.code).toBe(1);
     expect(r.err).toContain('failure');
@@ -228,9 +230,60 @@ describe.skipIf(launcherMissing)(launcherMissing ? skipTitle('run-scripts') : 's
     expect(ghLog(repo)).not.toMatch(/issues\/\d+ -f state=closed/);
   });
 
+  const BUILD_GREEN = 'build\tcompleted\tsuccess\thttps://ci/1';
+
+  it('waits for every check in ciCheckNames, and merges only after the last one is green', () => {
+    const repo = shipRepo(undefined, { ciCheckNames: ['build', 'core'] });
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP, {
+      STUB_CHECKS_FIRST: `${BUILD_GREEN}\ncore\tin_progress\t\thttps://ci/2`,
+      STUB_CHECKS: `${BUILD_GREEN}\ncore\tcompleted\tsuccess\thttps://ci/2`,
+    });
+    expect(r.code, r.err).toBe(0);
+    expect(r.out).toContain('waiting for build, core');
+    const calls = ghLog(repo).split('\n');
+    const merge = calls.findIndex((l) => l.includes('/merge'));
+    expect(merge).toBeGreaterThan(-1);
+    expect(calls.slice(0, merge).filter((l) => l.includes('check-runs')).length).toBe(2);
+  });
+
+  it('a required check with no run yet counts as still waiting', () => {
+    const repo = shipRepo(undefined, { ciCheckNames: ['build', 'core'] });
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP, {
+      STUB_CHECKS_FIRST: BUILD_GREEN,
+      STUB_CHECKS: `${BUILD_GREEN}\ncore\tcompleted\tsuccess\thttps://ci/2`,
+    });
+    expect(r.code, r.err).toBe(0);
+    const calls = ghLog(repo).split('\n');
+    const merge = calls.findIndex((l) => l.includes('/merge'));
+    expect(merge).toBeGreaterThan(-1);
+    expect(calls.slice(0, merge).filter((l) => l.includes('check-runs')).length).toBe(2);
+  });
+
+  it('stops on a red required check other than build, names it, and merges nothing', () => {
+    const repo = shipRepo(undefined, { ciCheckNames: ['build', 'core'] });
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP, {
+      STUB_CHECKS: `${BUILD_GREEN}\ncore\tcompleted\tfailure\thttps://ci/7`,
+    });
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('the core check finished failure');
+    expect(r.err).toContain('https://ci/7');
+    expect(ghLog(repo)).not.toContain('/merge');
+  });
+
+  it('a red check that is not in ciCheckNames does not stop the merge', () => {
+    const repo = shipRepo();
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP, {
+      STUB_CHECKS: `${BUILD_GREEN}\nextra\tcompleted\tfailure\thttps://ci/8`,
+    });
+    expect(r.code, r.err).toBe(0);
+    expect(ghLog(repo)).toContain('/merge');
+  });
+
   it('a re-run after red reuses the open PR and the fragment', () => {
     const repo = shipRepo();
-    run(repo, repo.clone, 'ship.ps1', SHIP, { STUB_CHECKS: 'completed failure https://ci/9' });
+    run(repo, repo.clone, 'ship.ps1', SHIP, {
+      STUB_CHECKS: 'build\tcompleted\tfailure\thttps://ci/9',
+    });
     const r = run(repo, repo.clone, 'ship.ps1', SHIP, { STUB_OPEN_PR: '77' });
     expect(r.code, r.err).toBe(0);
     expect(r.out).toContain('already open');
