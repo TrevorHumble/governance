@@ -63,8 +63,12 @@ $pinSeconds = 3
 if ($env:SHIP_POLL_SECONDS) { $pollSeconds = [int]$env:SHIP_POLL_SECONDS; $pinSeconds = $pollSeconds }
 
 # Calls gh, returns trimmed stdout with its lines kept apart, stops the ship on a non-zero exit.
+# Refuses an argument holding a double quote: Windows PowerShell 5.1 splits one when it calls a
+# native program, so gh would get extra arguments there while the same call passes under pwsh.
 function Invoke-Gh {
   param([string]$What, [string[]]$GhArgs)
+  $quoted = @($GhArgs | Where-Object { "$_".Contains('"') })
+  if ($quoted.Count -gt 0) { Stop-Ship "$What needs a gh argument holding a double quote, which Windows PowerShell 5.1 would split: $($quoted[0])" }
   $out = & $gh @GhArgs 2>&1
   if ($LASTEXITCODE -ne 0) { Stop-Ship "$What failed: $("$out".Trim())" }
   return (@($out | ForEach-Object { "$_" }) -join "`n").Trim()
@@ -77,16 +81,28 @@ function Get-OpenPr {
 }
 
 # Waits for every required check on the commit. Returns only when each has a run and all its runs
-# finished green. A check with no run yet counts as still waiting.
+# finished with a conclusion branch protection accepts. A check with no run yet is still waiting.
+# A required check can be a check run or a commit status, so both are read. Neither --jq filter
+# holds a double quote, which Invoke-Gh refuses (see there); @tsv writes a null as an empty field.
 function Wait-Green([string]$Sha) {
   $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
   while ($true) {
-    $out = Invoke-Gh 'reading checks' @('api', "repos/{owner}/{repo}/commits/$Sha/check-runs?per_page=100", '--jq', '.check_runs[] | [.name, .status, (.conclusion // ""), .html_url] | @tsv')
+    $out = Invoke-Gh 'reading checks' @('api', "repos/{owner}/{repo}/commits/$Sha/check-runs?per_page=100", '--jq', '.check_runs[]|[.name,.status,.conclusion,.html_url]|@tsv')
     $runs = @("$out" -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object {
         $f = $_ -split "`t"
         if ($requiredChecks -contains $f[0]) { [PSCustomObject]@{ Name = $f[0]; Status = $f[1]; Conclusion = $f[2]; Url = $f[3] } }
       })
-    $red = @($runs | Where-Object { $_.Status -eq 'completed' -and $_.Conclusion -ne 'success' })
+    # A commit status's state is success, pending, failure or error. Pending is still running.
+    $out = Invoke-Gh 'reading statuses' @('api', "repos/{owner}/{repo}/commits/$Sha/status?per_page=100", '--jq', '.statuses[]|[.context,.state,.target_url]|@tsv')
+    $runs += @("$out" -split "`r?`n" | Where-Object { $_.Trim() } | ForEach-Object {
+        $f = $_ -split "`t"
+        if ($requiredChecks -contains $f[0]) {
+          $status = 'completed'
+          if ($f[1] -eq 'pending') { $status = 'pending' }
+          [PSCustomObject]@{ Name = $f[0]; Status = $status; Conclusion = $f[1]; Url = $f[2] }
+        }
+      })
+    $red = @($runs | Where-Object { $_.Status -eq 'completed' -and @('success', 'skipped', 'neutral') -notcontains $_.Conclusion })
     if ($red.Count -gt 0) {
       Stop-Ship "the $($red[0].Name) check finished $($red[0].Conclusion) on $($Sha.Substring(0, 7)): $($red[0].Url). Nothing was merged. Fix the cause, commit, and run ship again."
     }
