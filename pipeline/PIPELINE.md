@@ -27,19 +27,11 @@ Run these twelve steps in order. Each line says what the step is for and what it
 
 ## The configuration lane
 
-Configuration is not a build. Tuning your own setup does not change the product, so the full build is for work that does.
-
 A model swap, which only changes provider, model, or effort values in `seats.json`, runs steps 1, 10, 11, and 12, with no issue and no review. Cite the standing "Seat changes" issue, #111, in the commit.
 
 An edit that only touches a skill the owner starts (the `notCounted` folders in `governance-manifest.json`) runs the same steps plus one `reviewing-skills` pass, and its commit cites no issue. Fix the pass's findings and merge, with no re-check round, even for a `blocker:`. That is an exception to `standards/reviewing.md` § "Re-check rounds".
 
 `npm run check:seats` decides whether a PR qualifies, against the PR base, and names the path that keeps it out. A PR with anything else runs all twelve steps.
-
-Show the owner the check's output, and merge on green only after the owner says yes in chat.
-
-## Reviewers
-
-How reviewers work, and what a re-check covers: `standards/reviewing.md` § "Independence" and § "Re-check rounds".
 
 ## When you are unsure
 

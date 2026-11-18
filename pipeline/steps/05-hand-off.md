@@ -20,9 +20,7 @@ The first line must start `#<N> Title:` (or `owner/name#<N> Title:` for an issue
 
 Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it. A criterion starting `Found:` (`writing-issues`) keeps that word in the message, so the owner sees it was not their ask.
 
-## Is it hard?
-
-A second look, while the owner is here. You judge it when you draft the message, check it again before you send, and the owner's reply settles it. The test is in `pipeline/PIPELINE.md`. If it is newly hard, say so in the message. "Before step 1" in `pipeline/PIPELINE.md` says what that moves.
+Judge `Hard:` by `pipeline/PIPELINE.md`, "Before step 1"; the owner's reply settles it.
 
 ## The token change
 
@@ -32,7 +30,7 @@ An approved cut or cap request becomes a Done-when line, so it gets checked like
 
 ## Write, then send
 
-If `pipeline/steps/09-pr-review.md` calls for the architecture specialist, run it (`reviewing-architecture`, on the `code-reviewer` seat) on the plan first. Its briefing carries the plan, a neutral summary of the components it adds or changes, the repo's top-level listing (`git ls-tree --name-only HEAD`), and the `DESIGN.md` records the change touches, quoted, if the file is present. Put their notes in the body under "Specialist notes". Fix any `blocker:` there before you write it.
+If the change adds or restructures a component, run the architecture specialist (`reviewing-architecture`, on the `code-reviewer` seat) on the plan first. Its briefing carries the plan, a neutral summary of the components it adds or changes, the repo's top-level listing (`git ls-tree --name-only HEAD`), and the `DESIGN.md` records the change touches, quoted, if the file is present. Put their notes in the body under "Specialist notes". Fix any `blocker:` there before you write it.
 
 The run's issue exists from step 01. A placeholder gets the draft's title and body whole; a backlog issue keeps its text, and you change only your lines (`github-write`):
 
@@ -55,8 +53,6 @@ Then send the message.
 Stop. Only a reply that is "approve" (or a near spelling) approves; "ok to file", a question and praise do not. After it, run `gh issue edit <N> -R owner/name --add-label owner-approved` once per issue in the hand-off, as the whole command, with the issue's own repo. The `before-issue-create` hook checks the reply and shows the owner one `Approved:` line per issue; say nothing more about it. If the hook refuses, ask again. Then step 06.
 
 If the owner asks for a change, edit the issue body and resend the whole message.
-
-In the governance home, ask a second time only if the measured token change differs a lot from the number you gave. A small difference needs no second ask.
 
 ## When approved words change later
 

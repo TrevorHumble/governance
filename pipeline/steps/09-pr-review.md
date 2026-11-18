@@ -4,10 +4,9 @@ Review, fix, re-review until it passes. That loop is normal and fair; most chang
 
 ## Who looks
 
-Seat every reviewer as `.claude/agents/orchestrator.md` says. Run each specialist below once; all but architecture run on the working-tree diff (no PR exists until step 11):
+Seat every reviewer as `.claude/agents/orchestrator.md` says. Run each specialist below once, on the working-tree diff (no PR exists until step 11):
 
 - `reviewing-design`: every diff.
-- `reviewing-architecture`: before filing (step 05), not on the diff, when the change adds or restructures a component.
 - `reviewing-security`: when the diff touches anything its description names, or any path in `criticalPaths` or any entry in `criticalDependencies` (`repo-profile.json`).
 - `reviewing-skills`: when a skill or agent file changes.
 - `reviewing-docs`: when docs change.
@@ -31,4 +30,4 @@ Run the check on the reviewed tree, before any `minor:` fixes. Those then go in 
 
 ## Token change
 
-In the governance home, if the measured token change differs materially from the one stated at hand-off, ask the owner again: `pipeline/steps/05-hand-off.md`.
+In the governance home, if the measured token change differs a lot from the one stated at hand-off, resend the hand-off with the measured number and wait for the owner's yes.
