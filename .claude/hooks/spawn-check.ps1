@@ -1,7 +1,9 @@
 # spawn-check: a PreToolUse hook on Agent. It denies a spawn whose model or effort differs from its
 # seat in seats.json. The seat comes from a role tag that starts the spawn's description: [<role>],
-# or [<role> hard] for the hard award. It denies a missing or unknown tag rather than guess, a tag
-# without hard while .run_state/hard exists for a role the award covers, and a reviewer role (a role
+# or [<role> hard] for the hard award. It denies a missing or unknown tag rather than guess; for a
+# role the award covers, a tag without hard on a spawn naming issue #N while .run_state/hard-<N>
+# exists, or on a spawn naming no single issue while any hard-<N> exists (a spawn with no issue of
+# its own names #0, which no issue has); and a reviewer role (a role
 # whose agent is "reviewer" in seats.json) unless run_in_background is exactly false, so that
 # reviewer-done can fire when the reviewer returns. A reviewer may share the session's model.
 # It is also the approval gate: where .claude/settings.json wires before-issue-create.ps1, an issue-reviewer
@@ -14,7 +16,8 @@
 # cannot be parsed is denied, and so is any call when hook-core.ps1 cannot be loaded. It allows, silently, on empty input, on input with no tool_input, when
 # seats.json cannot be read, and on any other exception.
 # Not covered: only the Agent tool is seen. A model started another way (claude -p through Bash, a
-# remote session, a connector) is never checked, and the role tag is the agent's own word.
+# remote session, a connector) is never checked, and the role tag and the #N are the agent's own
+# word. A marker matches by number only, so owner/name#N in another repo meets this repo's hard-<N>.
 $ErrorActionPreference = 'Stop'
 
 $FALLBACK = 'denied; see .claude/hooks/notes.md.'
@@ -38,37 +41,15 @@ function Test-ApprovalGate([string]$root, $description) {
     if (-not (Test-Path -LiteralPath $settings -PathType Leaf)) { return $null }
     if ((Get-Content -LiteralPath $settings -Raw) -notmatch 'hooks/before-issue-create\.ps1') { return $null }
     # One issue per review: #N, or owner/name#N for an issue in another repo.
-    $named = @([regex]::Matches([string]$description, '(?:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+))?#([0-9]+)') |
-        ForEach-Object { "$($_.Groups[1].Value)#$($_.Groups[2].Value)" } | Select-Object -Unique)
+    $named = Get-NamedIssues $description
     if ($named.Count -ne 1) { return @{ Key = 'no-issue'; Values = @{} } }
-    $repo, $number = $named[0] -split '#', 2
+    $number = $named[0].Number
     $fail = @{ Key = 'not-approved'; Values = @{ number = $number; why = ' (its labels could not be read)' } }
-    if (-not $repo) {
-      $url = (& git -C $root remote get-url origin 2>$null | Select-Object -First 1)
-      if ([string]$url -notmatch 'github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$') { return $fail }
-      $repo = "$($Matches[1])/$($Matches[2])"
-    }
-    # The remote is the agent's to set, so only plain owner/name reaches the gh command line.
-    if ($repo -cnotmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { return $fail }
-    $gh = $env:GOVERNANCE_GH
-    if (-not $gh) {
-      $cmd = Get-Command gh -ErrorAction SilentlyContinue
-      $gh = if ($cmd) { $cmd.Source } else { 'C:\Program Files\GitHub CLI\gh.exe' }
-    }
-    $ghArgs = "api repos/$repo/issues/$number --jq .labels[].name"
-    $info = New-Object System.Diagnostics.ProcessStartInfo
-    if ($gh -like '*.ps1') {
-      $info.FileName = (Get-Process -Id $PID).Path
-      $info.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$gh`" $ghArgs"
-    } else { $info.FileName = $gh; $info.Arguments = $ghArgs }
-    $info.UseShellExecute = $false
-    $info.RedirectStandardOutput = $true
-    $info.RedirectStandardError = $true
-    $proc = [System.Diagnostics.Process]::Start($info)
-    $out = $proc.StandardOutput.ReadToEndAsync()
-    if (-not $proc.WaitForExit(5000)) { try { $proc.Kill() } catch { }; return $fail }
-    if ($proc.ExitCode -ne 0) { return $fail }
-    $labels = @($out.Result -split "`r?`n" | ForEach-Object { $_.Trim() })
+    # Both sources give only plain owner/name, so nothing else reaches the gh command line.
+    $repo = if ($named[0].Repo) { $named[0].Repo } else { Get-OriginRepo $root }
+    if (-not $repo) { return $fail }
+    $labels = Invoke-Gh "api repos/$repo/issues/$number --jq .labels[].name" 5000
+    if ($null -eq $labels) { return $fail }
     if ($labels -ccontains 'owner-approved') { return $null }
     return @{ Key = 'not-approved'; Values = @{ number = $number; why = '' } }
   } catch {
@@ -112,9 +93,16 @@ try {
     if ($p) { $award = $p.Value }
   }
   if ($hard -and $null -eq $award) { Write-Deny @('unknown') @{ tag = "$role hard" }; exit 0 }
-  if (-not $hard -and $null -ne $award -and (Test-Path -LiteralPath (Join-Path $root '.run_state/hard') -PathType Leaf)) {
-    Write-Deny @('hard-run') @{ role = $role }
-    exit 0
+  # A run's own marker moves only its own spawns up. A spawn that names no single issue cannot be
+  # told apart, so while any run is hard it is refused until it names one.
+  if (-not $hard -and $null -ne $award) {
+    $markers = Get-HardMarkers $root
+    if ($markers.Count -gt 0) {
+      $named = Get-NamedIssues $payload.tool_input.description
+      if ($named.Count -ne 1) { Write-Deny @('hard-unnamed') @{ role = $role }; exit 0 }
+      $number = $named[0].Number
+      if ($markers -ccontains $number) { Write-Deny @('hard-run') @{ role = $role; number = $number }; exit 0 }
+    }
   }
 
   $background = $payload.tool_input.run_in_background

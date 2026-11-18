@@ -38,8 +38,12 @@ beforeAll(() => {
 
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 
-const marker = () => path.join(root, '.run_state', 'hard');
-afterEach(() => fs.rmSync(marker(), { force: true }));
+const marker = (n = 42) => path.join(root, '.run_state', `hard-${n}`);
+afterEach(() => {
+  for (const f of fs.readdirSync(path.join(root, '.run_state'))) {
+    fs.rmSync(path.join(root, '.run_state', f), { recursive: true, force: true });
+  }
+});
 
 // Returns the parsed hookSpecificOutput, or null when the hook printed nothing (an allow).
 function run(input, { env = true, project = root, script = SCRIPT } = {}) {
@@ -277,34 +281,66 @@ maybeDescribe('.claude/hooks/spawn-check.ps1: a reviewer on the session model', 
 maybeDescribe('.claude/hooks/spawn-check.ps1: the hard run marker', () => {
   beforeEach(() => fs.writeFileSync(marker(), ''));
 
-  it('denies a tag without hard for a role the award covers', () => {
-    const res = run(spawn('[code-reviewer] review', 'opus', 'medium'));
+  it("denies a tag without hard on the hard run's own issue", () => {
+    const res = run(spawn('[code-reviewer] review #42', 'opus', 'medium'));
     expect(res.permissionDecision).toBe('deny');
-    expect(res.permissionDecisionReason).toContain(
-      'This run is hard (.run_state/hard). Tag it [code-reviewer hard].'
+    expect(res.permissionDecisionReason).toContain('Run #42 is hard. Tag it [code-reviewer hard].');
+  });
+
+  it('matches the number with leading zeros or an owner/name prefix', () => {
+    expect(run(spawn('[code-reviewer] review #042', 'opus', 'medium')).permissionDecision).toBe(
+      'deny'
+    );
+    expect(run(spawn('[code-reviewer] review o/r#42', 'opus', 'medium')).permissionDecision).toBe(
+      'deny'
     );
   });
 
+  it("lets another run's untagged spawn through on its normal seat", () => {
+    expect(run(spawn('[code-reviewer] review #7', 'opus', 'medium'))).toBeNull();
+  });
+
+  it('lets a spawn with no issue of its own through when it names #0', () => {
+    expect(run(spawn('[code-reviewer] skill pass #0', 'opus', 'medium'))).toBeNull();
+  });
+
+  it('denies an untagged spawn that names no single issue while a run is hard', () => {
+    for (const d of ['[code-reviewer] review', '[code-reviewer] after #7, review #42']) {
+      const res = run(spawn(d, 'opus', 'medium'));
+      expect(res.permissionDecision).toBe('deny');
+      expect(res.permissionDecisionReason).toContain('#0 if none');
+    }
+  });
+
   it('allows the hard tag with the award values', () => {
-    expect(run(spawn('[code-reviewer hard] review', 'fable', 'medium'))).toBeNull();
+    expect(run(spawn('[code-reviewer hard] review #42', 'fable', 'medium'))).toBeNull();
   });
 
   it('leaves a role the award does not cover on its default seat', () => {
-    expect(run(spawn('[issue-reviewer] look', 'opus', 'medium'))).toBeNull();
+    expect(run(spawn('[issue-reviewer] look #42', 'opus', 'medium'))).toBeNull();
   });
 
   it('finds the marker at the project root when cwd is a worktree', () => {
     const wt = path.join(root, 'worktrees', 'issue-99');
     fs.mkdirSync(wt, { recursive: true });
     fs.copyFileSync(path.join(root, 'seats.json'), path.join(wt, 'seats.json'));
-    const input = spawn('[code-reviewer] review', 'opus', 'medium', { cwd: wt });
+    const input = spawn('[code-reviewer] review #42', 'opus', 'medium', { cwd: wt });
     expect(run(input).permissionDecision).toBe('deny');
     fs.rmSync(path.join(root, 'worktrees'), { recursive: true, force: true });
   });
 
+  it('ignores the old shared .run_state/hard and files that only look like markers', () => {
+    fs.rmSync(marker());
+    fs.writeFileSync(path.join(root, '.run_state', 'hard'), '42');
+    fs.writeFileSync(path.join(root, '.run_state', 'hard-42.md'), '');
+    fs.mkdirSync(path.join(root, '.run_state', 'hard-43'));
+    expect(run(spawn('[code-reviewer] review #42', 'opus', 'medium'))).toBeNull();
+    expect(run(spawn('[code-reviewer] review', 'opus', 'medium'))).toBeNull();
+  });
+
   it('is not seen when no marker exists', () => {
     fs.rmSync(marker());
-    expect(run(spawn('[orchestrator] build', 'sonnet', 'medium'))).toBeNull();
+    expect(run(spawn('[code-reviewer] review', 'opus', 'medium'))).toBeNull();
   });
 });
 

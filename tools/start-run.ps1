@@ -9,7 +9,7 @@
 # With -Issue it uses that backlog issue. Without it, it files a placeholder issue (label
 # needs-issue-review, never owner-approved) so the run has a number from its first minute; step 05
 # then fills that issue in. The run note goes in .run_state/ at the project root, the primary
-# checkout, not the worktree, as .claude/agents/orchestrator.md keeps .run_state/hard.
+# checkout, not the worktree, as .claude/agents/orchestrator.md keeps .run_state/hard-<N>.
 #
 # Exit 0: ready, work in the printed worktree. Exit 1: not ready, and the output says why.
 # Windows PowerShell 5.1-compatible: no ternary, no ??, no && or ||.

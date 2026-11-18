@@ -28,7 +28,8 @@ The {role} has returned. Fix what its evidence proves, say why for the rest, the
 
 no-tag: Start the description with a role tag: [role], or [role hard] on a hard run. Roles: {roles}.
 unknown: '{tag}' is not a seat.
-hard-run: This run is hard (.run_state/hard). Tag it [{role} hard].
+hard-run: Run #{number} is hard. Tag it [{role} hard].
+hard-unnamed: A run here is hard: name this spawn's issue as #<N>, or #0 if none.
 foreground: Spawn reviewers with run_in_background false; several in one message still run in parallel.
 wrong-seat: The {tag} seat is model {alias}, effort {effort}. You passed model {model}, effort {passed}.
 unreadable: The spawn input was unreadable. Try again.
@@ -45,4 +46,6 @@ githooks-elsewhere: This is not a repo root, so nothing was set.
 env: {name} is set and overrides the seats.
 fork: Fork mode is on, so reviewers may not start in front. Set CLAUDE_CODE_FORK_SUBAGENT to 0 in the env block of .claude/settings.json.
 cap: maxEffortLevel {cap} is below the {role} seat's effort ({effort}).
-marker: .run_state/hard exists, so spawns need the hard tag.
+marker: Leftover hard markers (issue closed) in .run_state: {markers}. Delete them.
+marker-unknown: Hard markers whose issue could not be read: {markers}.
+marker-old: .run_state/hard does nothing now. Delete it.

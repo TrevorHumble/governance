@@ -296,17 +296,68 @@ maybeDescribe('.claude/hooks/session-greeting.ps1: settings that override the se
   });
 });
 
-maybeDescribe('.claude/hooks/session-greeting.ps1: a leftover hard marker', () => {
+maybeDescribe('.claude/hooks/session-greeting.ps1: leftover hard markers', () => {
+  let stubDir;
+  const markers = (...names) => {
+    fs.mkdirSync(path.join(root, '.run_state'), { recursive: true });
+    for (const n of names) fs.writeFileSync(path.join(root, '.run_state', n), '');
+  };
+  // A gh stand-in: issue 5 is closed, issue 6 is open, anything else fails.
+  const stub = (body) => {
+    const file = path.join(stubDir, `gh-${Date.now()}-${Math.random()}.ps1`);
+    fs.writeFileSync(file, body);
+    return { GOVERNANCE_GH: file };
+  };
+  const states =
+    "$a = $args -join ' '\n" +
+    "if ($a -ceq 'api repos/o/r/issues/5 --jq .state') { Write-Output 'closed'; exit 0 }\n" +
+    "if ($a -ceq 'api repos/o/r/issues/6 --jq .state') { Write-Output 'open'; exit 0 }\n" +
+    'exit 1\n';
+  const fill = (key, list) => notes()[key].replace('{markers}', list);
+
+  beforeAll(() => {
+    stubDir = fs.mkdtempSync(path.join(os.tmpdir(), 'greeting-gh-'));
+    git(root, ['remote', 'add', 'origin', 'https://github.com/o/r.git']);
+  });
+  afterAll(() => {
+    git(root, ['remote', 'remove', 'origin']);
+    fs.rmSync(stubDir, { recursive: true, force: true });
+  });
   afterEach(() => fs.rmSync(path.join(root, '.run_state'), { recursive: true, force: true }));
 
-  it('mentions .run_state/hard when it exists at the project root', () => {
-    fs.mkdirSync(path.join(root, '.run_state'));
-    fs.writeFileSync(path.join(root, '.run_state', 'hard'), '');
-    expect(run(start('sonnet'))).toBe(`${armed()} ${notes().marker}`);
+  it('names a marker whose issue is closed as leftover, and says nothing of an open one', () => {
+    markers('hard-5', 'hard-6');
+    expect(run(start('sonnet'), { env: stub(states) })).toBe(
+      `${armed()} ${fill('marker', 'hard-5')}`
+    );
   });
 
-  it('says nothing about it when there is no marker', () => {
+  it('names a marker whose issue cannot be read as unknown, not leftover', () => {
+    markers('hard-6', 'hard-9');
+    expect(run(start('sonnet'), { env: stub(states) })).toBe(
+      `${armed()} ${fill('marker-unknown', 'hard-9')}`
+    );
+  });
+
+  it('shares one 5-second budget across all markers', () => {
+    markers('hard-5', 'hard-6', 'hard-7');
+    const started = Date.now();
+    const out = run(start('sonnet'), {
+      env: stub("Start-Sleep -Seconds 8\nWrite-Output 'closed'\n"),
+    });
+    expect(Date.now() - started).toBeLessThan(8000);
+    expect(out).toBe(`${armed()} ${fill('marker-unknown', 'hard-5, hard-6, hard-7')}`);
+  });
+
+  it('names the old shared .run_state/hard as leftover', () => {
+    markers('hard');
+    expect(run(start('sonnet'))).toBe(`${armed()} ${notes()['marker-old']}`);
+  });
+
+  it('says nothing about markers when there are none, or only files that look like one', () => {
     expect(run(start('sonnet'))).not.toContain('.run_state');
+    markers('hard-5.md', '5.md');
+    expect(run(start('sonnet'), { env: stub(states) })).toBe(armed());
   });
 });
 

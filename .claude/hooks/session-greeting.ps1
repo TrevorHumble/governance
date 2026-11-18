@@ -4,7 +4,8 @@
 #   - CLAUDE_CODE_FORK_SUBAGENT is not 0 (fork mode is on by default, and while it is on the Agent
 #     tool may offer no run_in_background, so spawn-check refuses every reviewer);
 #   - a maxEffortLevel in settings is below a seat's effort;
-#   - .run_state/hard exists at the project root (a leftover marker would move later runs up).
+#   - a .run_state/hard-<N> at the project root whose issue is closed (leftover), or whose state
+#     could not be read (unknown), and the old shared .run_state/hard, which nothing reads now.
 #   - it also turns the git hooks on (core.hooksPath, through tools/setup-hooks.ps1, since a fresh
 #     clone does not carry it) and adds a line saying whether commit-msg and pre-commit are armed;
 #     with no tools/setup-hooks.ps1 it skips that line.
@@ -113,9 +114,27 @@ try {
     }
   } catch { }
 
+  # Hard markers: each .run_state/hard-<N> whose issue is closed is leftover. The reads share one
+  # 5-second budget; a marker not read in time, or with no origin repo, is named unknown.
   try {
     if ($root -and (Test-Path -LiteralPath (Join-Path $root '.run_state/hard') -PathType Leaf)) {
-      $lines += Get-Note 'session-greeting' 'marker'
+      $lines += Get-Note 'session-greeting' 'marker-old'
+    }
+    $numbers = Get-HardMarkers $root
+    if ($numbers.Count -gt 0) {
+      $repo = Get-OriginRepo $root
+      $deadline = [DateTime]::UtcNow.AddSeconds(5)
+      $closed = @()
+      $unknown = @()
+      foreach ($n in $numbers) {
+        $state = $null
+        $left = [int]($deadline - [DateTime]::UtcNow).TotalMilliseconds
+        if ($repo -and $left -gt 0) { try { $state = Invoke-Gh "api repos/$repo/issues/$n --jq .state" $left } catch { } }
+        $word = if ($state) { [string]$state[0] } else { '' }
+        if ($word -ceq 'closed') { $closed += "hard-$n" } elseif ($word -cne 'open') { $unknown += "hard-$n" }
+      }
+      if ($closed.Count -gt 0) { $lines += Fill (Get-Note 'session-greeting' 'marker') @{ markers = ($closed -join ', ') } }
+      if ($unknown.Count -gt 0) { $lines += Fill (Get-Note 'session-greeting' 'marker-unknown') @{ markers = ($unknown -join ', ') } }
     }
   } catch { }
 

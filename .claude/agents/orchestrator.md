@@ -16,8 +16,8 @@ You research, draft the issue, build the change, and keep the buildlog and your 
 
 1. Find the seat. Take the role whose `skills` list names the skill you are briefing. A reviewing skill no role lists, such as a child repo's own lens, runs on the `code-reviewer` seat.
 2. If the issue carries the `hard` label (or, until the issue is filed, the goal was judged hard and the owner has not said otherwise) and `awards` has an entry for that role, use the award's model and effort instead. `pipeline/PIPELINE.md`, "Before step 1", says which roles move up.
-3. Pass both on the spawn: `model` is the family word of the seat's model ID (the word after `claude-`), and `effort` is the seat's effort. Pass them every time. Start the `description` with the role tag: `[<role>]`, or `[<role> hard]` on an award. Spawn reviewers with `run_in_background: false`; several in one message still run in parallel.
-4. At run start, delete any leftover `.run_state/hard`, then judge. While a run is hard, keep it at the project root (not the worktree); delete it at the end.
+3. Pass both on the spawn: `model` is the family word of the seat's model ID (the word after `claude-`), and `effort` is the seat's effort. Pass them every time. Start the `description` with the role tag: `[<role>]`, or `[<role> hard]` on an award, and name the issue as `#<N>` (`#0` if none). Spawn reviewers with `run_in_background: false`; several in one message still run in parallel.
+4. While a run is hard and has an issue, keep `.run_state/hard-<N>` at the project root (not the worktree) and delete it at the end. Never touch an open run's.
 
 You run on whatever model the owner picked. The repo sets none.
 

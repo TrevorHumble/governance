@@ -1,7 +1,8 @@
 # hook-core: the logic the hooks in this folder share, dot-sourced by each of them. It holds
 # reading stdin, reading a section (and a key) from notes.md, filling placeholders, the model family
-# word, the project root, the role tag, reading seats.json, and splitting a command into words and a
-# gh api call into its parts. A hook that cannot load this file
+# word, the project root, the role tag, reading seats.json, splitting a command into words and a
+# gh api call into its parts, the issues a description names, the per-run hard markers, the origin
+# repo, and a gh call with a time limit. A hook that cannot load this file
 # does nothing (or, for a deny, falls back to its one generic line); it never crashes the session.
 $HOOK_DIR = $PSScriptRoot
 $ROLE_TAG = '^\s*\[([a-z][a-z0-9-]*)(?:\s+(hard))?\]'
@@ -126,6 +127,65 @@ function Read-ApiCall([string[]]$words) {
     $call.Fields += , @{ Typed = ($name -ceq '-F' -or $name -ceq '--field'); Text = $val }
   }
   return $call
+}
+
+# A number without leading zeros, so #042 and hard-42 match.
+function Get-PlainNumber([string]$n) { return ($n -replace '^0+(?=\d)', '') }
+
+# The issues a description names (#N, or owner/name#N), each once, as @{ Repo; Number }: Repo is
+# '' for a bare #N, and Number is plain.
+function Get-NamedIssues($description) {
+  $seen = @{}
+  $out = @()
+  foreach ($m in [regex]::Matches([string]$description, '(?:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+))?#([0-9]+)')) {
+    $issue = @{ Repo = $m.Groups[1].Value; Number = (Get-PlainNumber $m.Groups[2].Value) }
+    $key = "$($issue.Repo)#$($issue.Number)"
+    if (-not $seen.ContainsKey($key)) { $seen[$key] = $true; $out += $issue }
+  }
+  return , $out
+}
+
+# The issue numbers of the per-run hard markers, .run_state/hard-<N> under the root.
+function Get-HardMarkers([string]$root) {
+  if (-not $root) { return , @() }
+  $dir = Join-Path $root '.run_state'
+  if (-not (Test-Path -LiteralPath $dir -PathType Container)) { return , @() }
+  return , @(Get-ChildItem -LiteralPath $dir -File | Where-Object { $_.Name -cmatch '^hard-[0-9]+$' } |
+      ForEach-Object { Get-PlainNumber $_.Name.Substring(5) } | Select-Object -Unique)
+}
+
+# owner/name from the root's origin remote on GitHub, or $null. The remote is the agent's to set,
+# so only plain owner/name comes back, safe on a gh command line.
+function Get-OriginRepo([string]$root) {
+  $ErrorActionPreference = 'Continue'
+  $url = (& git -C $root remote get-url origin 2>$null | Select-Object -First 1)
+  if ([string]$url -notmatch 'github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$') { return $null }
+  $repo = "$($Matches[1])/$($Matches[2])"
+  if ($repo -cnotmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { return $null }
+  return $repo
+}
+
+# Runs gh with $ghArgs, waiting $ms at most. Its output lines, trimmed, or $null when it exits
+# non-zero or runs past $ms. GOVERNANCE_GH names another gh; a .ps1 there runs in this PowerShell.
+function Invoke-Gh([string]$ghArgs, [int]$ms) {
+  $gh = $env:GOVERNANCE_GH
+  if (-not $gh) {
+    $cmd = Get-Command gh -ErrorAction SilentlyContinue
+    $gh = if ($cmd) { $cmd.Source } else { 'C:\Program Files\GitHub CLI\gh.exe' }
+  }
+  $info = New-Object System.Diagnostics.ProcessStartInfo
+  if ($gh -like '*.ps1') {
+    $info.FileName = (Get-Process -Id $PID).Path
+    $info.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$gh`" $ghArgs"
+  } else { $info.FileName = $gh; $info.Arguments = $ghArgs }
+  $info.UseShellExecute = $false
+  $info.RedirectStandardOutput = $true
+  $info.RedirectStandardError = $true
+  $proc = [System.Diagnostics.Process]::Start($info)
+  $out = $proc.StandardOutput.ReadToEndAsync()
+  if (-not $proc.WaitForExit([Math]::Max(0, $ms))) { try { $proc.Kill() } catch { }; return $null }
+  if ($proc.ExitCode -ne 0) { return $null }
+  return , @($out.Result -split "`r?`n" | ForEach-Object { $_.Trim() })
 }
 
 # The roles whose agent is "reviewer", read from seats.json (no list kept here).
