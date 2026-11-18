@@ -2,22 +2,22 @@
 name: reviewing-prs
 description: Use when reviewing a pull request or a single commit's diff against its issue, to say whether the change keeps the issue's promises.
 metadata:
-  reads: 'standards/reviewing.md standards/edge-cases.md standards/deciding.md NORTH-STAR.md'
+  reads: 'standards/reviewing.md standards/edge-cases.md standards/deciding.md definition-of-done.md NORTH-STAR.md'
 ---
 
 # Reviewing a pull request
 
 Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. Then read the issue's acceptance criteria, your briefing's neutral summary, and the changed files with the code around them. The summary is a map, not the evidence.
 
-## The criteria are the standard
+## Three lists
 
-Trace every criterion to evidence: a file and line, a test that would fail if the criterion did not hold, or the output of a command you name. Write one line per criterion saying where you found it. A criterion is missed in three ways:
+Write one line for each acceptance criterion, each numbered clause of `definition-of-done.md`, and each goal under "Goals" in `NORTH-STAR.md`: `yes` with its evidence (a file and line, a test that would fail without it, or a command's output, the briefing's test output included), `no` with what fails, or `n/a` with why. A clause checked only after review, such as CI or the PR body at step 11, is `n/a` naming that step. A `no` is a `blocker:`. A missing file gets one line saying so. An item is a `no` in three ways:
 
 - **Unmet.** Nothing does it, or the test passes either way.
 - **Met in wording only.** The label or message is there but the behavior behind it is not, such as a "Last synced" line that shows the current time.
 - **No failure case.** The criterion names a failure, such as a file that cannot be saved, and no code or test handles it.
 
-Each is a `blocker:`. A claim in the description, such as "also fixes #52" or "tested on a device", needs evidence in the diff; with none, ask a `question:`.
+A claim in the description, such as "also fixes #52" or "tested on a device", needs evidence in the diff; with none, ask a `question:`.
 
 ## Edge cases
 
@@ -33,8 +33,8 @@ Rule on each note under the issue's `## Notes` from the criteria and `NORTH-STAR
 
 ## Hold back
 
-A finding is an unmet criterion, an untested row that applies, a ruling on an issue note (even on unchanged lines), or a defect in the changed lines that you can show with an input and a wrong result. Preferences, edge cases no applicable row names, speculation the diff cannot confirm, and missing context such as omitted imports or unchanged lines are not findings; leave them out. A clean PR gets `praise:` that names the criterion it meets and the evidence that proves it, and you say it is ready.
+A finding is a `no` line, an untested row that applies, a ruling on an issue note (even on unchanged lines), or a defect in the changed lines that you can show with an input and a wrong result. Preferences, edge cases no applicable row names, speculation the diff cannot confirm, and missing context such as omitted imports or unchanged lines are not findings; leave them out. A clean PR gets `praise:` that names the criterion it meets and the evidence that proves it, and you say it is ready.
 
 ## Your reply
 
-List the findings, each starting with its label. End by saying whether any `blocker:` or `question:` needs a re-check.
+Give the three lists, then the findings, each starting with its label. End by saying whether any `blocker:` or `question:` needs a re-check.
