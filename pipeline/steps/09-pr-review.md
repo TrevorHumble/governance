@@ -16,7 +16,7 @@ A specialist does not loop. Fix what they raise yourself.
 
 ## The PR reviewer
 
-Then start one fresh PR reviewer with `reviewing-prs`. Hand it the issue and a neutral summary, not your reasoning: `standards/reviewing.md` § "Independence". Put the specialists' blockers in its briefing; it re-checks each by looking at the code.
+Then start one fresh PR reviewer with `reviewing-prs`. Hand it the issue and a neutral summary, not your reasoning: `standards/reviewing.md` § "Independence". Put the specialists' blockers in its briefing; it re-checks each by looking at the code. Add the summary lines of `checkCommands.test` (`repo-profile.json`) run on the reviewed tree, since it has no shell.
 
 Start no review until the issue has a `## Notes` heading, even one saying "none". Put its notes in the briefing, and ask for one ruling line per note (`reviewing-prs`, "Notes on the issue"). Step 12 reads those lines.
 
@@ -30,4 +30,4 @@ Run the check on the reviewed tree, before any `minor:` fixes. Those then go in 
 
 ## Token change
 
-In the governance home, if the measured token change differs a lot from the one stated at hand-off, resend the hand-off with the measured number and wait for the owner's yes.
+In the governance home, if the measured token change is more than 100 tokens away from the one stated at hand-off, resend the hand-off with the measured number and wait for the owner's yes.
