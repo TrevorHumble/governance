@@ -21,7 +21,9 @@ function ps(expression, env = {}) {
     env: childEnv,
   });
   expect(r.status).toBe(0);
-  return JSON.parse(r.stdout.trim());
+  // Windows PowerShell 5.1 writes nothing for ConvertTo-Json $null, where pwsh writes "null".
+  const out = r.stdout.trim();
+  return out === '' ? null : JSON.parse(out);
 }
 
 const maybeDescribe = launcherMissing

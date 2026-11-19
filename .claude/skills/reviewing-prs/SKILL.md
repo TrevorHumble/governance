@@ -29,11 +29,11 @@ When the briefing carries a specialist's `blocker:`, re-check it as `standards/r
 
 ## Notes on the issue
 
-Rule on each note under the issue's `## Notes` from the criteria and `NORTH-STAR.md`. A note on how something is built, or one they settle, is a `blocker:` naming the note and, when one settles it, the settling line, unless you estimate the fix is over the limits in `standards/deciding.md`, "Stay in scope". Keep only the owner's calls (`writing-acceptance-criteria`, "Whose call") and those over the limits, one ruling line each saying which. The same limits judge a fix the PR body names outside the issue's files.
+Rule on each note under the issue's `## Notes` from the criteria and `NORTH-STAR.md`. A note on how something is built, or one they settle, is a `blocker:` naming the note and any settling line, unless you estimate the fix is over the limits in `standards/deciding.md`, "Stay in scope". A note that is the owner's call (`writing-acceptance-criteria`, "Whose call") is a `blocker:` until the briefing's `Asked:` lines show his `Answer:`. Give one ruling line for each answered or over the limits. The same limits judge a fix the PR body names outside the issue's files.
 
 ## Hold back
 
-A finding is a `no` line, an untested row that applies, a ruling on an issue note (even on unchanged lines), or a defect in the changed lines that you can show with an input and a wrong result. Preferences, edge cases no applicable row names, speculation the diff cannot confirm, and missing context such as omitted imports or unchanged lines are not findings; leave them out. A clean PR gets `praise:` that names the criterion it meets and the evidence that proves it, and you say it is ready.
+A finding is a `no` line, an untested row that applies, a ruling on an issue note, a line anywhere that the change made untrue (a tooltip, a doc, a comment, a rule), one of the owner's calls you are fairly sure is wrong (a `blocker:` naming it and why, so the run asks him), or a defect in the changed lines you can show with an input and a wrong result. Preferences, edge cases no row names, speculation the diff cannot confirm, and missing context are not findings. A clean PR gets `praise:` naming the criterion it meets and its evidence, and you say it is ready.
 
 ## Your reply
 

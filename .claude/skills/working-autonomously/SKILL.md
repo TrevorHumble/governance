@@ -15,7 +15,7 @@ Check the criteria first, as `standards/deciding.md` says. A question the criter
 
 ## Park what you may not
 
-Owner's calls are marked as the `implementing` skill says. When the owner is away, you also build around anything only the owner can decide, with a clearly marked placeholder. Both go under "For you" in the report, every option priced, as `pipeline/report-template.md` shows. A change that goes over a cap is parked the same way. Never approve it yourself.
+An ask still goes in chat when the owner is away, logged as the `implementing` skill says. Build around it with a clearly marked placeholder, and ship waits for his answer. A change that goes over a cap is parked under "For you" in the report, every option priced, as `pipeline/report-template.md` shows. Never approve it yourself.
 
 ## One report
 

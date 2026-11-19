@@ -548,8 +548,15 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: caps on the work it does',
 maybeDescribe('.claude/hooks/before-issue-create.ps1: the body file must be a regular file', () => {
   const withFile = (f) => create(`--label ${LABEL} --body-file ${f}`);
 
-  it('allows a regular file and a link to one', () => {
-    fs.symlinkSync(path.join(dir, 'ok.md'), path.join(dir, 'link.md'));
+  it('allows a regular file and a link to one', (ctx) => {
+    expect(run(withFile('ok.md')).decision).toBe('allow');
+    try {
+      fs.symlinkSync(path.join(dir, 'ok.md'), path.join(dir, 'link.md'));
+    } catch (e) {
+      // Windows refuses symlinks without Developer Mode; the link half then cannot run here.
+      if (e.code === 'EPERM') return ctx.skip();
+      throw e;
+    }
     try {
       expect(run(withFile('link.md')).decision).toBe('allow');
     } finally {

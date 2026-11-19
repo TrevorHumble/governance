@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## The owner is asked the moment something of his looks wrong
+
+2026-11-18, #208, replacing parts of #167 and #135
+
+Decided: The owner's ground is the interface, the story, the criteria, the North Star and what to build; records of how the product works (notes, docs, comments) are the model's. A run decides what it can be reasonably sure of and asks him in chat the moment something of his looks wrong (`AGENTS.md`, "Working together"). `ship` stops while an `Asked:` line has no `Answer:`. Reviewers flag words a change made untrue, even on lines it did not touch.
+
+Why: Eight runs in two weeks found a problem inside their issue and held it for the report, which lands after merge, so each cost a new issue (#175).
+
+Gave up: "No check-ins after approve", and `Owner's call:` lines that wait for the report.
+
 ## Found work is settled in its own issue
 
 2026-11-16, #197

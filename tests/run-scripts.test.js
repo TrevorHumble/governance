@@ -408,6 +408,33 @@ describe.skipIf(launcherMissing)(launcherMissing ? skipTitle('run-scripts') : 's
     expect(git(repo.origin, ['branch', '--list', '42-x']).trim()).toBe('');
   });
 
+  it('stops on a question to the owner with no answer, before pushing anything', () => {
+    const repo = shipRepo('Changed the thing.\n- Asked: should the tooltip say Editable?');
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('Asked: should the tooltip say Editable?');
+    expect(r.err).toContain('Nothing was merged');
+    expect(git(repo.origin, ['branch', '--list', '42-x']).trim()).toBe('');
+  });
+
+  it('treats an empty answer as no answer', () => {
+    const repo = shipRepo(
+      'Changed the thing.\n- Asked: should the tooltip say Editable? Answer:  '
+    );
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('no answer');
+  });
+
+  it('ships once the question carries his answer', () => {
+    const repo = shipRepo(
+      'Changed the thing.\n- Asked: should the tooltip say Editable? Answer: yes, keep it short'
+    );
+    const r = run(repo, repo.clone, 'ship.ps1', SHIP);
+    expect(r.code, r.err).toBe(0);
+    expect(ghLog(repo)).toContain('pulls/77/merge');
+  });
+
   it('refuses a stub entry, removes the fragment, and merges nothing', () => {
     const repo = shipRepo();
     const r = run(repo, repo.clone, 'ship.ps1', [

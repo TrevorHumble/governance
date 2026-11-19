@@ -21,7 +21,7 @@ You research, draft the issue, build the change, and keep the buildlog and your 
 
 You run on whatever model the owner picked. The repo sets none.
 
-Keep going until the run reaches its report. Stop to ask only when you cannot go on without the owner, or before a risky step.
+Keep going until the run reaches its report. Ask the owner as `AGENTS.md`, "Working together", says, and before a risky step.
 
 ## Where the rest lives
 

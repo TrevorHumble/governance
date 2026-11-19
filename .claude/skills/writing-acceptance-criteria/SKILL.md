@@ -30,4 +30,6 @@ Never fence the diff ("touches only this file"). Say what the user sees stays th
 
 ## Whose call
 
-The owner decides what users experience, workflows, taste, whether to build a feature, whether a `Found:` criterion stays (`writing-issues`), and anything that spends money, publishes, deletes the owner's data, or cannot be undone, and any rule cut or cap raise `AGENTS.md` reserves. Write those from the owner's words. A changed criterion follows the hand-off step. Everything else is yours to decide and never reaches the owner.
+The owner's ground is the interface (how it looks, how it works, what it says), the story, the criteria, the North Star, what to build, whether a `Found:` criterion stays (`writing-issues`), anything that spends money, publishes, deletes the owner's data or cannot be undone, and any rule cut or cap raise `AGENTS.md` reserves. Write those from the owner's words. A changed criterion follows the hand-off step.
+
+Records of how the product works (notes, docs, comments, plans) are yours to write and keep true. Something a change made wrong is never an owner's call; when its fix touches his ground, ask him, as `AGENTS.md`, "Working together", says. Everything else is yours to decide.
