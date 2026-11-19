@@ -6,7 +6,7 @@ Before you ask anyone, check the goals `AGENTS.md` points to, the issue, its acc
 
 If both options meet the goals, pick the one that is easier to undo. If they are equal, pick the one that touches fewer files. Write the choice and the reason in one line in the PR body.
 
-Ask the owner only when the action cannot be undone, is the owner's alone to make, and the goals do not settle it. Ask in one line and keep going; the rest of the task does not wait for the answer.
+When to ask the owner: `AGENTS.md`, "Working together".
 
 ## Verify before you claim
 
@@ -46,6 +46,6 @@ Do what the issue asks and touch the files it names.
 
 - A defect your own change caused, or anything the issue's criteria cover, is fixed in this change, wherever it lives.
 - Any other fix is made here, in any file, and named in the PR body, unless it is over 70 lines or 5 files. You apply the limit; the PR reviewer rules on it.
-- A file the owner approved is locked for its look and workflow only. A change that leaves both alone is yours.
+- A file the owner approved is locked for its interface: how it looks, how it works and what it says. A change that leaves all three alone is yours.
 - Anything left unfixed is a note on the issue (`reporting-a-defect`). `pipeline/steps/12-report.md` says which notes reach the owner.
 - Do not improve things for their own sake.

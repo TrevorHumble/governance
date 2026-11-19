@@ -36,7 +36,7 @@ Then stop. No fix menu, no "let me know". He asks what he wants to ask; answer e
 
 ## Filing
 
-When he says file it ("file it away", "ledger it", "log that"), write one line to a file and post it as a comment on the ledger, issue #175 in `TrevorHumble/governance`, by `github-write`:
+When he says file it ("file it away", "ledger it", "log that"), read the ledger's comments first, then write one line to a file and post it as a comment on the ledger, issue #175 in `TrevorHumble/governance`, by `github-write`:
 
 ```
 gh api repos/TrevorHumble/governance/issues/175/comments -F body=@<file>
@@ -47,15 +47,16 @@ If edit-gate refuses the post, ask him to type `/rca`, then file.
 The line:
 
 ```
-- YYYY-MM-DD - <repo> - <what happened> - <cause> - <where>
+- YYYY-MM-DD - <repo> - <what happened> - <cause> - <where> - <shared cause>
 ```
 
-- Five fields, " - " between them. Swap any " - " inside a field for ", ".
+- Six fields, " - " between them. Swap any " - " inside a field for ", ".
 - `repo`: the repo the case happened in, as its folder is named.
 - `where`: the path or rule the cause lives in. `one-off` when the looking found none. `unknown` when it did not settle.
+- `shared cause`: the mechanism in a few words, worded so another case with the same mechanism gets the same words. `cause` is this case's story; this is its class. Reuse the words of an earlier line when the mechanism matches. When `where` is `one-off` or `unknown`, this field repeats it.
 - The date is today's, checked against the clock, not guessed.
 
-Then read the ledger's comments and count the lines with the same `where`, skipping `one-off` and `unknown`. Reply in one line: `Filed.` or `Filed. Third line on <where>.` Three is the sign that this class of case has earned one issue through the pipeline. That build is his call; do not file it.
+Then count the lines with the same `shared cause`, judging an older five-field line by its `cause` text, and skipping `one-off` and `unknown`. Reply in one line: `Filed.` or `Filed. Third line on <shared cause>.` Three is the sign that this class of case has earned one issue through the pipeline. That build is his call; do not file it.
 
 ## Ending it
 

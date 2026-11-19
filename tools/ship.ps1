@@ -5,7 +5,8 @@
 #   ship.ps1 -Lane -Body "<check:seats output>" [-Issue 111]    # configuration lane: stops at green
 #   ship.ps1 -Lane -Merge                                         # after the owner's yes in chat
 #
-# A build: copies the run note's "## Decisions" section into the PR body, pushes, opens the PR (or
+# A build: stops while the run note's "## Decisions" holds an "- Asked:" line with no "Answer:",
+# then copies that section into the PR body, pushes, opens the PR (or
 # reuses the open one), writes and checks buildlog/<N>-<PR>.md, waits for every required check
 # (ciCheckNames in repo-profile.json) on the head commit to finish green, squash-merges, and closes
 # the issue. Red stops it and names the check; run it again after the fix and it picks up where it
@@ -167,6 +168,11 @@ if ($Lane) {
   }
   $bodyText = ($decisions -join "`n").Trim()
   if (-not $bodyText) { Stop-Ship "the Decisions section of $note is empty. Write the decision lines there first (the implementing skill)." }
+  # An ask to the owner holds the merge until his answer is on its line (the implementing skill).
+  $open = @($decisions | Where-Object { $_ -match '^\s*-\s*Asked:' -and $_ -cnotmatch 'Answer:\s*\S' })
+  if ($open.Count -gt 0) {
+    Stop-Ship "the run note has a question to the owner with no answer: $($open[0].Trim()) Ask the owner and add his answer, then run ship again. Nothing was merged."
+  }
   $bodyText = "$bodyText`n`nIssue: #$Issue"
 }
 

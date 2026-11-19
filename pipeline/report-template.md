@@ -16,9 +16,9 @@ Agents pass the first test and fail the second. Short and useless is the common 
 
 Open with one line: `Moved up: no.` or `Moved up: yes, <why>`. The why is the part of the hard test that applied (`pipeline/PIPELINE.md`), at the start or mid-run. Every report carries it.
 
-The calls the agents made are in the PR body, and the report does not repeat them. The report is two paragraphs or less, in plain words, and says nothing twice.
+The calls the agents made are in the PR body, and the report repeats only the `Call:` lines. The report is two paragraphs or less, in plain words, and says nothing twice.
 
-**For you.** Leave it out when nothing needs the owner. Anything only the owner can decide, and any change parked because it went over a cap while the owner was away. Name the question in a line, then price each option, with a percentage for how likely it is the right pick (they add up to 100):
+**For you.** Leave it out when there is nothing for the owner. It holds each `Call:` line, what you decided and why, and any change parked because it went over a cap while the owner was away. It never holds a question the run could have asked while it ran (`AGENTS.md`, "Working together"). For a parked change, name the question in a line, then price each option, with a percentage for how likely it is the right pick (they add up to 100):
 
 ```
 Should shared lists be public by default?
