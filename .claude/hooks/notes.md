@@ -6,7 +6,7 @@ This command was judged as a filing or a label add: {why}. File an issue one way
 
 ## edit-gate
 
-Nothing changes until the owner starts the work. {what} Ask him to type /build, or /buildlog, /rca, /realign or /resume. Reading and read-only commands still run.
+Nothing changes until the owner starts the work. {what} Ask him to type /build, or /buildlog, /rca, /realign, /resume or /slop. Reading and read-only commands still run.
 
 ## goal-check
 

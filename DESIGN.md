@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Typing /slop also unlocks edits
+
+2026-11-21, #210, replacing parts of #179
+
+Decided: `/slop` joins `/build`, `/buildlog`, `/rca`, `/realign` and `/resume` as a typed command that unlocks edits, so it can file. It files to the same ledger as `/rca` (#175), with lines starting `slop, `, under rca's counting rule.
+
+Why: The owner wants filler writing talked through and filed the way wrong results are. One ledger keeps one count across both.
+
+Gave up: A second ledger for slop, which would split the count.
+
 ## The owner is asked the moment something of his looks wrong
 
 2026-11-18, #208, replacing parts of #167 and #135
