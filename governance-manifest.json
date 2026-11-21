@@ -497,7 +497,8 @@
     ".claude/skills/goal-writer/",
     ".claude/skills/impeccable/",
     ".claude/skills/rca/",
-    ".claude/skills/scaffold-project/"
+    ".claude/skills/scaffold-project/",
+    ".claude/skills/slop/"
   ],
   "classesDefault": "structure",
   "arrivesAsStructure": [".githooks/pre-commit", "pipeline/PIPELINE.md"],
