@@ -1,5 +1,5 @@
 # edit-gate: a PreToolUse hook on Edit, Write, NotebookEdit, Bash and PowerShell. Until the owner has
-# typed /build, /buildlog, /rca, /realign or /resume in this session (unlock-edits then writes
+# typed /build, /buildlog, /rca, /realign, /resume or /slop in this session (unlock-edits then writes
 # .run_state/unlocked-<session_id>), it denies every file edit outside the session's scratchpad, the
 # memory folders and the plans folder, and every command that is not on the read-only list below.
 # The marker is checked before hook-core.ps1 loads, so a broken core never stalls an unlocked run.

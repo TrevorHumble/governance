@@ -1,14 +1,14 @@
-# unlock-edits: a UserPromptExpansion hook. When the owner types /build, /buildlog, /rca, /realign or
-# /resume, it writes .run_state/unlocked-<session_id> under the project root, and edit-gate then lets
+# unlock-edits: a UserPromptExpansion hook. When the owner types /build, /buildlog, /rca, /realign,
+# /resume or /slop, it writes .run_state/unlocked-<session_id> under the project root, and edit-gate then lets
 # that session edit. Claude Code fires this event only for a command the user types, never for the
 # model's own Skill call, so the model cannot unlock itself.
 # It never blocks the command and prints nothing. It writes nothing for another command, for an
 # expansion that is not a slash command, or for a session id outside [A-Za-z0-9-].
 # Like edit-gate's marker check, it does not load hook-core.ps1, so a broken core cannot stop the
-# owner from unlocking. The settings.json matcher must name the same five; a test checks it.
+# owner from unlocking. The settings.json matcher must name the same six; a test checks it.
 $ErrorActionPreference = 'Stop'
 
-$UNLOCKING = @('build', 'buildlog', 'rca', 'realign', 'resume')
+$UNLOCKING = @('build', 'buildlog', 'rca', 'realign', 'resume', 'slop')
 
 try {
   $reader = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.UTF8Encoding]::new($false))

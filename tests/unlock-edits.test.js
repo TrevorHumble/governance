@@ -1,6 +1,6 @@
 // tests/unlock-edits.test.js
 // Tests for .claude/hooks/unlock-edits.ps1: a UserPromptExpansion hook that writes the session's
-// unlock marker when the owner types one of the five unlocking commands.
+// unlock marker when the owner types one of the six unlocking commands.
 'use strict';
 
 const { spawnSync } = require('child_process');
@@ -47,7 +47,7 @@ const maybeDescribe = launcherMissing
   : describe;
 
 maybeDescribe('.claude/hooks/unlock-edits.ps1', () => {
-  for (const name of ['build', 'buildlog', 'rca', 'realign', 'resume']) {
+  for (const name of ['build', 'buildlog', 'rca', 'realign', 'resume', 'slop']) {
     it(`writes the marker for /${name}, silently`, () => {
       expect(run(expansion(name))).toBe('');
       expect(markers()).toEqual([`unlocked-${SESSION}`]);
@@ -82,7 +82,7 @@ maybeDescribe('.claude/hooks/unlock-edits.ps1', () => {
     }
   });
 
-  it('names the same five commands as the settings.json matcher', () => {
+  it('names the same six commands as the settings.json matcher', () => {
     const script = fs.readFileSync(SCRIPT, 'utf8');
     const listed = [...script.match(/\$UNLOCKING = @\(([^)]*)\)/)[1].matchAll(/'([^']+)'/g)].map(
       (m) => m[1]

@@ -99,7 +99,7 @@
     ],
     "UserPromptExpansion": [
       {
-        "matcher": "^(build|buildlog|rca|realign|resume)$",
+        "matcher": "^(build|buildlog|rca|realign|resume|slop)$",
         "hooks": [
           {
             "type": "command",
