@@ -29,7 +29,7 @@ When the briefing carries a specialist's `blocker:`, re-check it as `standards/r
 
 ## Notes on the issue
 
-Rule on each note under the issue's `## Notes` from the criteria and `NORTH-STAR.md`. A note on how something is built, or one they settle, is a `blocker:` naming the note and any settling line, unless you estimate the fix is over the limits in `standards/deciding.md`, "Stay in scope". A note that is the owner's call (`writing-acceptance-criteria`, "Whose call") is a `blocker:` until the briefing's `Asked:` lines show his `Answer:`. Give one ruling line for each answered or over the limits. The same limits judge a fix the PR body names outside the issue's files.
+Rule on each note under the issue's `## Notes` from the criteria and `NORTH-STAR.md`. A note on how something is built, or one they settle, is a `blocker:` naming the note and any settling line. One over the limits in `standards/deciding.md`, "Stay in scope", or on the owner's ground (`writing-acceptance-criteria`, "Whose call") is a `blocker:` until it shows he was asked, and, if his answer could change this diff, until it has his answer. Give each that passes a ruling line. The same limits judge a fix the PR body names outside the issue's files.
 
 ## Hold back
 

@@ -26,7 +26,7 @@ The one thing he cannot use is a problem you knew about and held until the work 
 - Standards: `standards/`.
 - Which model and effort each role runs on: `seats.json`.
 - When a change is done: `definition-of-done.md`.
-- What the owner has already declined, if the file is present: `owner-declines.md`. Check it before a note goes to the owner; a match is dropped.
+- What the owner has already declined, if the file is present: `owner-declines.md`. Check it before you ask the owner; a match is dropped.
 
 ## Rules
 

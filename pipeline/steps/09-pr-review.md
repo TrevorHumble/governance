@@ -48,7 +48,7 @@ Write the answer under `## Decisions` in the run note: `Security review: ran, <c
 
 Then start one fresh PR reviewer with `reviewing-prs`. Hand it the issue and a neutral summary, not your reasoning: `standards/reviewing.md` § "Independence". Put the specialists' blockers in its briefing; it re-checks each by looking at the code. Add the summary lines of `checkCommands.test` (`repo-profile.json`) run on the reviewed tree, since it has no shell.
 
-Start no review until the issue has a `## Notes` heading, even one saying "none". Put its notes in the briefing, with the run note's `Asked:` lines as written (or "none"), and ask for one ruling line per note (`reviewing-prs`, "Notes on the issue"). Step 12 reads those lines.
+Start no review until the issue has a `## Notes` heading, even one saying "none". Put its notes in the briefing, with the run note's `Asked:` lines as written (or "none"), and ask for one ruling line per note (`reviewing-prs`, "Notes on the issue").
 
 On a FAIL, fix every `blocker:` and answer every `question:`, then re-check as `standards/reviewing.md` § "Re-check rounds" says. A finding you contest goes to `refereeing`, once.
 

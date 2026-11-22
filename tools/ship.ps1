@@ -168,7 +168,7 @@ if ($Lane) {
   }
   $bodyText = ($decisions -join "`n").Trim()
   if (-not $bodyText) { Stop-Ship "the Decisions section of $note is empty. Write the decision lines there first (the implementing skill)." }
-  # An ask to the owner holds the merge until his answer is on its line (the implementing skill).
+  # An Asked: line holds the merge until his answer is on it (the implementing skill).
   $open = @($decisions | Where-Object { $_ -match '^\s*-\s*Asked:' -and $_ -cnotmatch 'Answer:\s*\S' })
   if ($open.Count -gt 0) {
     Stop-Ship "the run note has a question to the owner with no answer: $($open[0].Trim()) Ask the owner and add his answer, then run ship again. Nothing was merged."
