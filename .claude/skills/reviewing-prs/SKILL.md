@@ -7,7 +7,7 @@ metadata:
 
 # Reviewing a pull request
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. Then read the issue's acceptance criteria, your briefing's neutral summary, and the changed files with the code around them. The summary is a map, not the evidence.
+Read `standards/reviewing.md` first and follow its labels, reasons and praise. Then read the acceptance criteria, your briefing's neutral summary, and the changed files with the code around them. The summary is a map, not the evidence.
 
 ## Three lists
 
@@ -17,7 +17,7 @@ Write one line for each acceptance criterion, each numbered clause of `definitio
 - **Met in wording only.** The label or message is there but the behavior behind it is not, such as a "Last synced" line that shows the current time.
 - **No failure case.** The criterion names a failure, such as a file that cannot be saved, and no code or test handles it.
 
-A claim in the description, such as "also fixes #52" or "tested on a device", needs evidence in the diff; with none, ask a `question:`.
+A claim in the description, such as "also fixes #52", needs evidence in the diff; with none, ask a `question:`.
 
 ## Edge cases
 
@@ -25,7 +25,7 @@ Find the rows of `standards/edge-cases.md` that fit the change's inputs and chec
 
 ## Specialist blockers
 
-When the briefing carries a specialist's `blocker:`, re-check it as `standards/reviewing.md` says. Look at the code: a new test or a note saying "addressed" does not show the cause is gone. Design, security, and a repo's own lens are the specialists' fields; do not redo them.
+When the briefing carries a specialist's `blocker:`, re-check it as `standards/reviewing.md` says. Look at the code; a new test or "addressed" note is not proof. Design, security, and a repo's own lens are the specialists' fields; do not redo them.
 
 ## Notes on the issue
 
@@ -33,7 +33,7 @@ Rule on each note under the issue's `## Notes` from the criteria and `NORTH-STAR
 
 ## Hold back
 
-A finding is a `no` line, an untested row that applies, a ruling on an issue note, a line anywhere that the change made untrue (a tooltip, a doc, a comment, a rule), one of the owner's calls you are fairly sure is wrong (a `blocker:` naming it and why, so the run asks him), or a defect in the changed lines you can show with an input and a wrong result. Preferences, edge cases no row names, speculation the diff cannot confirm, and missing context are not findings. A clean PR gets `praise:` naming the criterion it meets and its evidence, and you say it is ready.
+A finding is a `no` line, an untested row that applies, a ruling on an issue note, a line anywhere that the change made untrue (a tooltip, a doc, a comment, a rule), one of the owner's calls you are fairly sure is wrong (a `blocker:` naming it and why, so the run asks him), a defect in the changed lines you can show with an input and a wrong result, or a wrong `Security review:` line by the briefing's checks (a missed check: `blocker:`; a `ran` line naming no changed, fitting line: `nitpick:`). Preferences, edge cases no row names, speculation the diff cannot confirm, and missing context are not findings. A clean PR gets `praise:` naming the criterion it meets and its evidence, and you say it is ready.
 
 ## Your reply
 
