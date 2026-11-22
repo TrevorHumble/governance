@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Security review runs on four checks, not a path list
+
+2026-11-21, #213
+
+Decided: Step 09 starts security review on four checks (strangers, leaving, secrets, guards), two definitions and eight worked pairs, not on `criticalPaths` or `criticalDependencies`. Each PR states which check fired or why none did, and the PR reviewer checks that line. The checks reach reviewers in their briefings, about 700 tokens each, outside the reviewer cap.
+
+Why: Flatland wrote `criticalPaths` to mean "hard", so security review ran on every export change (#175, 2026-11-21). A rule scoped by a list instead of its intent bit twice (#175, 2026-11-19).
+
+Gave up: A path list, and a longer rule of about 25 clauses, which fresh reviewers found harder to apply the same way twice.
+
 ## Typing /slop also unlocks edits
 
 2026-11-21, #210, replacing parts of #179

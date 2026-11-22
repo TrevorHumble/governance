@@ -1,6 +1,6 @@
 ---
 name: reviewing-security
-description: Use when a pull request touches input handling, queries, files, logs, authentication, or workflow permissions, to trace what an untrusted user can reach.
+description: Use when a check in step 09's "When security review runs" fires on a change, to trace what another person can reach, what leaves, and what a loosened guard lets through.
 metadata:
   reads: 'standards/reviewing.md'
 ---
@@ -23,9 +23,13 @@ Judge access by the rule the issue states. If the issue says any signed-in user 
 
 The path from input to sink is what makes a `blocker:`, such as "name `../../.env` reads the server's secrets".
 
+## Guards, outbound paths and secrets
+
+The briefing's `Security review:` line names the check that fired. For a loosened guard, name what it refused before and what now gets through, and follow that like an input. For a new outbound path, name what is sent and to whom. For a secret or personal data in a new place, name who can read it.
+
 ## Hold back
 
-A finding is a path from input to sink that the diff shows. Speculation the diff cannot confirm, other flaws you could imagine downstream, tidy-ups, and missing context such as an omitted import are not findings; leave them out. If a path might exist but you cannot see the code, ask one `question:`. A change that handles its input well gets `praise:` that names what it did, such as the parameterised query or the contained path, and you say it is clear.
+A finding is a path the diff shows, from input to sink or from a loosened guard, outbound path or new place to harm. Speculation the diff cannot confirm, other flaws you could imagine downstream, tidy-ups, and missing context such as an omitted import are not findings; leave them out. If a path might exist but you cannot see the code, ask one `question:`. A change that handles its input well gets `praise:` that names what it did, such as the parameterised query, the contained path, or the guard that still refuses what it did, and you say it is clear.
 
 ## Your reply
 
