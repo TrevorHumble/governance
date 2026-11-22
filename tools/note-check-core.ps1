@@ -1,5 +1,5 @@
 # tools/note-check-core.ps1: the two mechanizable note pre-check decisions
-# named in AGENTS.md (owner-declines.md) and pipeline/steps/12-report.md:
+# named in AGENTS.md (owner-declines.md):
 # does a recorded owner decline suppress this note, and
 # does an open issue already cover it. The match key is the note's
 # normalized one-line substance; anything fuzzier than the comparisons

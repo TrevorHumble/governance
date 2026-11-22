@@ -15,8 +15,8 @@ Check the criteria first, as `standards/deciding.md` says. A question the criter
 
 ## Park what you may not
 
-An ask still goes in chat when the owner is away, logged as the `implementing` skill says. Build around it with a clearly marked placeholder, and ship waits for his answer. A change that goes over a cap is parked under "For you" in the report, every option priced, as `pipeline/report-template.md` shows. Never approve it yourself.
+An ask still goes in chat when the owner is away, logged as the `implementing` skill says. Where it touches this change, build around it with a clearly marked placeholder; `implementing` says when ship waits. A change that goes over a cap is parked under "For you" in the report, every option priced, as `pipeline/report-template.md` shows. Never approve it yourself.
 
 ## One report
 
-End with one report, in the template's form: "For you" if anything needs the owner. A defect outside the issue is fixed when `standards/deciding.md`, "Stay in scope", allows it; otherwise it is a note on the issue (`reporting-a-defect`); step 12 says which notes reach the owner.
+End with one report, in the template's form.

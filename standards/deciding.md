@@ -47,5 +47,5 @@ Do what the issue asks and touch the files it names.
 - A defect your own change caused, or anything the issue's criteria cover, is fixed in this change, wherever it lives.
 - Any other fix is made here, in any file, and named in the PR body, unless it is over 70 lines or 5 files. You apply the limit; the PR reviewer rules on it.
 - A file the owner approved is locked for its interface: how it looks, how it works and what it says. A change that leaves all three alone is yours.
-- Anything left unfixed is a note on the issue (`reporting-a-defect`). `pipeline/steps/12-report.md` says which notes reach the owner.
+- What you find and cannot fix here: `reporting-a-defect`.
 - Do not improve things for their own sake.

@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## A find the run cannot fix is asked when found
+
+2026-11-22, #216, replacing parts of #159
+
+Decided: A defect outside the task that a run cannot fix within "Stay in scope" is the owner's call, so it is asked in chat when found (`reporting-a-defect`). An ask that could change the run's change is an `Asked:` line and holds the merge; any other is dated in the issue's note and does not. Notes are the record, and the report carries only an ask still unanswered.
+
+Why: The old route made such finds notes the owner saw after merge, as in #213 (#175).
+
+Gave up: Routing finds through the report, and holding every merge on every ask.
+
 ## Security review runs on four checks, not a path list
 
 2026-11-21, #213

@@ -23,13 +23,13 @@ Read every prior-art path the issue names, and reuse what is there. Before you c
 
 Technical calls inside the criteria are yours (`standards/deciding.md`, "Decide from the goals"). Would a typical user expect it to work? Then build it: a slug that mangles punctuation is a bug, not a follow-up.
 
-Ask the owner as `AGENTS.md`, "Working together", says: in chat, the moment you find it. Log each ask as `- Asked: <question>` under `## Decisions` in the run note, add `Answer: <his words>` to that line when he replies, and keep building what does not wait on it; ship stops while an ask has no answer. Before a trade-off reaches him, look for the design that keeps both. A call near his ground that you make with some doubt gets a `- Call: <what and why>` line, which the report repeats; every other decision is a plain line.
+Ask the owner as `AGENTS.md`, "Working together", says: in chat, the moment you find it. Log an ask whose answer could change this change as `- Asked: <question>` under `## Decisions` in the run note, add `Answer: <his words>` to that line when he replies, and keep building what does not wait on it; ship stops while one has no answer. Log any other ask, dated, in the issue's note, with his answer when it comes; the merge does not wait for it. Before a trade-off reaches him, look for the design that keeps both. A call near his ground that you make with some doubt gets a `- Call: <what and why>` line, which the report repeats; every other decision is a plain line.
 
 ## Write it down
 
 Review and commit come after the build, not inside it. Before you call the build done, write these down, so shipping can copy them as written:
 
 - Under `## Decisions` in your run note (`.run_state/<N>.md`): what I changed, then one line under it for each decision you made inside the criteria and each case inside the issue you left alone, every `Asked:` and `Call:` line included.
-- On the issue, under `## Notes` (`reporting-a-defect`): what you left unfixed outside the criteria, and why, or "none".
+- On the issue, under `## Notes`, as `reporting-a-defect` says, or "none".
 
 A technical call you doubt is yours to settle. Make it and say why in the PR body.

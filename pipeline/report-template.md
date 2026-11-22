@@ -18,7 +18,7 @@ Open with one line: `Moved up: no.` or `Moved up: yes, <why>`. The why is the pa
 
 The calls the agents made are in the PR body, and the report repeats only the `Call:` lines. The report is two paragraphs or less, in plain words, and says nothing twice.
 
-**For you.** Leave it out when there is nothing for the owner. It holds each `Call:` line, what you decided and why, and any change parked because it went over a cap while the owner was away. It never holds a question the run could have asked while it ran (`AGENTS.md`, "Working together"). For a parked change, name the question in a line, then price each option, with a percentage for how likely it is the right pick (they add up to 100):
+**For you.** Leave it out when there is nothing for the owner. It holds each `Call:` line, what you decided and why, any change parked because it went over a cap while the owner was away, and each ask still unanswered on the issue's notes. It never holds a question the run could have asked while it ran (`AGENTS.md`, "Working together"). For a parked change, name the question in a line, then price each option, with a percentage for how likely it is the right pick (they add up to 100):
 
 ```
 Should shared lists be public by default?
@@ -32,4 +32,4 @@ A price is what the option costs: tokens, files, time, or money. If you need a f
 
 ## Nothing on your own initiative
 
-A note stays on the issue unless step 12 sends it up. Do not file an issue, label, or PR about it on your own initiative; the owner decides whether it becomes work. The pipeline's own calls, such as labels and the PR, are not this.
+A note stays on the issue. Do not file an issue, label, or PR about it on your own initiative; the owner decides whether it becomes work. The pipeline's own calls, such as labels and the PR, are not this.
