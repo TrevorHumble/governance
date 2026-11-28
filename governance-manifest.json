@@ -364,6 +364,10 @@
     "scripts/check-buildlog-entry.js",
     "scripts/check-design-records-core.js",
     "scripts/check-design-records.js",
+    "scripts/check-file-size-core.js",
+    "scripts/check-file-size.js",
+    "scripts/check-skills-core.js",
+    "scripts/check-skills.js",
     "scripts/check-emdash-core.js",
     "scripts/check-emdash.js",
     "scripts/check-review-evidence-core.js",
@@ -475,6 +479,10 @@
     "scripts/check-buildlog-entry.js": "content",
     "scripts/check-design-records-core.js": "content",
     "scripts/check-design-records.js": "content",
+    "scripts/check-file-size-core.js": "content",
+    "scripts/check-file-size.js": "content",
+    "scripts/check-skills-core.js": "content",
+    "scripts/check-skills.js": "content",
     "scripts/check-emdash-core.js": "content",
     "scripts/check-emdash.js": "content",
     "scripts/check-review-evidence-core.js": "content",
@@ -560,6 +568,10 @@
     {
       "name": "lenses",
       "type": "array of strings"
+    },
+    {
+      "name": "fileSize",
+      "type": "object"
     },
     {
       "name": "syncIssue",

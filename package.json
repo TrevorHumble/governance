@@ -13,6 +13,8 @@
     "check:evidence": "node scripts/check-review-evidence.js",
     "check:served": "node scripts/check-served-models.js",
     "check:design": "node scripts/check-design-records.js DESIGN.md",
+    "check:size": "node scripts/check-file-size.js",
+    "check:skills": "node scripts/check-skills.js",
     "lint": "eslint . --max-warnings=0",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

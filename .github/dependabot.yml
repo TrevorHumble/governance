@@ -22,7 +22,7 @@ updates:
           - 'patch'
         # No exclude-patterns. Security review runs for a package being added,
         # not for a bump of one already in use (pipeline/steps/09-pr-review.md,
-        # "When security review runs"). dependabot-auto-merge.yml merges every
+        # "Security review triggers"). dependabot-auto-merge.yml merges every
         # Dependabot PR on green, so holding a package's bumps for a person
         # means making that job skip it; listing it here alone does not.
       dev-deps:
