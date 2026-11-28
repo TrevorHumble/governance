@@ -28,6 +28,7 @@
 # so this is a reminder, not a guarantee; a body or label sent another way (a nested JSON field, a
 # --template, a here-document to --input) is denied or unseen. Any exception inside the hook allows
 # the call.
+# An accepted filing gets the before-issue-create-filed note from notes.md; the note never blocks.
 $ErrorActionPreference = 'Stop'
 
 $LABEL = 'needs-issue-review'
@@ -388,6 +389,13 @@ try {
   $head = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $count).TrimStart([char]0xFEFF)
   if (($head -split "`n", 2)[0].TrimEnd("`r") -imatch $CLAIM) {
     Write-Deny "the first line of '$($facts.File)' claims the owner's approval"
+    exit 0
+  }
+  # Accepted: a reminder of what a filed body carries, with no permission decision, so it never blocks.
+  $filed = Get-Note 'before-issue-create-filed'
+  if ($filed) {
+    $out = [ordered]@{ hookSpecificOutput = [ordered]@{ hookEventName = 'PreToolUse'; additionalContext = $filed } }
+    Write-Output ($out | ConvertTo-Json -Compress -Depth 4)
   }
   exit 0
 } catch {

@@ -32,7 +32,8 @@ beforeAll(() => {
 afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 // Runs the hook on a Bash command (or on raw stdin). Returns { decision, event, reason }: decision is
-// 'allow' when the hook printed nothing (event and reason are then undefined) or 'deny' when it did.
+// 'allow' when the hook printed nothing or only a note with no permission decision, and 'deny' when
+// it denied.
 function run(command, { raw } = {}) {
   const input = raw !== undefined ? raw : JSON.stringify({ tool_input: { command }, cwd: dir });
   const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', SCRIPT], {
@@ -43,6 +44,7 @@ function run(command, { raw } = {}) {
   const out = (r.stdout || '').trim();
   if (out === '') return { decision: 'allow' };
   const parsed = JSON.parse(out).hookSpecificOutput;
+  if (parsed.permissionDecision === undefined) return { decision: 'allow' };
   return {
     decision: parsed.permissionDecision,
     event: parsed.hookEventName,
@@ -58,7 +60,7 @@ const maybeDescribe = launcherMissing
   : describe;
 
 maybeDescribe('.claude/hooks/before-issue-create.ps1: the one accepted form', () => {
-  it('allows the label plus a body file holding the line, with no output', () => {
+  it('allows the label plus a body file holding the line, with no permission decision', () => {
     const res = run(create(`--label ${LABEL} --body-file ok.md`));
     expect(res).toEqual({ decision: 'allow' });
   });
@@ -135,14 +137,41 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the one accepted form', ()
 });
 
 maybeDescribe('.claude/hooks/before-issue-create.ps1: the reason text', () => {
-  const noteText = () => {
-    const text = fs.readFileSync(
-      path.join(__dirname, '..', '.claude', 'hooks', 'notes.md'),
-      'utf8'
-    );
-    const m = /^## before-issue-create[ \t]*\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(text);
+  const noteText = (section = 'before-issue-create') => {
+    const text = fs.readFileSync(path.join(HOOKS, 'notes.md'), 'utf8');
+    const m = new RegExp(
+      `^## ${section}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |$(?![\\s\\S]))`,
+      'm'
+    ).exec(text);
     return m[1].trim().replace(/\s*\r?\n\s*/g, ' ');
   };
+
+  it('reminds an accepted filing of the filed note, sets no permission decision, and is silent otherwise', () => {
+    // run() reports decisions only; this test reads the whole printed output.
+    const raw = (command) => {
+      const r = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', SCRIPT], {
+        input: JSON.stringify({ tool_input: { command }, cwd: dir }),
+        encoding: 'utf8',
+      });
+      expect(r.status).toBe(0);
+      return r.stdout.trim();
+    };
+    const accepted = JSON.parse(
+      raw(create(`--label ${LABEL} --body-file ok.md`))
+    ).hookSpecificOutput;
+    expect(accepted.additionalContext).toBe(noteText('before-issue-create-filed'));
+    expect(accepted.permissionDecision).toBeUndefined();
+    // The cloud form reaches the same reminder.
+    const api = JSON.parse(
+      raw(`gh api repos/o/r/issues -f title=T -f 'labels[]=${LABEL}' -F body=@ok.md`)
+    ).hookSpecificOutput;
+    expect(api.additionalContext).toBe(noteText('before-issue-create-filed'));
+    const claim = raw(create(`--label ${LABEL} --body-file bad.md`));
+    expect(claim.split(/\r?\n/)).toHaveLength(1);
+    expect(JSON.parse(claim).hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(JSON.parse(claim).hookSpecificOutput.additionalContext).toBeUndefined();
+    expect(raw('git status')).toBe('');
+  });
 
   it('is the notes.md text, with the reason and both labels filled in', () => {
     const res = run(create(`--label ${LABEL} --body "${LINE}"`));
@@ -177,6 +206,16 @@ maybeDescribe('.claude/hooks/before-issue-create.ps1: the reason text', () => {
       expect(reasonOf()).toBe(generic);
       fs.copyFileSync(path.join(HOOKS, 'hook-core.ps1'), path.join(lone, 'hook-core.ps1'));
       expect(reasonOf()).toBe(generic);
+      // With no notes.md, an accepted filing gets no reminder and still passes.
+      const accepted = spawnSync(PS, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', copy], {
+        input: JSON.stringify({
+          tool_input: { command: create(`--label ${LABEL} --body-file ok.md`) },
+          cwd: dir,
+        }),
+        encoding: 'utf8',
+      });
+      expect(accepted.status).toBe(0);
+      expect(accepted.stdout.trim()).toBe('');
     } finally {
       fs.rmSync(lone, { recursive: true, force: true });
     }
