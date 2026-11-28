@@ -33,5 +33,40 @@
       "buildlog/"
     ]
   },
-  "lenses": []
+  "lenses": [],
+  "fileSize": {
+    "limit": 800,
+    "allowed": [
+      {
+        "path": "tests/governance-sync.test.js",
+        "lines": 1501,
+        "why": "Tests for one tool, the governance sync; one subject."
+      },
+      {
+        "path": "tests/check-token-budget.test.js",
+        "lines": 1149,
+        "why": "Tests for one check, the token budget; one subject."
+      },
+      {
+        "path": "tests/before-issue-create.test.js",
+        "lines": 988,
+        "why": "Tests for one hook, before-issue-create; one subject."
+      },
+      {
+        "path": "tests/check-seats.test.js",
+        "lines": 948,
+        "why": "Tests for one check, the seats; one subject."
+      },
+      {
+        "path": "tools/governance-sync.ps1",
+        "lines": 902,
+        "why": "One job: the sync wrapper, the only file that changes git or GitHub state."
+      },
+      {
+        "path": "tools/governance-sync-core.ps1",
+        "lines": 844,
+        "why": "One job: the sync planner, read-only logic the wrapper and tests share."
+      }
+    ]
+  }
 }

@@ -2,6 +2,16 @@
 
 Design records for this repo, newest first. Each record is a `## ` title, then a line with the date and issue (`2026-10-22, #100`), then `Decided:`, `Why:` and `Gave up:` lines. At most 150 words per record; aim for under 100. CI checks this: `npm run check:design`.
 
+## Reviewers dig, and big files answer for themselves
+
+2026-11-27, #218, replacing part of #123
+
+Decided: Every reviewer reads the touched code and callers, researches, tries to break the change, and teaches one lesson. The reviewer who raises a blocker re-checks the fix, specialists included. Architecture reviews every plan and every diff. CI flags a file the change grew past `fileSize.limit`; the reviewer proposes a split or records why the file is one job, with the line count, and CI flags the file again at 20 percent growth. Plans meet a bar Haiku could build from.
+
+Why: Re-checks took 8 to 32 seconds, and Flatland grew 3,000-line files with no review catching the growth. The owner: "the mentor role should still assume their junior is going to make mistakes".
+
+Gave up: Shorter reviews; the 1,000-word issue cap; specialists running once; quoting `DESIGN.md` records into the architecture briefing.
+
 ## A find the run cannot fix is asked when found
 
 2026-11-22, #216, replacing parts of #159
@@ -234,11 +244,11 @@ Gave up: Given/When/Then. A reviewer must not flag a v2 child for being a layer.
 
 ## Reviews: five labels, mentor voice, read-only
 
-2026-10-18, #95
+2026-10-18, #95; updated 2026-11-27, #218
 
-Decided: Labels are praise, blocker, minor, nitpick and question. A minor must be fixed; a nitpick may be declined with a reason; a question must come back answered. Reviewers only Read, Grep and Glob. Specialists run once. Skills and docs get reviewers. The referee rules once.
+Decided: Labels are praise, blocker, minor, nitpick and question. A minor must be fixed; a nitpick may be declined with a reason; a question must come back answered. Reviewers use Read, Grep, Glob, web search and page reading; no shell. Skills and docs get reviewers. The referee rules once.
 
-Why: The owner wrote the voice, "Reviewers are senior mentors, not adversaries", now in `standards/reviewing.md`. He chose the labels, the extra reviewers and the single ruling. No shell, because `dontAsk` is ignored in auto mode (#93 experiment).
+Why: The owner wrote the voice, "Reviewers are senior mentors, not adversaries", now in `standards/reviewing.md`. He chose the labels, the extra reviewers and the single ruling. No shell, because `dontAsk` is ignored in auto mode (#93 experiment). Web access lets a reviewer research to expert level (#218).
 
 Gave up: The old adversarial voice, severity labels, review batching.
 

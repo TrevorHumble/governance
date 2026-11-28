@@ -45,6 +45,14 @@ jobs:
       # Checks the shape and length of each record in the design file.
       - name: Design records
         run: npm run check:design
+      # Runs node directly: package.json never syncs to a child, the scripts do. A file the PR
+      # grows past fileSize.limit in repo-profile.json fails unless fileSize.allowed records it.
+      - name: File size check
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        run: node scripts/check-file-size.js
+      # Skill name, description and length limits, and the token ceiling for counted skills.
+      - name: Skill limits check
+        run: node scripts/check-skills.js
       # Runs only on pull_request/merge_group: a direct push to main has no
       # pull request, so no merge-base diff of added lines exists to judge.
       - name: Em-dash gate

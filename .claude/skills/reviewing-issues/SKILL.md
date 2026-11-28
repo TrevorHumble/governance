@@ -7,26 +7,26 @@ metadata:
 
 # Reviewing an issue
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. Then read the three writing skills, which define what a good issue is, and the issue itself.
+Read `standards/reviewing.md` first, then the three writing skills, which define a good issue.
 
-## What to check
+## Checks
 
-1. **Complete.** It has a story, criteria, a plan, and a dependency map. A missing one is a `blocker:`.
-2. **A feature, not a layer.** `writing-issues` defines the slice and `writing-user-stories` the story. A story or issue that is a technical layer is a `blocker:`; name the feature it serves.
-3. **Criteria.** Judge them by `writing-acceptance-criteria`. Before you propose one, find whether an existing criterion already covers the case. If so, say which and propose nothing.
-4. **Bigger than its goal needs.** Could a smaller change reach the goal? Name what could come out and why. Never ask for more scope. A `Found:` criterion is the owner's to strike, not excess.
-5. **Expected token change.** In the governance home, the number must be there and plausible; a child issue without it passes. `writing-issues` says what it means. Judge whether it fits the words the issue adds or removes in the files it touches. If it could push governance over its cap and the issue names no cut or cap request, raise a `question:`; you cannot run the check.
-6. **Specialist notes.** A `blocker:` left open there is a `blocker:` here.
-7. **Hard.** Award `hard` when the plan meets the hard test in `pipeline/PIPELINE.md`, the issue lacks the label and its `Hard:` line is not `Hard: no (owner)`.
+1. **Complete.** The story, criteria, plan and dependency map are present. A missing part, intent line or failure criterion, a fenced diff, or a duplicate of an open issue is a `blocker:`.
+2. **Feature, not layer.** `writing-issues` defines the slice, and `writing-user-stories` the story. A story or issue that is a technical layer is a `blocker:`; name the feature the layer serves.
+3. **Criteria.** Judge by `writing-acceptance-criteria`. Before proposing a criterion, check whether an existing criterion covers the case. If so, name the existing criterion and propose nothing.
+4. **Scope.** Could a smaller change reach the goal? Name each removable part and the reason. Never ask for more scope. A `Found:` criterion is the owner's to strike, not excess.
+5. **Expected token change.** In the governance home, the number is present and plausible; a child issue without a number passes. `writing-issues` defines the number. Judge the number against the words the issue adds or removes. If the change could push governance over the cap and the issue names no cut or cap request, raise a `question:`; you cannot run the check.
+6. **Specialist notes.** An open `blocker:` in the specialist notes is an issue `blocker:`.
+7. **Hard.** Award `hard` when the plan meets the hard test in `pipeline/PIPELINE.md`, the issue lacks the label, and the `Hard:` line is not `Hard: no (owner)`.
 
-## Whose call
+## Owner calls
 
-`writing-acceptance-criteria` under "Whose call" says which are the owner's. Raise a `question:` for the owner; do not rewrite the criterion. Do not ask for technical detail.
+`writing-acceptance-criteria` under "Whose call" lists the owner calls. Raise a `question:` for the owner instead of rewriting the criterion. Do not ask for technical detail.
 
-## Hold back
+## Plan walkthrough
 
-A finding must point to a defect in the issue as written: a missing part (including a missing intent line or failure criterion), a layer story, an uncheckable criterion, a fenced diff, a duplicate, excess scope, a missing or implausible number, or a possible over-cap change with no cut or cap request named. Your preferences, extra detail, edge cases the criteria already cover, and "what if" thoughts are not findings. A clean issue gets `praise:` and a PASS. Praise names the specific thing, such as the failure criterion or the small slice.
+Open every file the plan names, and the surrounding code. Follow each step as the builder would. Where would the builder get lost, guess, or break code the plan never mentions? Cite `file:line`. Could Haiku build the change from the plan alone? A plan missing any of the four parts in `writing-issues`, or a step no builder could follow, is a `blocker:`.
 
-## Your reply
+## Reply format
 
-List the findings, each starting with its label. Then PASS, or FAIL if any `blocker:` or `question:` is open. End with `AWARD hard` or `DENY hard` and a one-line reason. You apply no label. In a re-check, repeat the award line from the earlier round.
+After the findings, PASS, or FAIL if any `blocker:` or `question:` is open, then the re-check line from `standards/reviewing.md`. End with `AWARD hard` or `DENY hard` and a one-line reason, as the last line. You apply no label. In a re-check, repeat the earlier round's award line.

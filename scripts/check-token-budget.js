@@ -129,6 +129,16 @@ function retiredOf(manifest) {
     .filter((p) => typeof p === 'string');
 }
 
+// Child-owned reference a reviewer reads to judge the work, never instructions: the decision log,
+// the goals, the readme and the owner's declines. Named here, not taken from the manifest's
+// excludedPaths, which also holds instruction files such as REPO-RULES.md.
+const REFERENCE_READS = ['DESIGN.md', 'NORTH-STAR.md', 'README.md', 'owner-declines.md'];
+
+// Reads that add nothing to a reviewer's reading: the not-counted entries and the reference files.
+function readingNotCounted(view) {
+  return [...view.notCounted, ...(view.manifestNotCounted || []), ...REFERENCE_READS];
+}
+
 function readHead(root) {
   const profile = JSON.parse(fs.readFileSync(path.join(root, 'repo-profile.json'), 'utf8'));
   const budget = profile.budget || {};
@@ -219,7 +229,9 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
       const base = readBase(root, found.ref, head.view.sharedPaths);
       // A PR must not leave the parent's guard by changing governanceHome: self at either end holds.
       if (base.profile.governanceHome === 'self') head.view.exemptRetired = false;
-      baseCounts = run(countInputs(base.view), base.read, base.caps);
+      baseCounts = run(countInputs(base.view), base.read, base.caps, {
+        notCounted: readingNotCounted(base.view),
+      });
       if (base.guarded) {
         const changed = changedFiles(root, found.ref);
         guardLines.push(
@@ -254,6 +266,7 @@ function main({ root = REPO_ROOT, argv = process.argv.slice(2), env = process.en
       library,
       vendorHashes: vendorHashes(root),
       tracked: new Set(head.view.listing),
+      notCounted: readingNotCounted(head.view),
     }
   );
   return {
@@ -268,4 +281,12 @@ if (require.main === module) {
   process.exitCode = exitCode;
 }
 
-module.exports = { main, readHead, baseRef, git, changedFiles, manifestNotCountedOf };
+module.exports = {
+  main,
+  readHead,
+  baseRef,
+  git,
+  changedFiles,
+  manifestNotCountedOf,
+  notCountedOf,
+};

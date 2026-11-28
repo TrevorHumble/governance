@@ -1,10 +1,10 @@
 # 05-hand-off
 
-You are about to ask for the owner's time, so make it a short ask. Write the draft into the run's issue, send one message, and wait.
+The hand-off asks for the owner's time, so make the ask short. Write the draft into the run's issue, send one message, and wait.
 
-## What the message holds
+## Message format
 
-Read the `writing-issues`, `writing-user-stories`, and `writing-acceptance-criteria` skills now, and draft it with them. Send, in this order and in plain words:
+Read the `writing-issues`, `writing-user-stories` and `writing-acceptance-criteria` skills now, and draft the message with those skills. Send, in this order and in everyday words:
 
 ```
 #<N> Title: ...
@@ -16,23 +16,23 @@ Token change: a number, or "none". Cut proposed: none, what and why, or a reques
 Approve?
 ```
 
-The first line must start `#<N> Title:` (or `owner/name#<N> Title:` for an issue in another repo) and the message must end `Approve?`: that is how the hook knows what the owner's yes covers. Several issues in one hand-off each get their own `#<N> Title:` line.
+The first line must start `#<N> Title:` (or `owner/name#<N> Title:` for an issue in another repo), and the message must end `Approve?`: the hook reads both to know the scope of the owner's yes. Several issues in one hand-off each get a separate `#<N> Title:` line.
 
-Write for the owner's calls, listed in `writing-acceptance-criteria` under "Whose call". Leave out the technical how. The models own that, and the owner does not need to read it. A criterion starting `Found:` (`writing-issues`) keeps that word in the message, so the owner sees it was not their ask.
+Write for the owner calls listed in `writing-acceptance-criteria` under "Whose call". Leave out implementation detail; the models decide implementation, and the owner needs none of the detail. A criterion starting `Found:` (`writing-issues`) retains the `Found:` prefix in the message, so the owner sees the criterion was not an owner request.
 
-Judge `Hard:` by `pipeline/PIPELINE.md`, "Before step 1"; the owner's reply settles it.
+Judge `Hard:` by `pipeline/PIPELINE.md`, "Before step 1"; the owner's reply settles the call.
 
-## The token change
+## Token change
 
-In a child repo (`governanceHome` is not `self` in `repo-profile.json`), skip this: leave the Token change and Cut proposed lines out of the message. Otherwise, work out the number before you write the message. `writing-issues` says what it means.
+In a child repo (`governanceHome` is not `self` in `repo-profile.json`), skip this section: leave the Token change and Cut proposed lines out of the message. Otherwise, measure the number before writing the message. `writing-issues` defines the number.
 
-An approved cut or cap request becomes a Done-when line, so it gets checked like any other.
+An approved cut or cap request becomes a Done-when line, so the request gets checked like any other criterion.
 
 ## Write, then send
 
-If the change adds or restructures a component, run the architecture specialist (`reviewing-architecture`, on the `code-reviewer` seat) on the plan first. Its briefing carries the plan, a neutral summary of the components it adds or changes, the repo's top-level listing (`git ls-tree --name-only HEAD`), and the `DESIGN.md` records the change touches, quoted, if the file is present. Put their notes in the body under "Specialist notes". Fix any `blocker:` there before you write it.
+Run the architecture specialist (`reviewing-architecture`, on the `code-reviewer` seat) on every plan first. The briefing carries the plan, a neutral summary of the components the plan adds or changes, and the repo's top-level listing (`git ls-tree --name-only HEAD`). The specialist reads `DESIGN.md` directly. Put the specialist's notes in the body under "Specialist notes". Fix each `blocker:` there before writing the body.
 
-The run's issue exists from step 01. A placeholder gets the draft's title and body whole; a backlog issue keeps its text, and you change only your lines (`github-write`):
+The run's issue exists from step 01. A placeholder gets the draft's title and body whole; a backlog issue retains the existing text, and you change only your lines (`github-write`):
 
 ```
 gh issue edit <N> --title "<title>" --body-file <file>
@@ -44,16 +44,16 @@ An extra issue in the same hand-off is filed new:
 gh issue create --title "<title>" --body-file <file> --label needs-issue-review
 ```
 
-A hard issue gets the `hard` label as well. The body carries the `Hard:` line as you wrote it; write `Hard: no (owner)` only when the owner said "not hard" themselves. Never add `owner-approved` or start the body with an approval line. The `before-issue-create` hook refuses both on a new filing, not on an edit (`WHAT-IT-CHECKS.md`).
+A hard issue also gets the `hard` label. The body carries the `Hard:` line as written; write `Hard: no (owner)` only when the owner said "not hard". Never add `owner-approved` or start the body with an approval line. The `before-issue-create` hook refuses both on a new filing, not on an edit (`WHAT-IT-CHECKS.md`).
 
 Then send the message.
 
-## After you send
+## After sending
 
-Stop. Only a reply that is "approve" (or a near spelling) approves; "ok to file", a question and praise do not. After it, run `gh issue edit <N> -R owner/name --add-label owner-approved` once per issue in the hand-off, as the whole command, with the issue's own repo. The `before-issue-create` hook checks the reply and shows the owner one `Approved:` line per issue; say nothing more about it. If the hook refuses, ask again. Then step 06.
+Stop. Only a reply of "approve" (or a near spelling) approves; "ok to file", a question and praise do not. After the approve, run `gh issue edit <N> -R owner/name --add-label owner-approved` once per issue in the hand-off, as the whole command, with the issue's repo. The `before-issue-create` hook checks the reply and shows the owner one `Approved:` line per issue; add no comment on the label. If the hook refuses, ask again. Then step 06.
 
 If the owner asks for a change, edit the issue body and resend the whole message.
 
-## When approved words change later
+## Criteria changed after approval
 
-If a criterion changes after the owner's approve, remove the label (`gh issue edit <N> --remove-label owner-approved`) and resend the whole message. The changed criteria then go to one reviewer on the `issue-reviewer` seat, which cannot start until the owner has approved again.
+If a criterion changes after the owner's approve, remove the label (`gh issue edit <N> --remove-label owner-approved`) and resend the whole message. The changed criteria then go to one reviewer on the `issue-reviewer` seat, which cannot start until the owner approves again.

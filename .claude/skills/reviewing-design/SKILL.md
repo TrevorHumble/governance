@@ -7,26 +7,22 @@ metadata:
 
 # Reviewing design
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. The worked pairs are in `reference/examples.md`; read them before you flag anything.
+Read `standards/reviewing.md` first. Read the worked pairs in `reference/examples.md` before flagging a finding.
 
-## The lens is depth
+## Module depth
 
-A good module has a small interface in front of a lot of hidden work. Judge each new module, function, or layer against that, not against line count. "More code than needed" is not a design finding.
+A good module has a small interface over a large hidden implementation. Judge each new module, function or layer by depth, not line count. "More code than needed" is not a design finding.
 
-- **Shallow.** The interface is nearly as big as the job: options, getters, and setters for one use. Say what the author could hide inside.
-- **Pass-through.** It forwards each call with the same signature. Apply the deletion test: if you removed it and nothing is lost, it is a pass-through, and "fine for now" does not excuse it. It earns its place only when it changes the error contract, the shape, or the policy.
-- **Information leakage.** Two places know a format or rule that one should own. Name both and say which should own it.
-- **Ghost gate.** A guard whose result nothing acts on, or that protects against a failure nobody can point to. Check the caller uses the result.
-- **Comments.** One that says what the next line plainly does is a `nitpick:`. A comment that gives a reason the code cannot show is `praise:`.
+- **Shallow.** The interface is nearly as big as the job: options, getters and setters for one use. Name the details the interface could hide.
+- **Pass-through.** Each call is forwarded with the same signature. Apply the deletion test: if removing the layer loses nothing, the layer is a pass-through, and "fine for now" is no excuse. A pass-through earns a place only by changing the error contract, the shape or the policy.
+- **Information leakage.** Two places know a format or rule that one place should own. Name both places and the right owner.
+- **Ghost gate.** A guard with a result nothing acts on, or a guard against a failure nobody can name. Check the caller uses the result.
+- **Comments.** A comment restating the next line is a `nitpick:`. A comment giving a reason the code cannot show is `praise:`.
 
-Count adapters behind a seam: one is a hypothetical seam, two make it real.
+Count adapters behind a seam: one adapter is a hypothetical seam, and two make the seam real.
 
-These design words come from Matt Pocock's codebase-design skill (MIT), https://github.com/mattpocock/skills.
+Design terms from Matt Pocock's codebase-design skill (MIT), https://github.com/mattpocock/skills.
 
-## Hold back
+## Changeability
 
-A finding points to one of the shapes above in the code as written. Style, naming taste, edge cases, missing imports from an elided diff, and "what if it grows" are not findings; leave them out. If the change is deep and small, give `praise:` that names why, and stop.
-
-## Your reply
-
-List the findings, each starting with its label. End by saying whether any `blocker:` or `question:` needs a re-check.
+Could the next developer change the code without breaking distant code? Cite each trip point with `file:line`. Style and naming taste are not findings.

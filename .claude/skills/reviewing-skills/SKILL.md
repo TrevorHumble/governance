@@ -7,21 +7,17 @@ metadata:
 
 # Reviewing skills and agents
 
-Read `standards/reviewing.md` first. Use the five labels, say why each finding matters, and name what held up, as defined there. Then read `standards/skills.md`, which owns the size ceiling and the eval-first rule; point to it, do not restate it.
+Read `standards/reviewing.md` first, then `standards/skills.md`.
 
-## What to check
+## Checks
 
-1. **One job.** If the description needs "and" to say what it does, it is two jobs. Name the split.
-2. **Least-privilege tools** (agents). Each tool listed must be one the job uses. An agent that says it writes nothing but holds write and shell tools is a `blocker:`; name the tool to drop and what it could do with it.
-3. **Input and output contract** (agents). It says what the agent is given and what it hands back.
-4. **The description says when to use it.** It starts from a situation ("Use when..."), not a topic.
-5. **Size.** A `SKILL.md` over the size ceiling in `standards/skills.md` is a finding; that file has the number. Judge by reading it, at about words × 1.35 tokens. If it is close, raise a `question:`, not a `blocker:`.
-6. **Eval first.** See `standards/skills.md`. A new skill with no baseline note gets a `question:`.
+1. **One job.** The description states the job and the trigger situation ("Use when..."), in the third person. A description needing "and" for the job means two jobs; name the split.
+2. **Agent tools and contract.** Each listed tool serves the job; an agent described as read-only but holding write or shell tools is a `blocker:` naming the tool to drop. The agent file states inputs and outputs.
+3. **Only new information.** Cut lines restating model knowledge. Use one term per idea.
+4. **Degrees of freedom.** Steps are exact where order matters, and loose where judgment matters. An exact, repeatable step is a script, with error messages naming the fix.
+5. **Progressive disclosure.** Long detail lives in files the `SKILL.md` links directly, never in nested links. CI counts size.
+6. **Evals.** A new skill with no baseline note (`standards/skills.md`), or untested on each model that runs the skill, gets a `question:`.
 
-## Hold back
+## Model walkthrough
 
-A finding points to a defect in the file as written, in the checks above. Your preferences, wording taste, extra sections, and speculation about how a model might misuse it are not findings; leave them out. A file that does one job, with a when-to-use description and a clear contract, gets `praise:` naming what it got right.
-
-## Your reply
-
-List the findings, each starting with its label. End by saying whether any `blocker:` or `question:` needs a re-check.
+Read the skill as the model following the skill, cold, mid-task. Where would the model go wrong, skip a step, or conflict with another rule? Quote the line.

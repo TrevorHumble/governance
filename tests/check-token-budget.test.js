@@ -295,6 +295,17 @@ describe('reading lists and the reviewer library', () => {
     expect(text(r)).not.toContain('in total, over');
   });
 
+  it('counts no notCounted read toward its reviewer, so reference reading never fills the cap', () => {
+    writeText(SKILL, skillText(['DESIGN.md']));
+    writeFileOfWords('DESIGN.md', 10000);
+    const over = run([SKILL], read);
+    expect(over.exitCode).toBe(1);
+    const r = run([SKILL], read, { notCounted: ['DESIGN.md', 'buildlog/'] });
+    // the skill alone: 10 words with one path, 14 tokens
+    expect(text(r)).toContain('reviewer reviewing-prs: 14 tokens (limit 10000)');
+    expect(r.exitCode).toBe(0);
+  });
+
   it('fails a reviewer reading a path that is missing', () => {
     writeText(SKILL, skillText(['standards/nowhere.md']));
     const r = run([SKILL], read);

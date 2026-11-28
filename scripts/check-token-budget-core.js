@@ -297,12 +297,14 @@ function libraryFailures(library, reviewers, vendorHashes) {
  * @param {object[]} [extra.library] reviewer-library.json entries; omitted, the library checks are off
  * @param {Record<string, string>} [extra.vendorHashes] sha256 of every file under VENDOR_ROOT on disk
  * @param {Set<string>} [extra.tracked] tracked paths, for the backticked-path check on reviewer skills
+ * @param {string[]} [extra.notCounted] notCounted entries (profile and manifest); a reviewer reads these
+ *   to do the work, so they add nothing to the reviewer's reading, only its instructions count
  * @param {{ref: string, total?: number, reviewers?: Record<string, number>}} [extra.base] the base's
  *   own counts, for the "was already over" note
  * @returns {{lines: string[], exitCode: number, total?: number, reviewers?: Record<string, number>}}
  */
 function run(files, readFile, caps, extra = {}) {
-  const { library, vendorHashes = {}, tracked, base } = extra;
+  const { library, vendorHashes = {}, tracked, base, notCounted = [] } = extra;
   if (!caps || !isCap(caps.total) || !isCap(caps.reviewer)) {
     return {
       lines: [
@@ -361,6 +363,8 @@ function run(files, readFile, caps, extra = {}) {
     let counted = 0;
     let vendored = 0;
     for (const p of paths) {
+      // A notCounted read (the decision log, for one) is reference material, not instructions.
+      if (isNotCounted(p, notCounted)) continue;
       // A shared path that is not listed and not in reads counts as zero.
       if (words.has(p)) {
         counted += words.get(p);
@@ -446,6 +450,8 @@ function run(files, readFile, caps, extra = {}) {
 
 module.exports = {
   run,
+  countWords,
+  toTokens,
   parseSkill,
   countInputs,
   guardedChanges,
