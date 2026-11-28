@@ -4,6 +4,10 @@
 
 This command was judged as a filing or a label add: {why}. File an issue one way: gh issue create --label {label} --body-file <file>, or in a cloud session gh api repos/{owner}/{repo}/issues -f title=T -f 'labels[]={label}' -F body=@<file>. File without {approved}, send the hand-off ending "Approve?", and after the owner's approve run gh issue edit <N> -R owner/name --add-label {approved} as the whole command (pipeline/steps/05-hand-off.md). Text that only mentions issue creation belongs in a file written with the Write tool (then git commit -F <file>, --body-file) or a Grep tool search.
 
+## before-issue-create-filed
+
+When filing for later, check the issue carries the whole picture (writing-issues, "Filing for later"), and fix a missing part as github-write, "Change part of a body", says.
+
 ## edit-gate
 
 Nothing changes until the owner starts the work. {what} Ask him to type /build, or /buildlog, /rca, /realign, /resume or /slop. Reading and read-only commands still run.
